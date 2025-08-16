@@ -4,7 +4,7 @@
 	branch = android10-release
 [submodule "core"]
 	path = core
-	url = https://github.com/LucisUrbe/LSPosed.git
+	url = https://github.com/HSSkyBoy/LSPosed.git
 	branch = master
 [submodule "patch/libs/manifest-editor"]
 	path = patch/libs/manifest-editor
