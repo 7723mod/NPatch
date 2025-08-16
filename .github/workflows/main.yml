@@ -2,16 +2,11 @@ name: Android CI
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ master ]
 
 jobs:
   build:
-    name: Build on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ ubuntu-latest ]
+    name: Build on Ubuntu
+    runs-on: ubuntu-latest
     env:
       CCACHE_COMPILERCHECK: '%compiler% -dumpmachine; %compiler% -dumpversion'
       CCACHE_NOHASHDIR: 'true'
@@ -46,22 +41,23 @@ jobs:
         git submodule update --init --recursive --no-fetch --checkout
         cd ./external/parallel_hashmap/parallel_hashmap/
 
-    - name: Write key
-      if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
-      run: |
-        if [ ! -z "${{ secrets.KEY_STORE }}" ]; then
-          echo androidStorePassword='${{ secrets.KEY_STORE_PASSWORD }}' >> gradle.properties
-          echo androidKeyAlias='${{ secrets.ALIAS }}' >> gradle.properties
-          echo androidKeyPassword='${{ secrets.KEY_PASSWORD }}' >> gradle.properties
-          echo androidStoreFile='key.jks' >> gradle.properties
-          echo ${{ secrets.KEY_STORE }} | base64 --decode > key.jks
-        fi
-
     - name: Setup Java
       uses: actions/setup-java@v3
       with:
-        distribution: 'temurin'
+        distribution: 'zulu'
         java-version: '21'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Setup Ninja
+      uses: seanmiddleditch/gha-setup-ninja@master
+      with:
+        version: 1.12.0
+
+    - name: Remove Android SDK's CMake
+      shell: bash
+      run: rm -rf $ANDROID_HOME/cmake
 
     - name: Setup Gradle
       uses: gradle/gradle-build-action@v2
@@ -76,26 +72,24 @@ jobs:
         restore-keys: ${{ runner.os }}
         save: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
 
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
-
-    - name: Setup Ninja
-      uses: seanmiddleditch/gha-setup-ninja@master
-      with:
-        version: 1.12.0
-
-    - name: Remove Android SDK's CMake
-      shell: bash
-      run: rm -rf $ANDROID_HOME/cmake
-
-    - name: Build dependencies
-      working-directory: libxposed
+    - name: Write key
+      if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
       run: |
-        cd api
-        echo 'org.gradle.jvmargs=-Xmx2048m' >> gradle.properties
+        if [ ! -z "${{ secrets.KEY_STORE }}" ]; then
+          echo androidStorePassword='${{ secrets.KEY_STORE_PASSWORD }}' >> gradle.properties
+          echo androidKeyAlias='${{ secrets.ALIAS }}' >> gradle.properties
+          echo androidKeyPassword='${{ secrets.KEY_PASSWORD }}' >> gradle.properties
+          echo androidStoreFile='key.jks' >> gradle.properties
+          echo ${{ secrets.KEY_STORE }} | base64 --decode > key.jks
+        fi
+
+    - name: Build local dependencies
+      run: |
+        echo "--- Building API dependency ---"
+        cd libxposed/api
         ./gradlew :api:publishApiPublicationToMavenLocal
+        echo "--- Building Service Interface dependency ---"
         cd ../service
-        echo 'org.gradle.jvmargs=-Xmx2048m' >> gradle.properties
         ./gradlew :interface:publishInterfacePublicationToMavenLocal
 
     - name: Build with Gradle
@@ -108,33 +102,26 @@ jobs:
     - name: Upload Debug artifact
       uses: actions/upload-artifact@v4
       with:
-        name: lspatch-debug
-        path: out/debug/*
+          name: lspatch-debug
+          path: out/debug/*
 
     - name: Upload Release artifact
       uses: actions/upload-artifact@v4
       with:
-        name: lspatch-release
-        path: out/release/*
+          name: lspatch-release
+          path: out/release/*
 
     - name: Upload mappings
       uses: actions/upload-artifact@v4
       with:
-        name: mappings
-        path: |
-          patch-loader/build/outputs/mapping
-          manager/build/outputs/mapping
+          name: mappings
+          path: |
+              patch-loader/build/outputs/mapping
+              manager/build/outputs/mapping
 
     - name: Upload symbols
       uses: actions/upload-artifact@v4
       with:
-        name: symbols
-        path: |
-          patch-loader/build/symbols
-
-    - name: Post to releases
-      if: ${{ github.event_name != 'pull_request' && success() && github.ref == 'refs/heads/master' }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        gh release create "v0.6" --generate-notes --draft `ls out/debug/* ` `ls out/release/*`
+          name: symbols
+          path: |
+              patch-loader/build/symbols
