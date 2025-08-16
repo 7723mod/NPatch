@@ -24,7 +24,7 @@
     <string name="home_system_abi">系统架构</string>
     <string name="home_info_copied">已复制到剪贴板</string>
     <string name="home_support">支持</string>
-    <string name="home_description">LSPatch 是一款免费的基于 LSPosed 核心的免 Root Xposed 框架。</string>
+    <string name="home_description">NPatch 是一款免费的复刻于 LSPatch 的，基于 LSPosed 核心的免 Root 的 Xposed 框架。</string>
     <string name="home_view_source_code"><![CDATA[查看源代码 %1$s<br/>加入我们的 %2$s 频道]]></string>
     <!-- Manage Screen -->
     <string name="screen_manage">管理</string>
@@ -42,6 +42,7 @@
     <string name="manage_no_modules">尚无模块</string>
     <string name="manage_module_settings">模块设置</string>
     <string name="manage_app_info">应用信息</string>
+    <string name="manage_check_manager_package_name">该应用由 %1$s 管理\n在本管理器中修改作用域 %2$s 不会生效\n重新修补以解决</string>
     <!-- New Patch Screen -->
     <string name="screen_new_patch">新建修补</string>
     <string name="patch_select_dir_title">选择存储目录</string>
@@ -53,7 +54,7 @@
     <string name="patch_local">本地模式</string>
     <string name="patch_local_desc">为未嵌入模块的应用程序打补丁。\nXposed 范围可动态更改，无需重新打补丁。\n打了本地补丁的应用程序只能在本地设备上运行。</string>
     <string name="patch_integrated">集成模式</string>
-    <string name="patch_integrated_desc">修补 App 并内置模块。\n经修补的应用可以在没有管理器的情况下运行，但不能动态管理配置。\n以集成模式修补的应用可在未安装 LSPatch 管理器的设备上运行。</string>
+    <string name="patch_integrated_desc">修补 App 并内置模块。\n经修补的应用可以在没有管理器的情况下运行，但不能动态管理配置。\n以集成模式修补的应用可在未安装 NPatch 管理器的设备上运行。</string>
     <string name="patch_embed_modules">嵌入模块</string>
     <string name="patch_debuggable">可调试</string>
     <string name="patch_sigbypass">破解签名校验</string>

@@ -1,9 +1,10 @@
 package org.lsposed.lspatch.ui.page.manage
 
 import android.app.Activity
-import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.ClipData
 import android.content.Context
+import android.content.pm.PackageManager
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
@@ -31,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import androidx.compose.ui.window.Dialog
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
@@ -92,6 +94,7 @@ fun AppManageBody(
                     ConfigManager.getModulesForApp(scopeApp).forEach {
                         ConfigManager.deactivateModule(scopeApp, it)
                     }
+                    var afterCheckManager by remember { mutableStateOf<(() -> Unit)?>(null) }
                     result.selected.forEach {
                         Log.d(TAG, "Activate ${it.app.packageName} for $scopeApp")
                         ConfigManager.activateModule(scopeApp, Module(it.app.packageName, it.app.sourceDir))
