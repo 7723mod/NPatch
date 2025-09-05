@@ -145,7 +145,7 @@ fun AppManageBody(
                 key = { it.first.app.packageName }
             ) {
                 val isRolling = it.second.useManager && it.second.lspConfig.VERSION_CODE >= Constants.MIN_ROLLING_VERSION_CODE
-                val canUpdateLoader = !isRolling && it.second.lspConfig.VERSION_CODE < LSPConfig.instance.VERSION_CODE
+                val canUpdateLoader = (!isRolling && it.second.lspConfig.VERSION_CODE < LSPConfig.instance.VERSION_CODE) || it.second.managerPackageName != BuildConfig.APPLICATION_ID
                 var expanded by remember { mutableStateOf(false) }
                 AnywhereDropdown(
                     expanded = expanded,
