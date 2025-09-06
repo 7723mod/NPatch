@@ -1,16 +1,15 @@
 [versions]
 room = "2.7.2"
 accompanist = "0.36.0"
-compose-destinations = "1.11.8"
+compose-destinations = "1.11.7"
 shizuku = "13.1.5"
 hiddenapi = "4.4.0"
-compose-bom = "2025.08.01"
+compose-bom = "2025.08.00"
 kotlin = "2.2.10"
 ksp = "2.2.10-2.0.2"
 commons-io = "2.20.0"
 beust-jcommander = "1.82"
 google-gson = "2.13.1"
-material = "1.12.0"
 core-ktx = "1.16.0"
 
 [plugins]

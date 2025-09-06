@@ -49,6 +49,14 @@
             </intent-filter>
         </activity-alias>
 
+        <receiver
+            android:name=".ui.util.InstallResultReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="${applicationId}.INSTALL_STATUS" />
+            </intent-filter>
+        </receiver>
+
 
         <service
             android:name=".manager.ModuleService"
