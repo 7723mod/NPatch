@@ -414,7 +414,7 @@ private fun DoPatchBody(modifier: Modifier, navigator: DestinationsNavigator) {
                 .animateContentSize(spring(stiffness = Spring.StiffnessLow))
         ) {
             ShimmerAnimation(enabled = viewModel.patchState == PatchState.PATCHING) {
-                ProvideTextStyle(MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)) {
+                ProvideTextStyle(MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Default)) {
                     val scrollState = rememberLazyListState()
                     LazyColumn(
                         state = scrollState,
@@ -578,7 +578,7 @@ private fun InstallDialog(patchApp: AppInfo, onFinish: (Int, String?) -> Unit) {
                 Text(
                     modifier = Modifier.fillMaxWidth(),
                     text = stringResource(if (installing == 1) R.string.installing else R.string.uninstalling),
-                    fontFamily = FontFamily.Serif,
+                    fontFamily = FontFamily.Default,
                     textAlign = TextAlign.Center
                 )
             }
