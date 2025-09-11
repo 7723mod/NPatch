@@ -2,6 +2,8 @@ name: Build CI
 
 on:
   workflow_dispatch:
+  pull_request:
+  merge_group:
 
 jobs:
   build:
@@ -41,7 +43,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.ccache
-        key: ${{ runner.os }}-ccache-${{ github.sha }}
+        key: ${{ runner.os }}-ccache-${{ hashFiles('**/src/**/*.cpp', '**/src/**/*.h', '**/CMakeLists.txt') }}
         restore-keys: |
           ${{ runner.os }}-ccache-
 
