@@ -54,7 +54,7 @@ fun AppItem(
                 Text(label)
                 Text(
                     text = packageName,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = FontFamily.Default,
                     style = MaterialTheme.typography.bodySmall
                 )
                 additionalContent?.invoke(this)

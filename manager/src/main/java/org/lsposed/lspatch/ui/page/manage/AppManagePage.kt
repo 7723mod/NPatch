@@ -81,7 +81,7 @@ fun AppManageBody(
                     if (LSPPackageManager.appList.isEmpty()) stringResource(R.string.manage_loading)
                     else stringResource(R.string.manage_no_apps)
                 },
-                fontFamily = FontFamily.Serif,
+                fontFamily = FontFamily.Default,
                 style = MaterialTheme.typography.headlineSmall
             )
         }
@@ -180,7 +180,7 @@ fun AppManageBody(
                                         text = "$patchText  $versionText",
                                         color = patchColor,
                                         fontWeight = FontWeight.SemiBold,
-                                        fontFamily = FontFamily.Serif,
+                                        fontFamily = FontFamily.Default,
                                         style = MaterialTheme.typography.bodySmall
                                     )
                                     if (canUpdateLoader) {

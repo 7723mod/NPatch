@@ -126,7 +126,7 @@ private fun ShizukuCard() {
                 Column(Modifier.padding(start = 20.dp)) {
                     Text(
                         text = stringResource(R.string.shizuku_available),
-                        fontFamily = FontFamily.Serif,
+                        fontFamily = FontFamily.Default,
                         style = MaterialTheme.typography.titleMedium
                     )
                     Spacer(Modifier.height(4.dp))
@@ -140,7 +140,7 @@ private fun ShizukuCard() {
                 Column(Modifier.padding(start = 20.dp)) {
                     Text(
                         text = stringResource(R.string.shizuku_unavailable),
-                        fontFamily = FontFamily.Serif,
+                        fontFamily = FontFamily.Default,
                         style = MaterialTheme.typography.titleMedium
                     )
                     Spacer(Modifier.height(4.dp))
