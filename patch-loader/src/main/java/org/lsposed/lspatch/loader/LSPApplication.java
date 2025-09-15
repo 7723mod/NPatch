@@ -6,40 +6,46 @@ import static org.lsposed.lspatch.share.Constants.ORIGINAL_APK_ASSET_PATH;
 import android.app.ActivityThread;
 import android.app.LoadedApk;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.res.CompatibilityInfo;
 import android.os.Build;
 import android.os.RemoteException;
-import android.system.Os;
 import android.util.Log;
 
+import com.google.gson.Gson;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.lsposed.lspatch.loader.util.FileUtils;
 import org.lsposed.lspatch.loader.util.XLog;
 import org.lsposed.lspatch.service.LocalApplicationService;
 import org.lsposed.lspatch.service.RemoteApplicationService;
+import org.lsposed.lspatch.share.PatchConfig;
 import org.lsposed.lspd.core.Startup;
+import org.lsposed.lspd.models.Module;
 import org.lsposed.lspd.service.ILSPApplicationService;
-import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 import java.util.zip.ZipFile;
 
+import dalvik.system.DexFile;
+import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import hidden.HiddenApiBridge;
 
@@ -57,7 +63,7 @@ public class LSPApplication {
     private static LoadedApk stubLoadedApk;
     private static LoadedApk appLoadedApk;
 
-    private static JSONObject config;
+    private static PatchConfig config;
 
     public static boolean isIsolated() {
         return (android.os.Process.myUid() % PER_USER_RANGE) >= FIRST_APP_ZYGOTE_ISOLATED_UID;
@@ -77,29 +83,47 @@ public class LSPApplication {
 
         Log.d(TAG, "Initialize service client");
         ILSPApplicationService service;
-        if (config.optBoolean("useManager")) {
-            service = new RemoteApplicationService(context);
+        if (config.useManager) {
+            try {
+                service = new RemoteApplicationService(context);
+                List<Module> m = service.getLegacyModulesList();
+                JSONArray moduleArr = new JSONArray();
+                for (Module module : m) {
+                    JSONObject moduleObj = new JSONObject();
+                    moduleObj.put("path",module.apkPath);
+                    moduleObj.put("packageName",module.packageName);
+                    moduleArr.put(moduleObj);
+                }
+                SharedPreferences shared = context.getSharedPreferences("npatch", Context.MODE_PRIVATE);
+                shared.edit().putString("modules",moduleArr.toString()).commit();
+                Log.e(TAG, "Success update module scope");
+            }catch (Exception e){
+                Log.e(TAG, "Failed to connect to manager, fallback to fixed local service");
+                service = new LocalApplicationService(context);
+            }
+
         } else {
             service = new LocalApplicationService(context);
         }
 
-        disableProfile(context);
         Startup.initXposed(false, ActivityThread.currentProcessName(), context.getApplicationInfo().dataDir, service);
         Startup.bootstrapXposed();
         // WARN: Since it uses `XResource`, the following class should not be initialized
         // before forkPostCommon is invoke. Otherwise, you will get failure of XResources
+
         Log.i(TAG, "Load modules");
         LSPLoader.initModules(appLoadedApk);
         Log.i(TAG, "Modules initialized");
 
         switchAllClassLoader();
-        SigBypass.doSigBypass(context, config.optInt("sigBypassLevel"));
+        SigBypass.doSigBypass(context, config.sigBypassLevel);
 
         Log.i(TAG, "LSPatch bootstrap completed");
     }
 
     private static Context createLoadedApkWithContext() {
         try {
+            var timeStart = System.currentTimeMillis();
             var mBoundApplication = XposedHelpers.getObjectField(activityThread, "mBoundApplication");
 
             stubLoadedApk = (LoadedApk) XposedHelpers.getObjectField(mBoundApplication, "info");
@@ -109,13 +133,13 @@ public class LSPApplication {
 
             try (var is = baseClassLoader.getResourceAsStream(CONFIG_ASSET_PATH)) {
                 BufferedReader streamReader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
-                config = new JSONObject(streamReader.lines().collect(Collectors.joining()));
-            } catch (Throwable e) {
-                Log.e(TAG, "Failed to parse config file", e);
+                config = new Gson().fromJson(streamReader, PatchConfig.class);
+            } catch (IOException e) {
+                Log.e(TAG, "Failed to load config file");
                 return null;
             }
-            Log.i(TAG, "Use manager: " + config.optBoolean("useManager"));
-            Log.i(TAG, "Signature bypass level: " + config.optInt("sigBypassLevel"));
+            Log.i(TAG, "Use manager: " + config.useManager);
+            Log.i(TAG, "Signature bypass level: " + config.sigBypassLevel);
 
             Path originPath = Paths.get(appInfo.dataDir, "cache/lspatch/origin/");
             Path cacheApkPath;
@@ -125,9 +149,7 @@ public class LSPApplication {
 
             appInfo.sourceDir = cacheApkPath.toString();
             appInfo.publicSourceDir = cacheApkPath.toString();
-            if (config.has("appComponentFactory")) {
-                appInfo.appComponentFactory = config.optString("appComponentFactory");
-            }
+            appInfo.appComponentFactory = config.appComponentFactory;
 
             if (!Files.exists(cacheApkPath)) {
                 Log.i(TAG, "Extract original apk");
@@ -137,10 +159,13 @@ public class LSPApplication {
                     Files.copy(is, cacheApkPath);
                 }
             }
+
             cacheApkPath.toFile().setWritable(false);
+
             var mPackages = (Map<?, ?>) XposedHelpers.getObjectField(activityThread, "mPackages");
             mPackages.remove(appInfo.packageName);
             appLoadedApk = activityThread.getPackageInfoNoCheck(appInfo, compatInfo);
+
             XposedHelpers.setObjectField(mBoundApplication, "info", appLoadedApk);
 
             var activityClientRecordClass = XposedHelpers.findClass("android.app.ActivityThread$ActivityClientRecord", ActivityThread.class.getClassLoader());
@@ -165,67 +190,20 @@ public class LSPApplication {
             Log.i(TAG, "hooked app initialized: " + appLoadedApk);
 
             var context = (Context) XposedHelpers.callStaticMethod(Class.forName("android.app.ContextImpl"), "createAppContext", activityThread, stubLoadedApk);
-            if (config.has("appComponentFactory")) {
+            if (config.appComponentFactory != null) {
                 try {
-                    context.getClassLoader().loadClass(appInfo.appComponentFactory);
-                } catch (Throwable e) { // 捕捉更廣泛的類載入錯誤, 可能可以兼容部分加固如 360
-                    Log.w(TAG, "Original AppComponentFactory not found: " + appInfo.appComponentFactory, e);
+                    context.getClassLoader().loadClass(config.appComponentFactory);
+                } catch (Throwable e) {
+                    Log.w(TAG, "Original AppComponentFactory not found: " + config.appComponentFactory, e);
                     appInfo.appComponentFactory = null;
                 }
             }
+            Log.i(TAG,"createLoadedApkWithContext cost: " + (System.currentTimeMillis() - timeStart) + "ms");
+
             return context;
         } catch (Throwable e) {
             Log.e(TAG, "createLoadedApk", e);
             return null;
-        }
-    }
-
-    public static void disableProfile(Context context) {
-        final ArrayList<String> codePaths = new ArrayList<>();
-        var appInfo = context.getApplicationInfo();
-        var pkgName = context.getPackageName();
-        if (appInfo == null) return;
-        if ((appInfo.flags & ApplicationInfo.FLAG_HAS_CODE) != 0) {
-            codePaths.add(appInfo.sourceDir);
-        }
-        if (appInfo.splitSourceDirs != null) {
-            Collections.addAll(codePaths, appInfo.splitSourceDirs);
-        }
-
-        if (codePaths.isEmpty()) {
-            // If there are no code paths there's no need to setup a profile file and register with
-            // the runtime,
-            return;
-        }
-
-        var profileDir = HiddenApiBridge.Environment_getDataProfilesDePackageDirectory(appInfo.uid / PER_USER_RANGE, pkgName);
-
-        var attrs = PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("r--------"));
-
-        for (int i = codePaths.size() - 1; i >= 0; i--) {
-            String splitName = i == 0 ? null : appInfo.splitNames[i - 1];
-            File curProfileFile = new File(profileDir, splitName == null ? "primary.prof" : splitName + ".split.prof").getAbsoluteFile();
-            Log.d(TAG, "Processing " + curProfileFile.getAbsolutePath());
-            try {
-                if (!curProfileFile.exists()) {
-                    Files.createFile(curProfileFile.toPath(), attrs);
-                    continue;
-                }
-                if (!curProfileFile.canWrite() && Files.size(curProfileFile.toPath()) == 0) {
-                    Log.d(TAG, "Skip profile " + curProfileFile.getAbsolutePath());
-                    continue;
-                }
-                if (curProfileFile.exists() && !curProfileFile.delete()) {
-                    try (var writer = new FileOutputStream(curProfileFile)) {
-                        Log.d(TAG, "Failed to delete, try to clear content " + curProfileFile.getAbsolutePath());
-                    } catch (Throwable e) {
-                        Log.e(TAG, "Failed to delete and clear profile file " + curProfileFile.getAbsolutePath(), e);
-                    }
-                    Os.chmod(curProfileFile.getAbsolutePath(), 00400);
-                }
-            } catch (Throwable e) {
-                Log.e(TAG, "Failed to disable profile file " + curProfileFile.getAbsolutePath(), e);
-            }
         }
     }
 

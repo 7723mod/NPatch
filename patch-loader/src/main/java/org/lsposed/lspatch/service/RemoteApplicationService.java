@@ -14,7 +14,6 @@ import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
 import android.os.UserHandle;
 import android.util.Log;
-import android.widget.Toast;
 
 import org.lsposed.lspatch.share.Constants;
 import org.lsposed.lspd.models.Module;
@@ -48,7 +47,7 @@ public class RemoteApplicationService implements ILSPApplicationService {
                 @Override
                 public void onServiceConnected(ComponentName name, IBinder binder) {
                     Log.i(TAG, "Manager binder received");
-                    service = Stub.asInterface(binder);
+                    service = ILSPApplicationService.Stub.asInterface(binder);
                     latch.countDown();
                 }
 
@@ -76,7 +75,6 @@ public class RemoteApplicationService implements ILSPApplicationService {
             if (!success) throw new TimeoutException("Bind service timeout");
         } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException |
                  InterruptedException | TimeoutException e) {
-            Toast.makeText(context, "Unable to connect to Manager", Toast.LENGTH_SHORT).show();
             var r = new RemoteException("Failed to get manager binder");
             r.initCause(e);
             throw r;

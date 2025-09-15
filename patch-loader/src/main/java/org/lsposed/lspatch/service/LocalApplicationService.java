@@ -1,89 +1,85 @@
 package org.lsposed.lspatch.service;
 
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
 import android.os.Environment;
 import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
 import android.util.Log;
 
-import org.lsposed.lspatch.loader.util.FileUtils;
-import org.lsposed.lspatch.share.Constants;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.lsposed.lspatch.util.ModuleLoader;
 import org.lsposed.lspd.models.Module;
 import org.lsposed.lspd.service.ILSPApplicationService;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.zip.ZipFile;
 
 public class LocalApplicationService extends ILSPApplicationService.Stub {
-
     private static final String TAG = "NPatch";
-
-    private final List<Module> modules = new ArrayList<>();
-
-    public LocalApplicationService(Context context) {
+    private final List<Module> cachedModule;
+    public LocalApplicationService(Context context){
+        SharedPreferences shared = context.getSharedPreferences("npatch", Context.MODE_PRIVATE);
+        cachedModule = new ArrayList<>();
         try {
-            for (var name : context.getAssets().list("lspatch/modules")) {
-                String packageName = name.substring(0, name.length() - 4);
-                String modulePath = context.getCacheDir() + "/lspatch/" + packageName + "/";
-                String cacheApkPath;
-                try (ZipFile sourceFile = new ZipFile(context.getPackageResourcePath())) {
-                    cacheApkPath = modulePath + sourceFile.getEntry(Constants.EMBEDDED_MODULES_ASSET_PATH + name).getCrc() + ".apk";
-                }
-
-                if (!Files.exists(Paths.get(cacheApkPath))) {
-                    Log.i(TAG, "Extract module apk: " + packageName);
-                    FileUtils.deleteFolderIfExists(Paths.get(modulePath));
-                    Files.createDirectories(Paths.get(modulePath));
-                    try (var is = context.getAssets().open("lspatch/modules/" + name)) {
-                        Files.copy(is, Paths.get(cacheApkPath));
+            JSONArray mArr = new JSONArray(shared.getString("modules", "{}"));
+            Log.i(TAG,"use fixed local application service:"+shared.getString("modules", "{}"));
+            for (int i = 0; i < mArr.length(); i++) {
+                JSONObject mObj = mArr.getJSONObject(i);
+                Module m = new Module();
+                String path = mObj.getString("path");
+                String packageName = mObj.getString("packageName");
+                m.apkPath = path;
+                m.packageName = packageName;
+                if (!new File(m.apkPath).exists()){
+                    Log.i("NPatch","Module:" + m.packageName + " path not available, reset.");
+                    try {
+                        ApplicationInfo info = context.getPackageManager().getApplicationInfo(m.packageName, 0);
+                        m.apkPath = info.sourceDir;
+                        Log.i("NPatch","Module:" + m.packageName + " path reset to " + m.apkPath);
+                    }catch (Exception e){
+                        Log.e("NPatch",Log.getStackTraceString(e));
                     }
                 }
-
-                var module = new Module();
-                module.apkPath = cacheApkPath;
-                module.packageName = packageName;
-                module.file = ModuleLoader.loadModule(cacheApkPath);
-                modules.add(module);
+                m.file = ModuleLoader.loadModule(m.apkPath);
+                cachedModule.add(m);
             }
-        } catch (IOException e) {
-            Log.e(TAG, "Error when initializing LocalApplicationServiceClient", e);
+        }catch (Exception e){
+            Log.e(TAG,Log.getStackTraceString(e));
         }
     }
 
     @Override
-    public boolean isLogMuted() throws RemoteException {
-        return false;
+    public List<Module> getLegacyModulesList() throws RemoteException {
+        return cachedModule;
     }
 
     @Override
-    public List<Module> getLegacyModulesList() {
-        return modules;
-    }
-
-    @Override
-    public List<Module> getModulesList() {
+    public List<Module> getModulesList() throws RemoteException {
         return new ArrayList<>();
     }
 
     @Override
-    public String getPrefsPath(String packageName) {
+    public String getPrefsPath(String packageName) throws RemoteException {
         return new File(Environment.getDataDirectory(), "data/" + packageName + "/shared_prefs/").getAbsolutePath();
     }
 
     @Override
-    public ParcelFileDescriptor requestInjectedManagerBinder(List<IBinder> binder) {
+    public ParcelFileDescriptor requestInjectedManagerBinder(List<IBinder> binder) throws RemoteException {
         return null;
     }
 
     @Override
     public IBinder asBinder() {
         return this;
+    }
+
+    @Override
+    public boolean isLogMuted() throws RemoteException {
+        return false;
     }
 }
