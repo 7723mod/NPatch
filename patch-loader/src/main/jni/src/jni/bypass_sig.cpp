@@ -22,7 +22,7 @@ namespace lspd {
 
     inline static constexpr const char* kLibCName = "libc.so";
 
-// 修改回傳型別以匹配 kImg 的實際型別
+    // 修改回傳型別以匹配 kImg 的實際型別
     std::unique_ptr<SandHook::ElfImg> &GetC(bool release = false) {
         static auto kImg = std::make_unique<SandHook::ElfImg>(kLibCName);
         if (release) {
@@ -77,11 +77,16 @@ namespace lspd {
             LSP_NATIVE_METHOD(SigBypass, enableOpenatHook, "(Ljava/lang/String;Ljava/lang/String;)V"),
     };
 
-    LSP_DEF_NATIVE_LIB_INIT() {
+    extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
+        JNIEnv* env = nullptr;
+        // 獲取 JNIEnv 指針
+        if (vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
+            return JNI_ERR;
+        }
         if (!jni_helper::RegisterMethods(env, "org/lsposed/lspatch/loader/SigBypass", gMethods,
                                          std::size(gMethods))) {
-            return JNI_FALSE;
+            return JNI_ERR;
         }
-        return JNI_TRUE;
+        return JNI_VERSION_1_6;
     }
 }  // namespace lspd
