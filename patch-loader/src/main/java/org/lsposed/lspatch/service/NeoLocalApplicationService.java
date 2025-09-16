@@ -19,10 +19,10 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-public class LocalApplicationService extends ILSPApplicationService.Stub {
+public class NeoLocalApplicationService extends ILSPApplicationService.Stub {
     private static final String TAG = "NPatch";
     private final List<Module> cachedModule;
-    public LocalApplicationService(Context context){
+    public NeoLocalApplicationService(Context context){
         SharedPreferences shared = context.getSharedPreferences("npatch", Context.MODE_PRIVATE);
         cachedModule = new ArrayList<>();
         try {

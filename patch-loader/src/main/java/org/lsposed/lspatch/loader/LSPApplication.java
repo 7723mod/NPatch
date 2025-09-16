@@ -19,7 +19,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.lsposed.lspatch.loader.util.FileUtils;
 import org.lsposed.lspatch.loader.util.XLog;
-import org.lsposed.lspatch.service.LocalApplicationService;
+import org.lsposed.lspatch.service.NeoLocalApplicationService;
 import org.lsposed.lspatch.service.RemoteApplicationService;
 import org.lsposed.lspatch.share.PatchConfig;
 import org.lsposed.lspd.core.Startup;
@@ -99,11 +99,11 @@ public class LSPApplication {
                 Log.e(TAG, "Success update module scope");
             }catch (Exception e){
                 Log.e(TAG, "Failed to connect to manager, fallback to fixed local service");
-                service = new LocalApplicationService(context);
+                service = new NeoLocalApplicationService(context);
             }
 
         } else {
-            service = new LocalApplicationService(context);
+            service = new NeoLocalApplicationService(context);
         }
 
         Startup.initXposed(false, ActivityThread.currentProcessName(), context.getApplicationInfo().dataDir, service);

@@ -51,10 +51,10 @@
     <string name="patch_from_storage">從儲存空間中選取 (多个) apk</string>
     <string name="patch_from_applist">選取已安裝的應用程式</string>
     <string name="patch_mode">打包模式</string>
-    <string name="patch_local">本機</string>
-    <string name="patch_local_desc">修補未嵌入模組的應用程式。\nXpose 範圍可以動態更改，無需重新修補。\n本地修補的應用程式只能在本機裝置上運作。</string>
+    <string name="patch_local">本地模式</string>
+    <string name="patch_local_desc">為未嵌入模組的應用程式打補丁。\nXposed 範圍可動態更改，無需重新打補丁。\n此模式下的應用程式只能在本地裝置上與 NPatch 管理器搭配使用。</string>
     <string name="patch_integrated">集成模式</string>
-    <string name="patch_integrated_desc">打包內建模組的應用程式。\n打包後的程式，可以在沒有管理器的情況下執行，但無法動態管理啟用的模組。\n以集成模式打包的應用程式，可以在沒有安裝 NPatch Manager 的裝置上使用。</string>
+    <string name="patch_integrated_desc">修補 App 並內建模組。\n經修補的應用可以在沒有管理器的情況下獨立執行，但不能動態管理配置。\n此模式適用於需要在未安裝 NPatch 管理器的裝置上執行的應用程式。</string>
     <string name="patch_embed_modules">內建模組</string>
     <string name="patch_debuggable">程式可偵錯</string>
     <string name="patch_sigbypass">破解簽名驗證</string>
