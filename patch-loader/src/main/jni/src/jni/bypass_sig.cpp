@@ -1,6 +1,6 @@
 //
 // Created by VIP on 2021/4/25.
-// Update by HSSkyBoy on 2025/9/11
+// Update by HSSkyBoy on 2025/9/16
 //
 
 #include "bypass_sig.h"
@@ -74,8 +74,14 @@ namespace lspd {
     }
 
     static JNINativeMethod gMethods[] = {
-            LSP_NATIVE_METHOD(SigBypass, enableOpenatHook, "(Ljava/lang/String;Ljava/lang/String;)V")};
+            LSP_NATIVE_METHOD(SigBypass, enableOpenatHook, "(Ljava/lang/String;Ljava/lang/String;)V"),
+    };
 
-    void RegisterBypass(JNIEnv *env) { REGISTER_LSP_NATIVE_METHODS(SigBypass); }
-
+    LSP_DEF_NATIVE_LIB_INIT() {
+        if (!jni_helper::RegisterMethods(env, "org/lsposed/lspatch/loader/SigBypass", gMethods,
+                                         std::size(gMethods))) {
+            return JNI_FALSE;
+        }
+        return JNI_TRUE;
+    }
 }  // namespace lspd
