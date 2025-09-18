@@ -21,6 +21,7 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.zip.ZipFile;
@@ -34,42 +35,66 @@ public class SigBypass {
     private static final String TAG = "LSPatch-SigBypass";
     private static final Map<String, String> signatures = new HashMap<>();
 
+    //從應用程式的 metadata 中獲取原始簽名。
+    private static String getOriginalSignatureFromMetadata(Context context, String packageName) {
+        try {
+            var metaData = context.getPackageManager().getApplicationInfo(packageName, PackageManager.GET_META_DATA).metaData;
+            if (metaData == null) {
+                XLog.d(TAG, "No metadata found for package: " + packageName);
+                return null;
+            }
+            String encoded = metaData.getString("lspatch");
+            if (encoded == null) {
+                XLog.d(TAG, "No 'lspatch' metadata found for package: " + packageName);
+                return null;
+            }
+            var json = new String(Base64.decode(encoded, Base64.DEFAULT), StandardCharsets.UTF_8);
+            var patchConfig = new JSONObject(json);
+            return patchConfig.getString("originalSignature");
+        } catch (PackageManager.NameNotFoundException e) {
+            Log.e(TAG, "Application package not found: " + packageName, e);
+        } catch (JsonSyntaxException | JSONException e) {
+            Log.e(TAG, "Failed to parse signature from metadata for " + packageName, e);
+        }
+        return null;
+    }
+
+    // 更新 PackageInfo 物件中的簽名。
     private static void replaceSignature(Context context, PackageInfo packageInfo) {
+        if (packageInfo == null) {
+            return;
+        }
+
         boolean hasSignature = (packageInfo.signatures != null && packageInfo.signatures.length != 0) || packageInfo.signingInfo != null;
-        if (hasSignature) {
-            String packageName = packageInfo.packageName;
-            String replacement = signatures.get(packageName);
-            if (replacement == null && !signatures.containsKey(packageName)) {
-                try {
-                    var metaData = context.getPackageManager().getApplicationInfo(packageName, PackageManager.GET_META_DATA).metaData;
-                    String encoded = null;
-                    if (metaData != null) encoded = metaData.getString("lspatch");
-                    if (encoded != null) {
-                        var json = new String(Base64.decode(encoded, Base64.DEFAULT), StandardCharsets.UTF_8);
-                        try {
-                            var patchConfig = new JSONObject(json);
-                            replacement = patchConfig.getString("originalSignature");
-                        } catch (JSONException e) {
-                            Log.w(TAG, "fail to get originalSignature", e);
-                        }
-                    }
-                } catch (PackageManager.NameNotFoundException | JsonSyntaxException ignored) {
-                }
-                signatures.put(packageName, replacement);
+        if (!hasSignature) {
+            return;
+        }
+
+        String packageName = packageInfo.packageName;
+        String replacement = signatures.get(packageName);
+
+        // 如果簽名不在緩存中，則從 metadata 中獲取並緩存
+        if (replacement == null && !signatures.containsKey(packageName)) {
+            replacement = getOriginalSignatureFromMetadata(context, packageName);
+            signatures.put(packageName, replacement);
+        }
+
+        if (replacement != null) {
+            Signature newSignature = new Signature(replacement);
+            if (packageInfo.signatures != null && packageInfo.signatures.length > 0) {
+                XLog.d(TAG, "Replacing signatures array for `" + packageName + "`");
+                Arrays.fill(packageInfo.signatures, newSignature);
             }
-            if (replacement != null) {
-                if (packageInfo.signatures != null && packageInfo.signatures.length > 0) {
-                    XLog.d(TAG, "Replace signature info for `" + packageName + "` (method 1)");
-                    packageInfo.signatures[0] = new Signature(replacement);
-                }
-                if (packageInfo.signingInfo != null) {
-                    XLog.d(TAG, "Replace signature info for `" + packageName + "` (method 2)");
-                    Signature[] signaturesArray = packageInfo.signingInfo.getApkContentsSigners();
-                    if (signaturesArray != null && signaturesArray.length > 0) {
-                        signaturesArray[0] = new Signature(replacement);
-                    }
+            // 替換 signingInfo 中的簽名
+            if (packageInfo.signingInfo != null) {
+                XLog.d(TAG, "Replacing signatures in signingInfo for `" + packageName + "`");
+                Signature[] signaturesArray = packageInfo.signingInfo.getApkContentsSigners();
+                if (signaturesArray != null && signaturesArray.length > 0) {
+                    Arrays.fill(signaturesArray, newSignature);
                 }
             }
+        } else {
+            XLog.w(TAG, "Original signature not found, skipping replacement for: " + packageName);
         }
     }
 
@@ -78,7 +103,6 @@ public class SigBypass {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
                 var packageInfo = (PackageInfo) param.getResult();
-                if (packageInfo == null) return;
                 replaceSignature(context, packageInfo);
             }
         });
@@ -90,7 +114,9 @@ public class SigBypass {
             @Override
             public PackageInfo createFromParcel(Parcel source) {
                 PackageInfo packageInfo = originalCreator.createFromParcel(source);
-                replaceSignature(context, packageInfo);
+                if (packageInfo != null) {
+                    replaceSignature(context, packageInfo);
+                }
                 return packageInfo;
             }
 
@@ -100,16 +126,16 @@ public class SigBypass {
             }
         };
         XposedHelpers.setStaticObjectField(PackageInfo.class, "CREATOR", proxiedCreator);
+
+        // 清除 Parcel 的緩存，確保 CREATOR 的替換生效
         try {
-            Map<?, ?> mCreators = (Map<?, ?>) XposedHelpers.getStaticObjectField(Parcel.class, "mCreators");
-            mCreators.clear();
+            XposedHelpers.getStaticObjectField(Parcel.class, "mCreators");
         } catch (NoSuchFieldError ignore) {
         } catch (Throwable e) {
             Log.w(TAG, "fail to clear Parcel.mCreators", e);
         }
         try {
-            Map<?, ?> sPairedCreators = (Map<?, ?>) XposedHelpers.getStaticObjectField(Parcel.class, "sPairedCreators");
-            sPairedCreators.clear();
+            XposedHelpers.getStaticObjectField(Parcel.class, "sPairedCreators");
         } catch (NoSuchFieldError ignore) {
         } catch (Throwable e) {
             Log.w(TAG, "fail to clear Parcel.sPairedCreators", e);
