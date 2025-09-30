@@ -65,7 +65,7 @@ public class NeoLocalApplicationService extends ILSPApplicationService.Stub {
 
     @Override
     public String getPrefsPath(String packageName) throws RemoteException {
-        return new File(Environment.getDataDirectory(), "data/" + packageName + "/shared_prefs/").getAbsolutePath();
+        return new File(Environment.getDataDirectory(), "data" + File.separator + packageName + File.separator + "shared_prefs").getAbsolutePath();
     }
 
     @Override

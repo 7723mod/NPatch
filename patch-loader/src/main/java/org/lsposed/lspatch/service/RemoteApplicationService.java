@@ -31,51 +31,81 @@ import java.util.concurrent.TimeoutException;
 public class RemoteApplicationService implements ILSPApplicationService {
 
     private static final String TAG = "NPatch";
-    private static final String MODULE_SERVICE = "org.lsposed.lspatch.manager.ModuleService";
+    private static final String MODULE_SERVICE_COMPONENT = "org.lsposed.lspatch.manager.ModuleService";
+    private static final long BIND_TIMEOUT_SECONDS = 1;
 
     private volatile ILSPApplicationService service;
 
+    @SuppressLint({"PrivateApi", "DiscouragedPrivateApi"})
+    private static void bindServicePreQ(Context context, Intent intent,
+                                        ServiceConnection conn, Handler handler) throws Exception {
+        final Class<? extends Context> contextImplClass = context.getClass();
+
+        final Object userHandle = contextImplClass.getMethod("getUser").invoke(context);
+
+        // bindServiceAsUser(Intent intent, ServiceConnection conn, int flags, Handler handler, UserHandle user)
+        final java.lang.reflect.Method bindServiceAsUserMethod = contextImplClass.getDeclaredMethod(
+                "bindServiceAsUser", Intent.class, ServiceConnection.class, int.class, Handler.class, UserHandle.class);
+
+        bindServiceAsUserMethod.invoke(context, intent, conn, Context.BIND_AUTO_CREATE, handler, (UserHandle) userHandle);
+    }
+
     @SuppressLint("DiscouragedPrivateApi")
     public RemoteApplicationService(Context context) throws RemoteException {
-        try {
-            var intent = new Intent()
-                    .setComponent(new ComponentName(Constants.MANAGER_PACKAGE_NAME, MODULE_SERVICE))
-                    .putExtra("packageName", context.getPackageName());
-            // TODO: Authentication
-            var latch = new CountDownLatch(1);
-            var conn = new ServiceConnection() {
-                @Override
-                public void onServiceConnected(ComponentName name, IBinder binder) {
-                    Log.i(TAG, "Manager binder received");
-                    service = ILSPApplicationService.Stub.asInterface(binder);
-                    latch.countDown();
-                }
+        final Intent intent = new Intent()
+                .setComponent(new ComponentName(Constants.MANAGER_PACKAGE_NAME, MODULE_SERVICE_COMPONENT))
+                .putExtra("packageName", context.getPackageName());
 
-                @Override
-                public void onServiceDisconnected(ComponentName name) {
-                    Log.e(TAG, "Manager service died");
-                    service = null;
-                }
-            };
-            Log.i(TAG, "Request manager binder");
+        final CountDownLatch latch = new CountDownLatch(1);
+        final ServiceConnection conn = new ServiceConnection() {
+            @Override
+            public void onServiceConnected(ComponentName name, IBinder binder) {
+                Log.i(TAG, "Manager binder received");
+                service = ILSPApplicationService.Stub.asInterface(binder);
+                latch.countDown();
+            }
+
+            @Override
+            public void onServiceDisconnected(ComponentName name) {
+                Log.e(TAG, "Manager service died");
+                service = null; // 服務斷開連接時清除引用
+            }
+        };
+
+        Log.i(TAG, "Request manager binder");
+
+        try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                // API 29+ 使用官方支持的帶 Executor 的 bindService
                 context.bindService(intent, Context.BIND_AUTO_CREATE, Executors.newSingleThreadExecutor(), conn);
             } else {
-                var handlerThread = new HandlerThread("RemoteApplicationService");
+                // API<29 使用反射調用 bindServiceAsUser
+                final HandlerThread handlerThread = new HandlerThread("RemoteApplicationServiceBinder");
                 handlerThread.start();
-                var handler = new Handler(handlerThread.getLooper());
-                var contextImplClass = context.getClass();
-                var getUserMethod = contextImplClass.getMethod("getUser");
-                var bindServiceAsUserMethod = contextImplClass.getDeclaredMethod(
-                        "bindServiceAsUser", Intent.class, ServiceConnection.class, int.class, Handler.class, UserHandle.class);
-                var userHandle = (UserHandle) getUserMethod.invoke(context);
-                bindServiceAsUserMethod.invoke(context, intent, conn, Context.BIND_AUTO_CREATE, handler, userHandle);
+                final Handler handler = new Handler(handlerThread.getLooper());
+
+                bindServicePreQ(context, intent, conn, handler);
             }
-            boolean success = latch.await(1, TimeUnit.SECONDS);
-            if (!success) throw new TimeoutException("Bind service timeout");
-        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException |
-                 InterruptedException | TimeoutException e) {
-            var r = new RemoteException("Failed to get manager binder");
+
+            boolean success = latch.await(BIND_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+
+            if (!success) {
+                throw new RemoteException("Bind service timeout after " + BIND_TIMEOUT_SECONDS + " seconds");
+            }
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RemoteException("Service binding interrupted: " + e.getMessage());
+        } catch (TimeoutException e) {
+            // 绑定超时
+            throw new RemoteException(e.getMessage());
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            // API<29 可能反射失敗
+            final RemoteException r = new RemoteException("Failed to get manager binder via reflection");
+            r.initCause(e);
+            throw r;
+        } catch (Exception e) {
+            final RemoteException r = new RemoteException("Failed to bind manager service");
             r.initCause(e);
             throw r;
         }
@@ -83,22 +113,34 @@ public class RemoteApplicationService implements ILSPApplicationService {
 
     @Override
     public boolean isLogMuted() throws RemoteException {
-        return false;
+        if (service == null) {
+            Log.w(TAG, "isLogMuted called but service is null. Returning default false.");
+            return false;
+        }
+        return service.isLogMuted();
     }
 
     @Override
     public List<Module> getLegacyModulesList() throws RemoteException {
-        return service == null ? new ArrayList<>() : service.getLegacyModulesList();
+        if (service == null) {
+            Log.w(TAG, "getLegacyModulesList called but service is null. Returning empty list.");
+            return new ArrayList<>();
+        }
+        return service.getLegacyModulesList();
     }
 
     @Override
     public List<Module> getModulesList() throws RemoteException {
-        return service == null ? new ArrayList<>() : service.getModulesList();
+        if (service == null) {
+            Log.w(TAG, "getModulesList called but service is null. Returning empty list.");
+            return new ArrayList<>();
+        }
+        return service.getModulesList();
     }
 
     @Override
     public String getPrefsPath(String packageName) {
-        return new File(Environment.getDataDirectory(), "data/" + packageName + "/shared_prefs/").getAbsolutePath();
+        return new File(Environment.getDataDirectory(), "data" + File.separator + packageName + File.separator + "shared_prefs").getAbsolutePath();
     }
 
     @Override
@@ -107,7 +149,12 @@ public class RemoteApplicationService implements ILSPApplicationService {
     }
 
     @Override
-    public ParcelFileDescriptor requestInjectedManagerBinder(List<IBinder> binder) {
-        return null;
+    public ParcelFileDescriptor requestInjectedManagerBinder(List<IBinder> binder) throws RemoteException {
+        // 如果 service 為 null，則直接返回，避免丟出 NullPointerException
+        if (service == null) {
+            Log.w(TAG, "requestInjectedManagerBinder called but service is null. Returning null.");
+            return null;
+        }
+        return service.requestInjectedManagerBinder(binder);
     }
 }
