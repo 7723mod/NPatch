@@ -30,15 +30,20 @@ android {
     namespace = "org.lsposed.lspatch.loader"
 }
 
-val assembleReleaseTaskProvider = tasks.named("assembleRelease")
+val assembleReleaseTaskProvider = tasks.named("assembleReleaseAar")
 
 androidComponents.onVariants { variant ->
     val variantCapped = variant.name.replaceFirstChar { it.uppercase(Locale.ROOT) }
     val projectDir = rootProject.layout.projectDirectory
-    val assembleVariantTask = tasks.named("assemble$variantCapped")
+
+    val assembleVariantTask = when (variant.name) {
+        "release" -> tasks.named("assembleReleaseAar")
+        else -> tasks.named("assemble$variantCapped")
+    }
 
     val copyDexTask = tasks.register<Copy>("copyDex$variantCapped") {
         dependsOn(assembleVariantTask)
+
         from(
             layout.buildDirectory.file("intermediates/dex/${variant.name}/mergeDex$variantCapped/classes.dex")
         )
@@ -52,9 +57,10 @@ androidComponents.onVariants { variant ->
         dependsOn("strip${variantCapped}DebugSymbols")
 
         val strippedLibsDir = layout.buildDirectory.dir("intermediates/stripped_native_libs/${variant.name}/strip${variantCapped}DebugSymbols/out/lib")
+
         from(
             fileTree(
-                strippedLibsDir.asFile
+                strippedLibsDir.get().asFile
             ) {
                 include(listOf("**/liblspatch.so"))
             }
@@ -67,7 +73,7 @@ androidComponents.onVariants { variant ->
         dependsOn(copyDexTask)
 
         doLast {
-            println("Dex and so files has been copied to ${projectDir.asFile.resolve("out")}")
+            println("Dex and so files has been been copied to ${projectDir.asFile.resolve("out")}")
         }
     }
 }
