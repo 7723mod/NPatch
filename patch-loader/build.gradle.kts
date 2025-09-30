@@ -1,3 +1,4 @@
+import java.io.File
 import java.util.Locale
 import org.gradle.api.tasks.Copy
 
@@ -29,17 +30,15 @@ android {
     namespace = "org.lsposed.lspatch.loader"
 }
 
-// Use tasks.named() to get a provider for the assemble task
-val assembleTaskProvider = androidComponents.selector().all().withBuildType("release").map {
-    tasks.named("assembleRelease")
-}
+val assembleReleaseTaskProvider = tasks.named("assembleRelease")
 
 androidComponents.onVariants { variant ->
-    val variantCapped = variant.name.replaceFirstChar { it.uppercase() }
+    val variantCapped = variant.name.replaceFirstChar { it.uppercase(Locale.ROOT) }
     val projectDir = rootProject.layout.projectDirectory
+    val assembleVariantTask = tasks.named("assemble$variantCapped")
 
     val copyDexTask = tasks.register<Copy>("copyDex$variantCapped") {
-        dependsOn(variant.assembleTask)
+        dependsOn(assembleVariantTask)
         from(
             layout.buildDirectory.file("intermediates/dex/${variant.name}/mergeDex$variantCapped/classes.dex")
         )
@@ -49,15 +48,16 @@ androidComponents.onVariants { variant ->
     }
 
     val copySoTask = tasks.register<Copy>("copySo$variantCapped") {
-        dependsOn(variant.assembleTask)
+        dependsOn(assembleVariantTask)
         dependsOn("strip${variantCapped}DebugSymbols")
 
         val strippedLibsDir = layout.buildDirectory.dir("intermediates/stripped_native_libs/${variant.name}/strip${variantCapped}DebugSymbols/out/lib")
         from(
             fileTree(
-                "dir" to strippedLibsDir,
-                "include" to listOf("**/liblspatch.so")
-            )
+                strippedLibsDir.asFile
+            ) {
+                include(listOf("**/liblspatch.so"))
+            }
         )
         into(projectDir.dir("out/assets/${variant.name}/lspatch/so"))
     }
@@ -67,7 +67,7 @@ androidComponents.onVariants { variant ->
         dependsOn(copyDexTask)
 
         doLast {
-            println("Dex and so files has been copied to ${projectDir.asFile}${File.separator}out")
+            println("Dex and so files has been copied to ${projectDir.asFile.resolve("out")}")
         }
     }
 }
