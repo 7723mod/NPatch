@@ -111,25 +111,27 @@ jobs:
           -Dorg.gradle.jvmargs=-Xmx3g \
           -Dandroid.native.buildOutput=verbose
 
+    - name: Upload Debug artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: npatch-debug
+        path: out/debug/*
+
     - name: Upload Release artifact
       uses: actions/upload-artifact@v4
       with:
         name: npatch-release
         path: |
           out/release/*
-          patch-loader/build/outputs/aar/* - name: Upload mappings
+          patch-loader/build/outputs/aar/*
+
+    - name: Upload mappings
       uses: actions/upload-artifact@v4
       with:
         name: mappings
         path: |
           patch-loader/build/outputs/mapping
           manager/build/outputs/mapping
-          
-    - name: Upload Debug artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: npatch-debug
-        path: out/debug/*
 
     - name: Upload symbols
       uses: actions/upload-artifact@v4

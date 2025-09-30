@@ -30,16 +30,13 @@ android {
     namespace = "org.lsposed.lspatch.loader"
 }
 
-val assembleReleaseTaskProvider = tasks.named("assembleReleaseAar")
+val assembleReleaseTaskProvider = tasks.named("assembleRelease")
 
 androidComponents.onVariants { variant ->
     val variantCapped = variant.name.replaceFirstChar { it.uppercase(Locale.ROOT) }
     val projectDir = rootProject.layout.projectDirectory
 
-    val assembleVariantTask = when (variant.name) {
-        "release" -> tasks.named("assembleReleaseAar")
-        else -> tasks.named("assemble$variantCapped")
-    }
+    val assembleVariantTask = tasks.named("assemble$variantCapped")
 
     val copyDexTask = tasks.register<Copy>("copyDex$variantCapped") {
         dependsOn(assembleVariantTask)
