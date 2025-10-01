@@ -38,11 +38,15 @@ jobs:
       with:
         java-version: '21'
         distribution: 'adopt'
+        cache: 'gradle'
 
     - name: Setup Ninja
       uses: seanmiddleditch/gha-setup-ninja@master
       with:
         version: 1.12.0
+        
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
 
     - name: Write Signing Key if needed
       if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
@@ -72,10 +76,10 @@ jobs:
       run: |
         echo "--- Building API dependency ---"
         cd libxposed/api
-        ./gradlew :api:publishApiPublicationToMavenLocal --no-daemon
+        JAVA_HOME=${{ steps.setup-java.outputs.path }} ./gradlew :api:publishApiPublicationToMavenLocal --no-daemon
         echo "--- Building Service Interface dependency ---"
         cd ../service
-        ./gradlew :interface:publishInterfacePublicationToMavenLocal --no-daemon
+        JAVA_HOME=${{ steps.setup-java.outputs.path }} ./gradlew :interface:publishInterfacePublicationToMavenLocal --no-daemon
 
     - name: Set short commit id
       run: echo "commit=$(echo ${{ github.sha }} | cut -c-7)" >> $GITHUB_ENV
