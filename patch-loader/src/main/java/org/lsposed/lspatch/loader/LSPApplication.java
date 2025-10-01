@@ -27,27 +27,20 @@ import org.lsposed.lspd.models.Module;
 import org.lsposed.lspd.service.ILSPApplicationService;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.zip.ZipFile;
 
-import dalvik.system.DexFile;
-import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
-import hidden.HiddenApiBridge;
 
 /**
  * Created by Windysha
@@ -86,15 +79,15 @@ public class LSPApplication {
         if (config.useManager) {
             try {
                 service = new RemoteApplicationService(context);
-                List<Module> m = service.getLegacyModulesList();
-                JSONArray moduleArr = new JSONArray();
+                var m = service.getLegacyModulesList();
+                var moduleArr = new JSONArray();
                 for (Module module : m) {
-                    JSONObject moduleObj = new JSONObject();
+                    var moduleObj = new JSONObject();
                     moduleObj.put("path",module.apkPath);
                     moduleObj.put("packageName",module.packageName);
                     moduleArr.put(moduleObj);
                 }
-                SharedPreferences shared = context.getSharedPreferences("npatch", Context.MODE_PRIVATE);
+                var shared = context.getSharedPreferences("npatch", Context.MODE_PRIVATE);
                 shared.edit().putString("modules",moduleArr.toString()).commit();
                 Log.e(TAG, "Success update module scope");
             }catch (Exception e){
@@ -132,7 +125,7 @@ public class LSPApplication {
             var baseClassLoader = stubLoadedApk.getClassLoader();
 
             try (var is = baseClassLoader.getResourceAsStream(CONFIG_ASSET_PATH)) {
-                BufferedReader streamReader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
+                var streamReader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
                 config = new Gson().fromJson(streamReader, PatchConfig.class);
             } catch (IOException e) {
                 Log.e(TAG, "Failed to load config file");
@@ -141,9 +134,9 @@ public class LSPApplication {
             Log.i(TAG, "Use manager: " + config.useManager);
             Log.i(TAG, "Signature bypass level: " + config.sigBypassLevel);
 
-            Path originPath = Paths.get(appInfo.dataDir, "cache/lspatch/origin/");
+            var originPath = Paths.get(appInfo.dataDir, "cache/lspatch/origin/");
             Path cacheApkPath;
-            try (ZipFile sourceFile = new ZipFile(appInfo.sourceDir)) {
+            try (var sourceFile = new ZipFile(appInfo.sourceDir)) {
                 cacheApkPath = originPath.resolve(sourceFile.getEntry(ORIGINAL_APK_ASSET_PATH).getCrc() + ".apk");
             }
 
@@ -155,7 +148,7 @@ public class LSPApplication {
                 Log.i(TAG, "Extract original apk");
                 FileUtils.deleteFolderIfExists(originPath);
                 Files.createDirectories(originPath);
-                try (InputStream is = baseClassLoader.getResourceAsStream(ORIGINAL_APK_ASSET_PATH)) {
+                try (var is = baseClassLoader.getResourceAsStream(ORIGINAL_APK_ASSET_PATH)) {
                     Files.copy(is, cacheApkPath);
                 }
             }
@@ -169,6 +162,7 @@ public class LSPApplication {
             XposedHelpers.setObjectField(mBoundApplication, "info", appLoadedApk);
 
             var activityClientRecordClass = XposedHelpers.findClass("android.app.ActivityThread$ActivityClientRecord", ActivityThread.class.getClassLoader());
+            // Simplification: Using lambda with explicit casts for cleaner code (BiConsumer<Object, Object>)
             var fixActivityClientRecord = (BiConsumer<Object, Object>) (k, v) -> {
                 if (activityClientRecordClass.isInstance(v)) {
                     var pkgInfo = XposedHelpers.getObjectField(v, "packageInfo");
