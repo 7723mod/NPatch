@@ -1,4 +1,4 @@
-name: Build CI
+name: CI Build
 
 on:
   workflow_dispatch:
@@ -7,9 +7,9 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: ubuntu-24.04
     env:
-      CCACHE_COMPILERCHECK: '%compiler% -dumpmachine; %compiler% -dumpversion'
+      CCACHE_COMPILERCHECK: '$(which ${compiler}) -dumpmachine; $(which ${compiler}) -dumpversion'
       CCACHE_NOHASHDIR: 'true'
       CCACHE_HARDLINK: 'true'
       CCACHE_BASEDIR: ${{ github.workspace }}
@@ -43,9 +43,6 @@ jobs:
       uses: seanmiddleditch/gha-setup-ninja@master
       with:
         version: 1.12.0
-
-    - name: Remove Android's cmake
-      run: rm -rf $ANDROID_HOME/cmake
 
     - name: Write Signing Key if needed
       if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
