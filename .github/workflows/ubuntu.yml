@@ -7,49 +7,23 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    name: Build
+    runs-on: ubuntu-latest
     env:
-      CCACHE_COMPILERCHECK: '$(which ${compiler}) -dumpmachine; $(which ${compiler}) -dumpversion'
+      CCACHE_COMPILERCHECK: '%compiler% -dumpmachine; %compiler% -dumpversion'
       CCACHE_NOHASHDIR: 'true'
       CCACHE_HARDLINK: 'true'
-      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_BASEDIR: '${{ github.workspace }}'
 
     steps:
     - name: Checkout
       uses: actions/checkout@v4
       with:
-        submodules: recursive
+        submodules: 'recursive'
         fetch-depth: 0
 
-    - name: Cache Dependencies (Gradle, Maven, ccache)
-      uses: actions/cache/restore@v4
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-          ~/.m2/repository
-          ~/.ccache
-        key: ${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-${{ hashFiles('**/build.gradle*') }}-${{ hashFiles('**/src/**/*.cpp', '**/src/**/*.h', '**/CMakeLists.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-
-
-    - name: Setup Java and Gradle
-      uses: gradle/actions/setup-gradle@v4
-      with:
-        java-version: '21'
-        distribution: 'adopt'
-        cache: 'gradle'
-
-    - name: Setup Ninja
-      uses: seanmiddleditch/gha-setup-ninja@master
-      with:
-        version: 1.12.0
-        
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-
-    - name: Write Signing Key if needed
-      if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    - name: Write key
+      if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
       run: |
         if [ ! -z "${{ secrets.KEY_STORE }}" ]; then
           echo androidStorePassword='${{ secrets.KEY_STORE_PASSWORD }}' >> gradle.properties
@@ -72,53 +46,65 @@ jobs:
         repository: libxposed/service
         path: libxposed/service
 
-    - name: Build Local Dependencies
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Setup ninja
+      uses: seanmiddleditch/gha-setup-ninja@master
+      with:
+        version: 1.12.0
+
+    - name: Remove Android's cmake
+      shell: bash
+      run: rm -rf $ANDROID_HOME/cmake
+
+    - name: Build dependencies with Gradle
+      working-directory: libxposed
       run: |
-        echo "--- Building API dependency ---"
-        cd libxposed/api
-        JAVA_HOME=${{ steps.setup-java.outputs.path }} ./gradlew :api:publishApiPublicationToMavenLocal --no-daemon
-        echo "--- Building Service Interface dependency ---"
+        cd api
+        echo 'org.gradle.jvmargs=-Xmx2048m' >> gradle.properties
+        ./gradlew :api:publishApiPublicationToMavenLocal
         cd ../service
-        JAVA_HOME=${{ steps.setup-java.outputs.path }} ./gradlew :interface:publishInterfacePublicationToMavenLocal --no-daemon
+        echo 'org.gradle.jvmargs=-Xmx2048m' >> gradle.properties
+        ./gradlew :interface:publishInterfacePublicationToMavenLocal
 
     - name: Set short commit id
-      run: echo "commit=$(echo ${{ github.sha }} | cut -c-7)" >> $GITHUB_ENV
+      run: echo "commit=$(echo ${{ github.sha }} | cut -c-7)" > $GITHUB_ENV
 
     - name: Build with Gradle
       run: |
-        echo 'org.gradle.parallel=true' >> gradle.properties
-        echo 'org.gradle.jvmargs=-Xmx3g' >> gradle.properties
-        echo 'android.native.buildOutput=verbose' >> gradle.properties
+        {
+          echo 'org.gradle.parallel=true'
+          echo 'org.gradle.jvmargs=-Xmx2048m'
+          echo 'android.native.buildOutput=verbose'
+        } >> gradle.properties
         ./gradlew buildAll
-
-    - name: Save Cache
-      uses: actions/cache/save@v4
-      if: always()
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-          ~/.m2/repository
-          ~/.ccache
-        key: ${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-${{ hashFiles('**/build.gradle*') }}-${{ hashFiles('**/src/**/*.cpp', '**/src/**/*.h', '**/CMakeLists.txt') }}
-
 
     - name: Upload Debug artifact
       uses: actions/upload-artifact@v4
       with:
-        name: npatch-debug
+        name: npatch-debug-${{ env.commit }}
         path: out/debug/*
 
     - name: Upload Release artifact
       uses: actions/upload-artifact@v4
       with:
-        name: npatch-release
+        name: npatch-release-${{ env.commit }}
         path: out/release/*
 
     - name: Upload mappings
       uses: actions/upload-artifact@v4
       with:
-        name: mappings
+        name: mappings-${{ env.commit }}
         path: |
           patch-loader/build/outputs/mapping
           manager/build/outputs/mapping
@@ -126,6 +112,6 @@ jobs:
     - name: Upload symbols
       uses: actions/upload-artifact@v4
       with:
-        name: symbols
+        name: symbols-${{ env.commit }}
         path: |
           patch-loader/build/symbols
