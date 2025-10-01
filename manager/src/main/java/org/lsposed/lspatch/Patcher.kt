@@ -35,6 +35,7 @@ object Patcher {
                     add("-m"); add(it)
                 }
                 if(injectDex) add("--injectdex")
+                if (config.injectProvider) add("--provider")
                 if (!MyKeyStore.useDefault) {
                     addAll(arrayOf("-k", MyKeyStore.file.path, Configs.keyStorePassword, Configs.keyStoreAlias, Configs.keyStoreAliasPassword))
                 }

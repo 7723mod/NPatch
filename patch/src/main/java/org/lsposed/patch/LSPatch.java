@@ -42,6 +42,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -80,7 +81,8 @@ public class LSPatch {
 
     @Parameter(names = {"--injectdex"}, description = "Inject directly the loder dex file into the original application package")
     private boolean injectDex = false;
-
+    @Parameter(names = {"--provider"}, description = "Inject Provider to manager data files")
+    private boolean isInjectProvider = false;
     @Parameter(names = {"-k", "--keystore"}, arity = 4, description = "Set custom signature keystore. Followed by 4 arguments: keystore path, keystore password, keystore alias, keystore alias password")
     private List<String> keystoreArgs = Arrays.asList(null, "123456", "key0", "123456");
 
@@ -250,7 +252,7 @@ public class LSPatch {
 
             logger.i("Patching apk...");
             // modify manifest
-            final var config = new PatchConfig(useManager, debuggableFlag, overrideVersionCode, sigbypassLevel, originalSignature, appComponentFactory);
+            final var config = new PatchConfig(useManager, debuggableFlag, overrideVersionCode, sigbypassLevel, originalSignature, appComponentFactory, isInjectProvider);
             final var configBytes = new Gson().toJson(config).getBytes(StandardCharsets.UTF_8);
             final var metadata = Base64.getEncoder().encodeToString(configBytes);
             try (var is = new ByteArrayInputStream(modifyManifestFile(manifestEntry.open(), metadata, minSdkVersion))) {
@@ -280,6 +282,14 @@ public class LSPatch {
                 }
             } catch (Throwable e) {
                 throw new PatchError("Error when adding dex", e);
+            }
+
+            if (isInjectProvider){
+                try (var is = getClass().getClassLoader().getResourceAsStream("assets/provider.dex")) {
+                    dstZFile.add("assets/lspatch/provider.dex", is);
+                } catch (Throwable e) {
+                    throw new PatchError("Error when adding dex", e);
+                }
             }
 
             if (!useManager) {
@@ -357,6 +367,17 @@ public class LSPatch {
         // TODO: replace query_all with queries -> manager
         if (useManager)
             property.addUsesPermission("android.permission.QUERY_ALL_PACKAGES");
+        if (isInjectProvider){
+            HashMap<String,String> providerMap = new HashMap<>();
+            providerMap.put("name","bin.mt.file.content.MTDataFilesProvider");
+            providerMap.put("permission","android.permission.MANAGE_DOCUMENTS");
+            providerMap.put("exported","true");
+            providerMap.put("authorities",packageName + ".MTDataFilesProvider");
+            providerMap.put("grantUriPermissions","true");
+
+            property.addProvider(providerMap,"android.content.action.DOCUMENTS_PROVIDER");
+
+        }
 
         var os = new ByteArrayOutputStream();
         (new ManifestEditor(is, os, property)).processManifest();

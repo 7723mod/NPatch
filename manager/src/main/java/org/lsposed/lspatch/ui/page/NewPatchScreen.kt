@@ -344,6 +344,13 @@ private fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
             title = stringResource(R.string.patch_debuggable)
         )
         SettingsCheckBox(
+            modifier = Modifier.clickable { viewModel.injectProvider = !viewModel.injectProvider },
+            checked = viewModel.injectProvider,
+            icon = Icons.Outlined.AddCard,
+            title = stringResource(R.string.patch_inject_mt_provider),
+            desc = stringResource(R.string.patch_inject_mt_provider_desc)
+        )
+        SettingsCheckBox(
             modifier = Modifier.clickable { viewModel.overrideVersionCode = !viewModel.overrideVersionCode },
             checked = viewModel.overrideVersionCode,
             icon = Icons.Outlined.Layers,

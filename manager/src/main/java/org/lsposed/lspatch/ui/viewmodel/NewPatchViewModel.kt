@@ -40,6 +40,7 @@ class NewPatchViewModel : ViewModel() {
 
     var useManager by mutableStateOf(true)
     var debuggable by mutableStateOf(false)
+    var injectProvider by mutableStateOf(false)
     var overrideVersionCode by mutableStateOf(false)
     var sigBypassLevel by mutableStateOf(2)
     var injectDex by mutableStateOf(false)
@@ -96,7 +97,7 @@ class NewPatchViewModel : ViewModel() {
         if (useManager) embeddedModules = emptyList()
         patchOptions = Patcher.Options(
             injectDex = injectDex,
-            config = PatchConfig(useManager, debuggable, overrideVersionCode, sigBypassLevel, null, null),
+            config = PatchConfig(useManager, debuggable, overrideVersionCode, sigBypassLevel, null, null,injectProvider),
             apkPaths = listOf(patchApp.app.sourceDir) + (patchApp.app.splitSourceDirs ?: emptyArray()),
             embeddedModules = embeddedModules.flatMap { listOf(it.app.sourceDir) + (it.app.splitSourceDirs ?: emptyArray()) }
         )
