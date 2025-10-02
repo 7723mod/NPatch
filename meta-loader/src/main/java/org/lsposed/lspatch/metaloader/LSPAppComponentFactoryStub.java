@@ -91,7 +91,7 @@ public class LSPAppComponentFactoryStub extends AppComponentFactory {
                     transfer(is, os);
                     dex = os.toByteArray();
                 }
-                soPath = manager.sourceDir + "!/assets/npatch/so/" + libName + "/liblspatch.so";
+                soPath = manager.sourceDir + "!/assets/lspatch/so/" + libName + "/liblspatch.so";
             } else {
                 Log.i(TAG, "Bootstrap loader from embedment");
                 try (var is = cl.getResourceAsStream(Constants.LOADER_DEX_ASSET_PATH);

@@ -33,10 +33,10 @@ fun checkIsApkFixedByLSP(context: Context, packageName: String): Boolean {
             context.packageManager.getApplicationInfo(packageName, PackageManager.GET_META_DATA)
         (app.metaData?.containsKey("lspatch") != true)
     } catch (_: PackageManager.NameNotFoundException) {
-        Log.e("LSPatch", "Package not found: $packageName")
+        Log.e("NPatch", "Package not found: $packageName")
         false
     } catch (e: Exception) {
-        Log.e("LSPatch", "Unexpected error in checkIsApkFixedByLSP", e)
+        Log.e("NPatch", "Unexpected error in checkIsApkFixedByLSP", e)
         false
     }
 }

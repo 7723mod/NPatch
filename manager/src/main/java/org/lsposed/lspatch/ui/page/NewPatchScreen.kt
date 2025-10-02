@@ -359,6 +359,14 @@ private fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
             desc = stringResource(R.string.patch_inject_dex_desc)
         )
 
+        SettingsCheckBox(
+            modifier = Modifier.clickable { viewModel.outputLog = !viewModel.outputLog },
+            checked = viewModel.outputLog,
+            icon = Icons.Outlined.AddCard,
+            title = stringResource(R.string.patch_output_log_to_media),
+            desc = stringResource(R.string.patch_output_log_to_media_desc)
+        )
+
         var bypassExpanded by remember { mutableStateOf(false) }
         AnywhereDropdown(
             expanded = bypassExpanded,

@@ -112,6 +112,9 @@ public class LSPApplication {
         // WARN: Since it uses `XResource`, the following class should not be initialized
         // before forkPostCommon is invoke. Otherwise, you will get failure of XResources
 
+        if (config.outputLog){
+            XposedBridge.setLogPrinter(new XposedLogPrinter(0,"NPatch"));
+        }
         Log.i(TAG, "Load modules");
         LSPLoader.initModules(appLoadedApk);
         Log.i(TAG, "Modules initialized");
@@ -119,7 +122,7 @@ public class LSPApplication {
         switchAllClassLoader();
         SigBypass.doSigBypass(context, config.sigBypassLevel);
 
-        Log.i(TAG, "LSPatch bootstrap completed");
+        Log.i(TAG, "NPatch bootstrap completed");
     }
 
     private static Context createLoadedApkWithContext() {
@@ -142,7 +145,7 @@ public class LSPApplication {
             Log.i(TAG, "Use manager: " + config.useManager);
             Log.i(TAG, "Signature bypass level: " + config.sigBypassLevel);
 
-            Path originPath = Paths.get(appInfo.dataDir, "cache/lspatch/origin/");
+            Path originPath = Paths.get(appInfo.dataDir, "cache/npatch/origin/");
             Path cacheApkPath;
             try (ZipFile sourceFile = new ZipFile(appInfo.sourceDir)) {
                 cacheApkPath = originPath.resolve(sourceFile.getEntry(ORIGINAL_APK_ASSET_PATH).getCrc() + ".apk");

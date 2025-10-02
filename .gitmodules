@@ -4,5 +4,5 @@
 	branch = android10-release
 [submodule "core"]
 	path = core
-	url = https://github.com/JingMatrix/LSPosed.git
+	url = https://github.com/HSSkyBoy/LSPosed.git
 	branch = master
