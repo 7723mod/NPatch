@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">कुछ फ़ंक्शन अनुपलब्ध</string>
     <string name="home_api_version">एपीआई संस्करण</string>
-    <string name="home_lspatch_version">एलएसपैच संस्करण</string>
+    <string name="home_npatch_version">एलएसपैच संस्करण</string>
     <string name="home_framework_version">फ्रेमवर्क संस्करण</string>
     <string name="home_system_version">सिस्टम संस्करण</string>
     <string name="home_device">उपकरण</string>

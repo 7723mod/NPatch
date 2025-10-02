@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">සමහර කාර්යයන් නොමැත</string>
     <string name="home_api_version">API අනුවාදය</string>
-    <string name="home_lspatch_version">NPatch අනුවාදය</string>
+    <string name="home_npatch_version">NPatch අනුවාදය</string>
     <string name="home_framework_version">රාමු අනුවාදය</string>
     <string name="home_system_version">පද්ධති අනුවාදය</string>
     <string name="home_device">උපාංගය</string>

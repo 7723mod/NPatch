@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">Bazı işlevler kullanılamıyor</string>
     <string name="home_api_version">API Sürümü</string>
-    <string name="home_lspatch_version">NPatch Sürümü</string>
+    <string name="home_npatch_version">NPatch Sürümü</string>
     <string name="home_framework_version">Çerçeve Sürümü</string>
     <string name="home_system_version">Sistem Sürümü</string>
     <string name="home_device">Cihaz</string>

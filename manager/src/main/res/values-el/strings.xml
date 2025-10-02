@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">Ορισμένες λειτουργίες δεν είναι διαθέσιμες</string>
     <string name="home_api_version">Έκδοση API</string>
-    <string name="home_lspatch_version">Έκδοση NPatch</string>
+    <string name="home_npatch_version">Έκδοση NPatch</string>
     <string name="home_framework_version">Έκδοση πλαισίου</string>
     <string name="home_system_version">Έκδοση συστήματος</string>
     <string name="home_device">Συσκευή</string>

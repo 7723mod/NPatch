@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">一部の機能が使用できません</string>
     <string name="home_api_version">APIのバージョン</string>
-    <string name="home_lspatch_version">NPatchのバージョン</string>
+    <string name="home_npatch_version">NPatchのバージョン</string>
     <string name="home_framework_version">フレームワークのバージョン</string>
     <string name="home_system_version">システムのバージョン</string>
     <string name="home_device">デバイス</string>

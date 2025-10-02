@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">কিছু ফাংশন অনুপলব্ধ</string>
     <string name="home_api_version">API সংস্করণ</string>
-    <string name="home_lspatch_version">এলএসপ্যাচ সংস্করণ</string>
+    <string name="home_npatch_version">এলএসপ্যাচ সংস্করণ</string>
     <string name="home_framework_version">ফ্রেমওয়ার্ক সংস্করণ</string>
     <string name="home_system_version">সিস্টেম সংস্করণ</string>
     <string name="home_device">যন্ত্র</string>

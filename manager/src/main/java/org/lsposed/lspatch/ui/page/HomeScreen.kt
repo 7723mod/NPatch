@@ -190,7 +190,7 @@ private fun InfoCard() {
             infoCardContent(stringResource(R.string.home_api_version) to "${LSPConfig.instance.API_CODE}")
 
             Spacer(Modifier.height(24.dp))
-            infoCardContent(stringResource(R.string.home_lspatch_version) to LSPConfig.instance.VERSION_NAME + " (${LSPConfig.instance.VERSION_CODE})")
+            infoCardContent(stringResource(R.string.home_npatch_version) to LSPConfig.instance.VERSION_NAME + " (${LSPConfig.instance.VERSION_CODE})")
 
             Spacer(Modifier.height(24.dp))
             infoCardContent(stringResource(R.string.home_framework_version) to LSPConfig.instance.CORE_VERSION_NAME + " (${LSPConfig.instance.CORE_VERSION_CODE})")

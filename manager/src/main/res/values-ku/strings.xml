@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">Hin fonksiyon ne berdest in</string>
     <string name="home_api_version">Guhertoya API</string>
-    <string name="home_lspatch_version">Guhertoya NPatch</string>
+    <string name="home_npatch_version">Guhertoya NPatch</string>
     <string name="home_framework_version">Guhertoya Çarçoveyê</string>
     <string name="home_system_version">Versiyon ji System</string>
     <string name="home_device">Sazî</string>

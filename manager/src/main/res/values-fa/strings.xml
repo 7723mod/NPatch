@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">برخی از عملکردها در دسترس نیستند</string>
     <string name="home_api_version">نسخه API</string>
-    <string name="home_lspatch_version">نسخه NPatch</string>
+    <string name="home_npatch_version">نسخه NPatch</string>
     <string name="home_framework_version">نسخه فریمورک</string>
     <string name="home_system_version">نسخه اندروید</string>
     <string name="home_device">مدل دستگاه</string>

@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">Noen funksjoner er utilgjengelige</string>
     <string name="home_api_version">API-versjon</string>
-    <string name="home_lspatch_version">NPatch-versjon</string>
+    <string name="home_npatch_version">NPatch-versjon</string>
     <string name="home_framework_version">Rammeversjon</string>
     <string name="home_system_version">Systemversjon</string>
     <string name="home_device">Enhet</string>

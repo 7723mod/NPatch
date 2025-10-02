@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">חלק מהפונקציות אינן זמינות</string>
     <string name="home_api_version">גרסת API</string>
-    <string name="home_lspatch_version">גרסת NPatch</string>
+    <string name="home_npatch_version">גרסת NPatch</string>
     <string name="home_framework_version">גרסת מסגרת</string>
     <string name="home_system_version">גרסת מערכת</string>
     <string name="home_device">התקן</string>

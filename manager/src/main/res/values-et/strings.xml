@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">Mõned funktsioonid pole saadaval</string>
     <string name="home_api_version">API versioon</string>
-    <string name="home_lspatch_version">NPatchi versioon</string>
+    <string name="home_npatch_version">NPatchi versioon</string>
     <string name="home_framework_version">Raamversioon</string>
     <string name="home_system_version">Süsteemi versioon</string>
     <string name="home_device">Seade</string>

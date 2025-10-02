@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">Néhány funkció nem elérhető</string>
     <string name="home_api_version">API verzió</string>
-    <string name="home_lspatch_version">NPatch verzió</string>
+    <string name="home_npatch_version">NPatch verzió</string>
     <string name="home_framework_version">Keretrendszer verziója</string>
     <string name="home_system_version">Rendszer verzió</string>
     <string name="home_device">Eszköz</string>

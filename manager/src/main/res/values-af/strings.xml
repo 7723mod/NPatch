@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">Sommige funksies nie beskikbaar nie</string>
     <string name="home_api_version">API weergawe</string>
-    <string name="home_lspatch_version">NPatch weergawe</string>
+    <string name="home_npatch_version">NPatch weergawe</string>
     <string name="home_framework_version">Raamwerk weergawe</string>
     <string name="home_system_version">Stelsel weergawe</string>
     <string name="home_device">Toestel</string>

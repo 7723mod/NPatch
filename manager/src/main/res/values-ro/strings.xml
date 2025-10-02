@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">Unele funcții nu sunt disponibile</string>
     <string name="home_api_version">Versiunea API</string>
-    <string name="home_lspatch_version">Versiunea NPatch</string>
+    <string name="home_npatch_version">Versiunea NPatch</string>
     <string name="home_framework_version">Versiunea cadru</string>
     <string name="home_system_version">Versiunea de sistem</string>
     <string name="home_device">Dispozitiv</string>

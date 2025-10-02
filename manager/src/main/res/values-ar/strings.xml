@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">بعض الوظائف غير متاحة</string>
     <string name="home_api_version">إصدار API</string>
-    <string name="home_lspatch_version">إصدار NPatch</string>
+    <string name="home_npatch_version">إصدار NPatch</string>
     <string name="home_framework_version">إصدار Framework</string>
     <string name="home_system_version">إصدار النظام</string>
     <string name="home_device">الجهاز</string>

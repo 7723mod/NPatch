@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">Kai kurios funkcijos nepasiekiamos</string>
     <string name="home_api_version">API versija</string>
-    <string name="home_lspatch_version">NPatch versija</string>
+    <string name="home_npatch_version">NPatch versija</string>
     <string name="home_framework_version">Framework versija</string>
     <string name="home_system_version">Sistemos versija</string>
     <string name="home_device">Įrenginys</string>

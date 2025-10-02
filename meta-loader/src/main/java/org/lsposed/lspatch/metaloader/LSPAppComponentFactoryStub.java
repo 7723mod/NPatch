@@ -29,7 +29,7 @@ import java.util.zip.ZipFile;
 @SuppressLint("UnsafeDynamicallyLoadedCode")
 public class LSPAppComponentFactoryStub extends AppComponentFactory {
 
-    private static final String TAG = "LSPatch-MetaLoader";
+    private static final String TAG = "NPatch-MetaLoader";
     private static final Map<String, String> archToLib = new HashMap<String, String>(4);
 
     public static byte[] dex;
@@ -91,7 +91,7 @@ public class LSPAppComponentFactoryStub extends AppComponentFactory {
                     transfer(is, os);
                     dex = os.toByteArray();
                 }
-                soPath = manager.sourceDir + "!/assets/lspatch/so/" + libName + "/liblspatch.so";
+                soPath = manager.sourceDir + "!/assets/npatch/so/" + libName + "/liblspatch.so";
             } else {
                 Log.i(TAG, "Bootstrap loader from embedment");
                 try (var is = cl.getResourceAsStream(Constants.LOADER_DEX_ASSET_PATH);

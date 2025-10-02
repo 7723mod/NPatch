@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">Some functions unavailable</string>
     <string name="home_api_version">API Version</string>
-    <string name="home_lspatch_version">NPatch Version</string>
+    <string name="home_npatch_version">NPatch Version</string>
     <string name="home_framework_version">Framework Version</string>
     <string name="home_system_version">System Version</string>
     <string name="home_device">Device</string>
@@ -65,6 +65,10 @@
     <string name="patch_sigbypasslv2">lv2: Bypass PM + openat (libc)</string>
     <string name="patch_override_version_code">Override version code</string>
     <string name="patch_override_version_code_desc">Override the patched app\'s version code to 1\nThis allows downgrade installation in the future, and generally this will not affect the version code actually perceived by the application</string>
+    <string name="patch_inject_dex">Inject loader dex</string>
+    <string name="patch_inject_dex_desc">For applications with isolated services, such as the render engines of browsers, please turn on this option to ensure that they work properly.</string>
+    <string name="patch_output_log_to_media">Output Log to Media Directory</string>
+    <string name="patch_output_log_to_media_desc">Output the Xposed log to the target application Media directory.</string>
     <string name="patch_start">Start Patch</string>
     <string name="patch_return">Return</string>
     <string name="patch_uninstall_text">Due to different signatures, you need to uninstall the original app before installing the patched one.\nMake sure you have backed up personal data.</string>
@@ -92,6 +96,4 @@
     <string name="settings_keystore_wrong_alias_password">Wrong alias password</string>
     <string name="settings_storage_directory">change storage directory</string>
     <string name="settings_detail_patch_logs">Detail patch logs</string>
-    <string name="patch_inject_dex">Inject loader dex</string>
-    <string name="patch_inject_dex_desc">For applications with isolated services, such as the render engines of browsers, please turn on this option to ensure that they work properly.</string>
 </resources>

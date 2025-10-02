@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">کچھ فنکشنز دستیاب نہیں ہیں۔</string>
     <string name="home_api_version">API ورژن</string>
-    <string name="home_lspatch_version">ایل ایس پیچ ورژن</string>
+    <string name="home_npatch_version">ایل ایس پیچ ورژن</string>
     <string name="home_framework_version">فریم ورک ورژن</string>
     <string name="home_system_version">سسٹم ورژن</string>
     <string name="home_device">ڈیوائس</string>

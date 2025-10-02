@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">Niektoré funkcie sú nedostupné</string>
     <string name="home_api_version">Verzia API</string>
-    <string name="home_lspatch_version">Verzia NPatch</string>
+    <string name="home_npatch_version">Verzia NPatch</string>
     <string name="home_framework_version">Verzia rámca</string>
     <string name="home_system_version">Verzia systému</string>
     <string name="home_device">Zariadenie</string>

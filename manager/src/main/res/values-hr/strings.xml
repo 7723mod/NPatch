@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">Neke funkcije nisu dostupne</string>
     <string name="home_api_version">API verzija</string>
-    <string name="home_lspatch_version">NPatch verzija</string>
+    <string name="home_npatch_version">NPatch verzija</string>
     <string name="home_framework_version">Framework verzija</string>
     <string name="home_system_version">Verzija sustava</string>
     <string name="home_device">Uređaj</string>

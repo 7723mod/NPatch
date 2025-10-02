@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">Beberapa fungsi tidak tersedia</string>
     <string name="home_api_version">Versi API</string>
-    <string name="home_lspatch_version">Versi NPatch</string>
+    <string name="home_npatch_version">Versi NPatch</string>
     <string name="home_framework_version">Versi Kerangka</string>
     <string name="home_system_version">Versi Sistem</string>
     <string name="home_device">Perangkat</string>

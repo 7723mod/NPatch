@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">일부 기능을 사용할 수 없음</string>
     <string name="home_api_version">API 버전</string>
-    <string name="home_lspatch_version">NPatch 버전</string>
+    <string name="home_npatch_version">NPatch 버전</string>
     <string name="home_framework_version">프레임워크 버전</string>
     <string name="home_system_version">시스템 버전</string>
     <string name="home_device">장치</string>

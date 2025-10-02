@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">ฟังก์ชั่นบางอย่างใช้งานไม่ได้</string>
     <string name="home_api_version">เวอร์ชัน API</string>
-    <string name="home_lspatch_version">เวอร์ชัน NPatch</string>
+    <string name="home_npatch_version">เวอร์ชัน NPatch</string>
     <string name="home_framework_version">เวอร์ชันกรอบงาน</string>
     <string name="home_system_version">เวอร์ชันของระบบ</string>
     <string name="home_device">อุปกรณ์</string>

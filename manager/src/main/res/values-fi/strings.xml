@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">Jotkut toiminnot eivät ole käytettävissä</string>
     <string name="home_api_version">API-versio</string>
-    <string name="home_lspatch_version">NPatch-versio</string>
+    <string name="home_npatch_version">NPatch-versio</string>
     <string name="home_framework_version">Framework-versio</string>
     <string name="home_system_version">Järjestelmän versio</string>
     <string name="home_device">Laite</string>

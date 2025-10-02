@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">部分功能不可用</string>
     <string name="home_api_version">API 版本</string>
-    <string name="home_lspatch_version">NPatch 版本</string>
+    <string name="home_npatch_version">NPatch 版本</string>
     <string name="home_framework_version">框架版本</string>
     <string name="home_system_version">系统版本</string>
     <string name="home_device">设备</string>
@@ -63,6 +63,10 @@
     <string name="patch_sigbypasslv2">lv2: 绕过 PM + openat (libc)</string>
     <string name="patch_override_version_code">覆写版本号</string>
     <string name="patch_override_version_code_desc">将修补的 App 版本号重写为 1\n这将允许后续降级安装，并且通常来说这不会影响应用实际感知到的版本号</string>
+    <string name="patch_inject_dex">注入加载器 Dex</string>
+    <string name="patch_inject_dex_desc">对那些需要孤立服务进程的应用程序，譬如说浏览器的渲染引擎，请勾选此选项以确保他们正常运行</string>
+    <string name="patch_output_log_to_media">日志输出到 Media 目录</string>
+    <string name="patch_output_log_to_media_desc">将模块的 Xposed 日志输出到目标应用的 Media 目录</string>
     <string name="patch_start">开始修补</string>
     <string name="patch_return">返回</string>
     <string name="patch_uninstall_text">由于签名不同，安装修补的应用前需要先卸载原应用。\n确保您已备份好个人数据。</string>
@@ -88,6 +92,4 @@
     <string name="settings_keystore_wrong_alias_password">别名密码错误</string>
     <string name="settings_detail_patch_logs">详细修补日志</string>
     <string name="settings_storage_directory">变更存储目录</string>
-    <string name="patch_inject_dex">注入加载器 Dex</string>
-    <string name="patch_inject_dex_desc">对那些需要孤立服务进程的应用程序，譬如说浏览器的渲染引擎，请勾选此选项以确保他们正常运行</string>
 </resources>

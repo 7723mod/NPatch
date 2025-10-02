@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">部分功能不可用</string>
     <string name="home_api_version">API 版本</string>
-    <string name="home_lspatch_version">NPatch 版本</string>
+    <string name="home_npatch_version">NPatch 版本</string>
     <string name="home_framework_version">框架版本</string>
     <string name="home_system_version">系統版本</string>
     <string name="home_device">裝置</string>

@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">Algumas funções indisponíveis</string>
     <string name="home_api_version">Versão da API</string>
-    <string name="home_lspatch_version">Versão NPatch</string>
+    <string name="home_npatch_version">Versão NPatch</string>
     <string name="home_framework_version">Versão da estrutura</string>
     <string name="home_system_version">Versão do sistema</string>
     <string name="home_device">Dispositivo</string>

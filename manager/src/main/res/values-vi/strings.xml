@@ -17,7 +17,7 @@
     <!-- Home Screen -->
     <string name="home_shizuku_warning">Một số chức năng không khả dụng</string>
     <string name="home_api_version">Phiên bản API</string>
-    <string name="home_lspatch_version">NPatch Version</string>
+    <string name="home_npatch_version">NPatch Version</string>
     <string name="home_framework_version">Phiên bản khung</string>
     <string name="home_system_version">Phiên bản hệ thống</string>
     <string name="home_device">Thiết bị</string>
