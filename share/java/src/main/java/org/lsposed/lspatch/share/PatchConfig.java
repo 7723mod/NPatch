@@ -11,6 +11,7 @@ public class PatchConfig {
     public final String appComponentFactory;
     public final LSPConfig lspConfig;
     public final String managerPackageName;
+    public final String newPackage;
 
     public PatchConfig(
             boolean useManager,
@@ -19,7 +20,8 @@ public class PatchConfig {
             int sigBypassLevel,
             String originalSignature,
             String appComponentFactory,
-            boolean outputLog
+            boolean outputLog,
+            String newPackage
     ) {
         this.useManager = useManager;
         this.debuggable = debuggable;
@@ -29,6 +31,7 @@ public class PatchConfig {
         this.appComponentFactory = appComponentFactory;
         this.lspConfig = LSPConfig.instance;
         this.managerPackageName = Constants.MANAGER_PACKAGE_NAME;
+        this.newPackage = newPackage;
         this.outputLog = outputLog;
     }
 }

@@ -6,6 +6,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 import pxb.android.axml.AxmlParser;
 
@@ -19,6 +21,9 @@ public class ManifestParser {
         String packageName = null;
         String appComponentFactory = null;
         int minSdkVersion = 0;
+        List<String> permissions = new ArrayList<>();
+        List<String> use_permissions = new ArrayList<>();
+        List<String> authorities = new ArrayList<>();
         try {
 
             while (true) {
@@ -46,16 +51,41 @@ public class ManifestParser {
                             }
                         }
 
+                        if ("permission".equals(name)){
+                            if ("name".equals(attrName)){
+                                String permissionName = parser.getAttrValue(i).toString();
+                                if (!permissionName.startsWith("android")){
+                                    permissions.add(permissionName);
+                                }
+                            }
+                        }
+
+                        if ("uses-permission".equals(name)){
+                            if ("name".equals(attrName)){
+                                String permissionName = parser.getAttrValue(i).toString();
+                                if (!permissionName.startsWith("android")){
+                                    use_permissions.add(permissionName);
+                                }
+                            }
+                        }
+
+                        if ("provider".equals(name)){
+                            if ("authorities".equals(attrName)){
+                                String authority = parser.getAttrValue(i).toString();
+                                authorities.add(authority);
+                            }
+                        }
+
                         if ("appComponentFactory".equals(attrName) || attrNameRes == 0x0101057a) {
                             appComponentFactory = parser.getAttrValue(i).toString();
                         }
 
-                        if (packageName != null && packageName.length() > 0 &&
-                                appComponentFactory != null && appComponentFactory.length() > 0 &&
-                                minSdkVersion > 0
-                        ) {
-                            return new Pair(packageName, appComponentFactory, minSdkVersion);
-                        }
+//                        if (packageName != null && packageName.length() > 0 &&
+//                                appComponentFactory != null && appComponentFactory.length() > 0 &&
+//                                minSdkVersion > 0
+//                        ) {
+//                            return new Pair(packageName, appComponentFactory, minSdkVersion);
+//                        }
                     }
                 } else if (type == AxmlParser.END_TAG) {
                     // ignored
@@ -65,7 +95,11 @@ public class ManifestParser {
             return null;
         }
 
-        return new Pair(packageName, appComponentFactory, minSdkVersion);
+        Pair pair = new Pair(packageName, appComponentFactory, minSdkVersion);
+        pair.setPermissions(permissions);
+        pair.setUse_permissions(use_permissions);
+        pair.setAuthorities(authorities);
+        return pair;
     }
 
     /**
@@ -83,11 +117,38 @@ public class ManifestParser {
         public String appComponentFactory;
 
         public int minSdkVersion;
+        public List<String> permissions;
+        public List<String> use_permissions;
+        public List<String> authorities;
 
         public Pair(String packageName, String appComponentFactory, int minSdkVersion) {
             this.packageName = packageName;
             this.appComponentFactory = appComponentFactory;
             this.minSdkVersion = minSdkVersion;
+        }
+
+        public List<String> getPermissions() {
+            return permissions;
+        }
+
+        public void setPermissions(List<String> permissions) {
+            this.permissions = permissions;
+        }
+
+        public List<String> getUse_permissions() {
+            return use_permissions;
+        }
+
+        public void setUse_permissions(List<String> use_permissions) {
+            this.use_permissions = use_permissions;
+        }
+
+        public List<String> getAuthorities() {
+            return authorities;
+        }
+
+        public void setAuthorities(List<String> authorities) {
+            this.authorities = authorities;
         }
     }
 

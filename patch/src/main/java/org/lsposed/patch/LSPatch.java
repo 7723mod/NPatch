@@ -18,8 +18,12 @@ import com.beust.jcommander.ParameterException;
 import com.google.gson.Gson;
 import com.wind.meditor.core.ManifestEditor;
 import com.wind.meditor.property.AttributeItem;
+import com.wind.meditor.property.AttributeMapper;
 import com.wind.meditor.property.ModificationProperty;
+import com.wind.meditor.property.PermissionMapper;
 import com.wind.meditor.utils.NodeValue;
+import com.wind.meditor.utils.PermissionType;
+import com.wind.meditor.utils.Utils;
 
 import org.apache.commons.io.FilenameUtils;
 import org.lsposed.lspatch.share.Constants;
@@ -43,9 +47,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class LSPatch {
@@ -99,6 +106,8 @@ public class LSPatch {
     @Parameter(names = {"-m", "--embed"}, description = "Embed provided modules to apk")
     private List<String> modules = new ArrayList<>();
 
+    @Parameter(names = {"-p", "--newpackage"}, description = "Patch with new package")
+    private String newPackageName = "";
 
     private static final String ANDROID_MANIFEST_XML = "AndroidManifest.xml";
     private static final HashSet<String> ARCHES = new HashSet<>(Arrays.asList(
@@ -226,17 +235,32 @@ public class LSPatch {
             if (manifestEntry == null)
                 throw new PatchError("Provided file is not a valid apk");
 
+            String newPackage = newPackageName;
+
             // parse the app appComponentFactory full name from the manifest file
             final String appComponentFactory;
             int minSdkVersion;
+            ManifestParser.Pair pair;
             try (var is = manifestEntry.open()) {
-                var pair = ManifestParser.parseManifestFile(is);
+                pair = ManifestParser.parseManifestFile(is);
                 if (pair == null)
                     throw new PatchError("Failed to parse AndroidManifest.xml");
                 appComponentFactory = pair.appComponentFactory;
                 minSdkVersion = pair.minSdkVersion;
                 logger.d("original appComponentFactory class: " + appComponentFactory);
                 logger.d("original minSdkVersion: " + minSdkVersion);
+
+                if (newPackage == null || newPackage.isEmpty()){
+                    newPackage = pair.packageName;
+                }
+
+                logger.i("permissions: " + pair.permissions);
+                logger.i("use-permissions: " +pair.use_permissions);
+                logger.i("provider.authorities: " + pair.authorities);
+
+                logger.i("permissions size: " + (pair.permissions == null ? 0 : pair.permissions.size()));
+                logger.i("use-permissions size: " + (pair.use_permissions == null ? 0 : pair.use_permissions.size()));
+                logger.i("authorities size: " + (pair.authorities == null ? 0 : pair.authorities.size()));
             }
 
             final boolean skipSplit = apkPaths.size() > 1 && srcApkFile.getName().startsWith("split_") && appComponentFactory == null;
@@ -254,10 +278,10 @@ public class LSPatch {
 
             logger.i("Patching apk...");
             // modify manifest
-            final var config = new PatchConfig(useManager, debuggableFlag, overrideVersionCode, sigbypassLevel, originalSignature, appComponentFactory, outputLog);
+            final var config = new PatchConfig(useManager, debuggableFlag, overrideVersionCode, sigbypassLevel, originalSignature, appComponentFactory, outputLog, newPackage);
             final var configBytes = new Gson().toJson(config).getBytes(StandardCharsets.UTF_8);
             final var metadata = Base64.getEncoder().encodeToString(configBytes);
-            try (var is = new ByteArrayInputStream(modifyManifestFile(manifestEntry.open(), metadata, minSdkVersion))) {
+            try (var is = new ByteArrayInputStream(modifyManifestFile(manifestEntry.open(), metadata, minSdkVersion, pair.packageName, newPackage, pair.permissions, pair.use_permissions, pair.authorities))) {
                 dstZFile.add(ANDROID_MANIFEST_XML, is);
             } catch (Throwable e) {
                 throw new PatchError("Error when modifying manifest", e);
@@ -331,6 +355,57 @@ public class LSPatch {
         logger.i("Done. Output APK: " + outputFile.getAbsolutePath());
     }
 
+    private List<String> replacePermissionWithNewPackage(List<String> list, String pkg, String newPackage){
+        List<String> res = new LinkedList<>();
+        if (list != null && !list.isEmpty()){
+            for (String next : list) {
+                if (next != null && !next.isEmpty()) {
+                    if (next.startsWith(pkg)){
+                        String s = next.replaceAll(pkg, newPackage);
+                        res.add(s);
+                    }else {
+                        res.add(newPackage + "_" + next);
+                    }
+                }
+            }
+        }
+        return res;
+    }
+
+    private List<String> replaceUsesPermissionWithNewPackage(List<String> list, String pkg, String newPackage){
+        List<String> res = new LinkedList<>();
+        if (list != null && !list.isEmpty()){
+            for (String next : list) {
+                if (next != null && !next.isEmpty()) {
+                    if (next.startsWith(pkg)){
+                        String s = next.replaceAll(pkg, newPackage);
+                        res.add(s);
+                    }else {
+                        res.add(newPackage + "_" + next);
+                    }
+                }
+            }
+        }
+        return res;
+    }
+
+    private List<String> replaceProviderWithNewPackage(List<String> list, String pkg, String newPackage){
+        List<String> res = new LinkedList<>();
+        if (list != null && !list.isEmpty()){
+            for (String next : list) {
+                if (next != null && !next.isEmpty()) {
+                    if (next.startsWith(pkg)){
+                        String s = next.replaceAll(pkg, newPackage);
+                        res.add(s);
+                    }else {
+                        res.add(newPackage + "_" + next);
+                    }
+                }
+            }
+        }
+        return res;
+    }
+
     private void embedModules(ZFile zFile) {
         for (var module : modules) {
             File file = new File(module);
@@ -343,12 +418,12 @@ public class LSPatch {
                 logger.i("  - " + packageName);
                 zFile.add(EMBEDDED_MODULES_ASSET_PATH + packageName + ".apk", fileIs);
             } catch (NullPointerException | IOException e) {
-                logger.e(module + " does not exist or is not a valid apk file.");
+                logger.e(module + " does not exist or is not a valid apk file. error:" + e);
             }
         }
     }
 
-    private byte[] modifyManifestFile(InputStream is, String metadata, int minSdkVersion) throws IOException {
+    private byte[] modifyManifestFile(InputStream is, String metadata, int minSdkVersion, String originPackage, String newPackage, List<String> permissions, List<String> uses_permissions, List<String> authorities) throws IOException {
         ModificationProperty property = new ModificationProperty();
 
         if (overrideVersionCode)
@@ -357,6 +432,34 @@ public class LSPatch {
             property.addUsesSdkAttribute(new AttributeItem(NodeValue.UsesSDK.MIN_SDK_VERSION, 27));
         property.addApplicationAttribute(new AttributeItem(NodeValue.Application.DEBUGGABLE, debuggableFlag));
         property.addApplicationAttribute(new AttributeItem("appComponentFactory", PROXY_APP_COMPONENT_FACTORY));
+        if (newPackage != null && !newPackage.isEmpty()){
+            property.addManifestAttribute(new AttributeItem(NodeValue.Manifest.PACKAGE, newPackage).setNamespace(null));
+        }
+        property.setPermissionMapper(new PermissionMapper() {
+            @Override
+            public String map(PermissionType type, String permission) {
+                if (permission.startsWith(originPackage)){
+                    assert newPackage != null;
+                    return permission.replaceFirst(originPackage, newPackage);
+                }
+                if (permission.startsWith("android")
+                        || permission.startsWith("com.android")){
+                    return permission;
+                }
+                return newPackage + "_" + permission;
+            }
+        });
+        property.setAuthorityMapper(new AttributeMapper<String>() {
+            @Override
+            public String map(String value) {
+                if (value.startsWith(originPackage)){
+                    assert newPackage != null;
+                    return value.replaceFirst(originPackage, newPackage);
+                }
+                return newPackage + "_" + value;
+            }
+        });
+
         property.addMetaData(new ModificationProperty.MetaData("lspatch", metadata));
         // TODO: replace query_all with queries -> manager
         if (useManager)

@@ -139,7 +139,7 @@ public class LSPApplication {
                 BufferedReader streamReader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
                 config = new Gson().fromJson(streamReader, PatchConfig.class);
             } catch (IOException e) {
-                Log.e(TAG, "Failed to load config file");
+                Log.e(TAG, "Failed to load config file", e);
                 return null;
             }
             Log.i(TAG, "Use manager: " + config.useManager);

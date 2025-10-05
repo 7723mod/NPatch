@@ -17,6 +17,7 @@ import java.util.Collections.addAll
 object Patcher {
 
     class Options(
+        val newPackageName: String,
         private val injectDex: Boolean,
         private val config: PatchConfig,
         private val apkPaths: List<String>,
@@ -24,8 +25,8 @@ object Patcher {
     ) {
         fun toStringArray(): Array<String> {
             return buildList {
-                addAll(apkPaths)
                 add("-o"); add(lspApp.tmpApkDir.absolutePath)
+                add("-p"); add(config.newPackage)
                 if (config.debuggable) add("-d")
                 add("-l"); add(config.sigBypassLevel.toString())
                 if (config.useManager) add("--manager")
@@ -38,6 +39,7 @@ object Patcher {
                 if (!MyKeyStore.useDefault) {
                     addAll(arrayOf("-k", MyKeyStore.file.path, Configs.keyStorePassword, Configs.keyStoreAlias, Configs.keyStoreAliasPassword))
                 }
+                addAll(apkPaths)
             }.toTypedArray()
         }
     }
@@ -56,20 +58,22 @@ object Patcher {
             lspApp.targetApkFiles?.clear()
             val apkFileList = arrayListOf<File>()
             lspApp.tmpApkDir.walk()
-                .filter { it.name.endsWith(Constants.PATCH_FILE_SUFFIX) }
-                .forEach { apk ->
-                    val file = root.createFile("application/vnd.android.package-archive", apk.name)
-                        ?: throw IOException("Failed to create output file")
-                    val output = lspApp.contentResolver.openOutputStream(file.uri)
-                        ?: throw IOException("Failed to open output stream")
-                    val apkFile = File(lspApp.externalCacheDir, apk.name)
-                    apk.copyTo(apkFile, overwrite = true)
-                    apkFileList.add(apkFile)
-                    output.use {
-                        apk.inputStream().use { input ->
+                .filter { it.isFile && it.name.endsWith(Constants.PATCH_FILE_SUFFIX) }
+                .forEach { tempApkFile ->
+                    val cachedApkFile = File(lspApp.externalCacheDir, tempApkFile.name)
+                    if (tempApkFile.renameTo(cachedApkFile).not()) {
+                        tempApkFile.copyTo(cachedApkFile, overwrite = true)
+                        tempApkFile.delete()
+                    }
+                    apkFileList.add(cachedApkFile)
+
+                    val finalFile = root.createFile("application/vnd.android.package-archive", cachedApkFile.name)
+                        ?: throw IOException("無法建立輸出檔案： ${cachedApkFile.name}")
+                    lspApp.contentResolver.openOutputStream(finalFile.uri)?.use { output ->
+                        cachedApkFile.inputStream().use { input ->
                             input.copyTo(output)
                         }
-                    }
+                    } ?: throw IOException("Unable to open an output stream:  ${finalFile.uri}")
                 }
             lspApp.targetApkFiles = apkFileList
             logger.i("Patched files are saved to ${root.uri.lastPathSegment}")
