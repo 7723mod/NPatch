@@ -3,6 +3,7 @@ package org.lsposed.lspatch.loader;
 import static org.lsposed.lspatch.share.Constants.ORIGINAL_APK_ASSET_PATH;
 
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageParser;
@@ -31,7 +32,7 @@ import de.robv.android.xposed.XposedHelpers;
 
 public class SigBypass {
 
-    private static final String TAG = "LSPatch-SigBypass";
+    private static final String TAG = "NPatch-SigBypass";
     private static final Map<String, String> signatures = new HashMap<>();
 
     private static void replaceSignature(Context context, PackageInfo packageInfo) {
@@ -113,6 +114,34 @@ public class SigBypass {
         } catch (NoSuchFieldError ignore) {
         } catch (Throwable e) {
             Log.w(TAG, "fail to clear Parcel.sPairedCreators", e);
+        }
+    }
+
+    public static void replaceApplication(String packageName, String sourceDir, String resourcesDir) throws IOException {
+        try {
+            Log.i(TAG, "Start Replace application info for `" + packageName + "`");
+            XposedBridge.hookAllMethods(Class.forName("android.app.ApplicationPackageManager"), "getApplicationInfo", new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    if (packageName.equals(param.args[0])) {
+                        ApplicationInfo info = (ApplicationInfo) param.getResult();
+                        info.sourceDir = sourceDir;
+                        info.publicSourceDir = sourceDir;
+                    }
+                }
+            });
+            XposedBridge.hookAllMethods(Class.forName("android.app.ApplicationPackageManager"), "getApplicationInfoAsUser", new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    if (packageName.equals(param.args[0])) {
+                        ApplicationInfo info = (ApplicationInfo) param.getResult();
+                        info.sourceDir = sourceDir;
+                        info.publicSourceDir = sourceDir;
+                    }
+                }
+            });
+        } catch (Throwable e) {
+            Log.w(TAG, "fail to replace getApplicationInfo", e);
         }
     }
 

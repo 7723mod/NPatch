@@ -204,6 +204,7 @@ public class LSPApplication {
             }
             Log.i(TAG,"createLoadedApkWithContext cost: " + (System.currentTimeMillis() - timeStart) + "ms");
 
+            SigBypass.replaceApplication(appInfo.packageName, appInfo.sourceDir, appInfo.publicSourceDir);
             return context;
         } catch (Throwable e) {
             Log.e(TAG, "createLoadedApk", e);
