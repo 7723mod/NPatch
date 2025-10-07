@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Build
+    name: 構建
     runs-on: ubuntu-latest
     env:
       CCACHE_COMPILERCHECK: '%compiler% -dumpmachine; %compiler% -dumpversion'
@@ -17,14 +17,14 @@ jobs:
       CCACHE_BASEDIR: '${{ github.workspace }}'
 
     steps:
-    - name: Checkout
+    - name: 檢出程式碼
       uses: actions/checkout@v5
       with:
         ref: ${{ github.sha }}
         submodules: 'recursive'
-        fetch-depth: 0
+        fetch-depth: 0 
 
-    - name: Cache CCACHE
+    - name: 設定快取
       uses: actions/cache@v4
       with:
         path: ~/.ccache
@@ -32,7 +32,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-ccache-
 
-    - name: Write signing key if needed
+    - name: 如果需要，則寫入簽名密鑰
       if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
       run: |
         if [ ! -z "${{ secrets.KEY_STORE }}" ]; then
@@ -43,41 +43,41 @@ jobs:
           echo ${{ secrets.KEY_STORE }} | base64 --decode > key.jks
         fi
 
-    - name: Checkout libxposed/api
+    - name: 檢出 libxposed/api
       uses: actions/checkout@main
       with:
         repository: libxposed/api
         path: libxposed/api
         ref: 54582730315ba4a3d7cfaf9baf9d23c419e07006
 
-    - name: Checkout libxposed/service
+    - name: 檢出 libxposed/service
       uses: actions/checkout@main
       with:
         repository: libxposed/service
         path: libxposed/service
 
-    - name: Setup Java
+    - name: 設定 Java
       uses: actions/setup-java@v5
       with:
         java-version: '21'
         distribution: 'adopt'
 
-    - name: Setup Gradle
+    - name: 設定 Gradle
       uses: gradle/actions/setup-gradle@v5
 
-    - name: Setup Android SDK
+    - name: 設定 Android SDK
       uses: android-actions/setup-android@v3
 
-    - name: Setup ninja
+    - name: 設定 ninja
       uses: seanmiddleditch/gha-setup-ninja@master
       with:
         version: 1.12.0
 
-    - name: Remove Android's cmake
+    - name: 移除 Android 的 cmake
       shell: bash
       run: rm -rf "$ANDROID_HOME/cmake"
 
-    - name: Setup build environment properties
+    - name: 設定構建環境
       run: |
         # for libxposed/api build
         echo 'org.gradle.jvmargs=-Xmx2048m' >> libxposed/api/gradle.properties
@@ -93,10 +93,10 @@ jobs:
         echo 'org.gradle.jvmargs=-Xmx2048m' >> libxposed/api/gradle.properties
         echo 'org.gradle.jvmargs=-Xmx2048m' >> libxposed/service/gradle.properties
 
-    - name: Grant execution permission to gradlew
+    - name: 授予 gradlew 執行權限
       run: chmod +x gradlew
 
-    - name: Build dependencies with Gradle
+    - name: 使用 Gradle 構建依賴項
       working-directory: libxposed
       run: |
         cd api
@@ -106,25 +106,25 @@ jobs:
         echo 'org.gradle.jvmargs=-Xmx2048m' >> gradle.properties
         ./gradlew :interface:publishInterfacePublicationToMavenLocal
 
-    - name: Set short commit id
+    - name: 設定 commit id
       run: echo "commit=$(echo ${{ github.sha }} | cut -c-7)" > $GITHUB_ENV
 
-    - name: Build with Gradle
+    - name: 使用 Gradle 構建
       run: ./gradlew buildAll
 
-    - name: Upload Release artifact
+    - name: 上傳 Release Artifact
       uses: actions/upload-artifact@v4
       with:
         name: npatch-release-${{ env.commit }}
         path: out/release/*
 
-    - name: Upload Debug artifact
+    - name: 上傳 Debug Artifact
       uses: actions/upload-artifact@v4
       with:
         name: npatch-debug-${{ env.commit }}
         path: out/debug/*
 
-    - name: Upload mappings
+    - name: 上傳 mappings
       uses: actions/upload-artifact@v4
       with:
         name: mappings-${{ env.commit }}
@@ -132,7 +132,7 @@ jobs:
           patch-loader/build/outputs/mapping
           manager/build/outputs/mapping
 
-    - name: Upload symbols
+    - name: 上傳 symbols
       uses: actions/upload-artifact@v4
       with:
         name: symbols-${{ env.commit }}
