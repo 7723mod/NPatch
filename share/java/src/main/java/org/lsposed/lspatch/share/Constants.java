@@ -8,7 +8,7 @@ public class Constants {
     final static public String ORIGINAL_APK_ASSET_PATH = "assets/lspatch/origin.apk";
     final static public String EMBEDDED_MODULES_ASSET_PATH = "assets/lspatch/modules/";
 
-    final static public String PATCH_FILE_SUFFIX = "-lspatched.apk";
+    final static public String PATCH_FILE_SUFFIX = "-npatched.apk";
     final static public String PROXY_APP_COMPONENT_FACTORY = "org.lsposed.lspatch.metaloader.LSPAppComponentFactoryStub";
     final static public String MANAGER_PACKAGE_NAME = "org.lsposed.npatch";
     final static public int MIN_ROLLING_VERSION_CODE = 348;
