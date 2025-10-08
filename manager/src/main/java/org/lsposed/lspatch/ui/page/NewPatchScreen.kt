@@ -352,7 +352,6 @@ private fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
             title = stringResource(R.string.patch_override_version_code),
             desc = stringResource(R.string.patch_override_version_code_desc)
         )
-
         SettingsCheckBox(
             modifier = Modifier.clickable { viewModel.injectDex = !viewModel.injectDex },
             checked = viewModel.injectDex,
@@ -360,7 +359,13 @@ private fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
             title = stringResource(R.string.patch_inject_dex),
             desc = stringResource(R.string.patch_inject_dex_desc)
         )
-
+        SettingsCheckBox(
+            modifier = Modifier.clickable { viewModel.injectProvider = !viewModel.injectProvider },
+            checked = viewModel.injectProvider,
+            icon = Icons.Outlined.AddCard,
+            title = stringResource(R.string.patch_inject_mt_provider),
+            desc = stringResource(R.string.patch_inject_mt_provider_desc)
+        )
         SettingsCheckBox(
             modifier = Modifier.clickable { viewModel.outputLog = !viewModel.outputLog },
             checked = viewModel.outputLog,
@@ -368,7 +373,6 @@ private fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
             title = stringResource(R.string.patch_output_log_to_media),
             desc = stringResource(R.string.patch_output_log_to_media_desc)
         )
-
         var bypassExpanded by remember { mutableStateOf(false) }
         AnywhereDropdown(
             expanded = bypassExpanded,
