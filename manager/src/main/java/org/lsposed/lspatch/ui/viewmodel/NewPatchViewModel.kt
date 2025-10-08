@@ -45,6 +45,7 @@ class NewPatchViewModel : ViewModel() {
     var overrideVersionCode by mutableStateOf(false)
     var sigBypassLevel by mutableStateOf(2)
     var injectDex by mutableStateOf(false)
+    var injectProvider by mutableStateOf(false)
     var outputLog by mutableStateOf(true)
     var embeddedModules = emptyList<AppInfo>()
 
@@ -96,9 +97,9 @@ class NewPatchViewModel : ViewModel() {
     }
 
     private fun submitPatch() {
-        Log.d(TAG, "Submit patch")
+        Log.d(TAG, "Submit Patch")
         if (useManager) embeddedModules = emptyList()
-        val config = PatchConfig(useManager, debuggable, overrideVersionCode, sigBypassLevel, null, null, outputLog, newPackageName)
+        val config = PatchConfig(useManager, debuggable, overrideVersionCode, sigBypassLevel, null, null, injectProvider, outputLog, newPackageName)
         patchOptions = Patcher.Options(
             newPackageName = newPackageName,
             injectDex = injectDex,
@@ -110,7 +111,7 @@ class NewPatchViewModel : ViewModel() {
     }
 
     private suspend fun launchPatch() {
-        logger.i("Launch patch")
+        logger.i("Launch Patch")
         patchState = try {
             Patcher.patch(logger, patchOptions)
             PatchState.FINISHED

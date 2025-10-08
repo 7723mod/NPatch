@@ -65,6 +65,8 @@
     <string name="patch_override_version_code_desc">将修补的 App 版本号重写为 1\n这将允许后续降级安装，并且通常来说这不会影响应用实际感知到的版本号</string>
     <string name="patch_new_package">修补新包名</string>
     <string name="hint_patch_new_package">请输入新的包名</string>
+    <string name="patch_inject_mt_provider">注入文件提供器</string>
+    <string name="patch_inject_mt_provider_desc">注入文件提供器以在没有 Root 权限的情况下管理 data 目录的文件 (来自 MT 管理器)</string>
     <string name="patch_inject_dex">注入加载器 Dex</string>
     <string name="patch_inject_dex_desc">对那些需要孤立服务进程的应用程序，譬如说浏览器的渲染引擎，请勾选此选项以确保他们正常运行</string>
     <string name="patch_output_log_to_media">日志输出到 Media 目录</string>
