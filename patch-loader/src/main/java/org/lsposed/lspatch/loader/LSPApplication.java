@@ -175,6 +175,7 @@ public class LSPApplication {
                     try (InputStream is = baseClassLoader.getResourceAsStream(PROVIDER_DEX_ASSET_PATH)) {
                         Files.copy(is, providerPath);
                     }
+                    providerPath.toFile().setWritable(false);
                 }catch (Exception e){
                     Log.e(TAG, "Failed to inject provider:" + Log.getStackTraceString(e));
                 }
