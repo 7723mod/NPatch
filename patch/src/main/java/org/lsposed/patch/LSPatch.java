@@ -46,6 +46,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -79,6 +80,9 @@ public class LSPatch {
     @Parameter(names = {"-f", "--force"}, description = "Force overwrite exists output file")
     private boolean forceOverwrite = false;
 
+    @Parameter(names = {"-p", "--newpackage"}, description = "Patch with new package")
+    private String newPackageName = "";
+
     @Parameter(names = {"-d", "--debuggable"}, description = "Set app to be debuggable")
     private boolean debuggableFlag = false;
 
@@ -87,6 +91,9 @@ public class LSPatch {
 
     @Parameter(names = {"--injectdex"}, description = "Inject directly the loder dex file into the original application package")
     private boolean injectDex = false;
+
+    @Parameter(names = {"--provider"}, description = "Inject Provider to manager data files")
+    private boolean isInjectProvider = false;
 
     @Parameter(names = {"--outputLog"}, description = "Output Log to Media")
     private boolean outputLog = true;
@@ -106,8 +113,7 @@ public class LSPatch {
     @Parameter(names = {"-m", "--embed"}, description = "Embed provided modules to apk")
     private List<String> modules = new ArrayList<>();
 
-    @Parameter(names = {"-p", "--newpackage"}, description = "Patch with new package")
-    private String newPackageName = "";
+    private String packageName;
 
     private static final String ANDROID_MANIFEST_XML = "AndroidManifest.xml";
     private static final HashSet<String> ARCHES = new HashSet<>(Arrays.asList(
@@ -247,6 +253,7 @@ public class LSPatch {
                     throw new PatchError("Failed to parse AndroidManifest.xml");
                 appComponentFactory = pair.appComponentFactory;
                 minSdkVersion = pair.minSdkVersion;
+                packageName = pair.packageName;
                 logger.d("original appComponentFactory class: " + appComponentFactory);
                 logger.d("original minSdkVersion: " + minSdkVersion);
 
@@ -278,7 +285,7 @@ public class LSPatch {
 
             logger.i("Patching apk...");
             // modify manifest
-            final var config = new PatchConfig(useManager, debuggableFlag, overrideVersionCode, sigbypassLevel, originalSignature, appComponentFactory, outputLog, newPackage);
+            final var config = new PatchConfig(useManager, debuggableFlag, overrideVersionCode, sigbypassLevel, originalSignature, appComponentFactory, isInjectProvider, outputLog, newPackage);
             final var configBytes = new Gson().toJson(config).getBytes(StandardCharsets.UTF_8);
             final var metadata = Base64.getEncoder().encodeToString(configBytes);
             try (var is = new ByteArrayInputStream(modifyManifestFile(manifestEntry.open(), metadata, minSdkVersion, pair.packageName, newPackage, pair.permissions, pair.use_permissions, pair.authorities))) {
@@ -308,6 +315,14 @@ public class LSPatch {
                 }
             } catch (Throwable e) {
                 throw new PatchError("Error when adding dex", e);
+            }
+
+            if (isInjectProvider){
+                try (var is = getClass().getClassLoader().getResourceAsStream("assets/provider.dex")) {
+                    dstZFile.add("assets/lspatch/provider.dex", is);
+                } catch (Throwable e) {
+                    throw new PatchError("Error when adding dex", e);
+                }
             }
 
             if (!useManager) {
@@ -464,6 +479,17 @@ public class LSPatch {
         // TODO: replace query_all with queries -> manager
         if (useManager)
             property.addUsesPermission("android.permission.QUERY_ALL_PACKAGES");
+        if (isInjectProvider){
+            HashMap<String,String> providerMap = new HashMap<>();
+            providerMap.put("name","bin.mt.file.content.MTDataFilesProvider");
+            providerMap.put("permission","android.permission.MANAGE_DOCUMENTS");
+            providerMap.put("exported","true");
+            providerMap.put("authorities",packageName + ".MTDataFilesProvider");
+            providerMap.put("grantUriPermissions","true");
+
+            property.addProvider(providerMap,"android.content.action.DOCUMENTS_PROVIDER");
+
+        }
 
         var os = new ByteArrayOutputStream();
         (new ManifestEditor(is, os, property)).processManifest();

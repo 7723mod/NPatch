@@ -565,7 +565,8 @@ private fun InstallDialog(patchApp: AppInfo, onFinish: (Int, String?) -> Unit) {
     }
 
     LaunchedEffect(uninstallFirst) {
-        if (!uninstallFirst && installing == 0) {
+        if (!uninstallFirst && installing == 0) {       
+            onFinish(LSPPackageManager.STATUS_USER_CANCELLED, "User cancelled")
             doInstall()
         }
     }

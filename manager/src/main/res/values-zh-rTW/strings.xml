@@ -65,6 +65,8 @@
     <string name="patch_override_version_code_desc">將打包應用程式的版本編號改成 1\n允許以後降級安裝，一般來說，這不會影響應用程式實際感知的版本編號。</string>
     <string name="patch_new_package">修補新套件名</string>
     <string name="hint_patch_new_package">請輸入新的套件名</string>
+    <string name="patch_inject_mt_provider">注入檔案选取器</string>
+    <string name="patch_inject_mt_provider_desc">注入檔案选取器以在沒有 Root 權限的情況下管理 data 目錄的檔案(來自 MT 管理器)</string>
     <string name="patch_inject_dex">注入載入器 Dex</string>
     <string name="patch_inject_dex_desc">對那些需要孤立服務程序的應用程式，譬如說瀏覽器的渲染引擎，請勾選此選項以確保他們正常執行</string>
     <string name="patch_output_log_to_media">日誌輸出到 Media 目錄</string>
