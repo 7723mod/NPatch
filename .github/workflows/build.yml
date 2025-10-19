@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     name: 構建
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     env:
       CCACHE_COMPILERCHECK: '%compiler% -dumpmachine; %compiler% -dumpversion'
       CCACHE_NOHASHDIR: 'true'
@@ -27,21 +27,22 @@ jobs:
     - name: 設定快取
       uses: actions/cache@v4
       with:
-        path: ~/.ccache
+        path: $env:USERPROFILE\.ccache
         key: ${{ runner.os }}-ccache-${{ github.sha }}
         restore-keys: |
           ${{ runner.os }}-ccache-
 
     - name: 如果需要，則寫入簽名密鑰
       if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+      shell: powershell
       run: |
-        if [ ! -z "${{ secrets.KEY_STORE }}" ]; then
-          echo androidStorePassword='${{ secrets.KEY_STORE_PASSWORD }}' >> gradle.properties
-          echo androidKeyAlias='${{ secrets.ALIAS }}' >> gradle.properties
-          echo androidKeyPassword='${{ secrets.KEY_PASSWORD }}' >> gradle.properties
-          echo androidStoreFile='key.jks' >> gradle.properties
-          echo ${{ secrets.KEY_STORE }} | base64 --decode > key.jks
-        fi
+        if (-not [string]::IsNullOrEmpty("${{ secrets.KEY_STORE }}")) {
+          "androidStorePassword='${{ secrets.KEY_STORE_PASSWORD }}'" | Out-File -Append -FilePath gradle.properties
+          "androidKeyAlias='${{ secrets.ALIAS }}'" | Out-File -Append -FilePath gradle.properties
+          "androidKeyPassword='${{ secrets.KEY_PASSWORD }}'" | Out-File -Append -FilePath gradle.properties
+          "androidStoreFile='key.jks'" | Out-File -Append -FilePath gradle.properties
+          [System.Convert]::FromBase64String("${{ secrets.KEY_STORE }}") | Set-Content -Path key.jks -Encoding Byte
+        }
 
     - name: 檢出 libxposed/api
       uses: actions/checkout@main
@@ -74,55 +75,60 @@ jobs:
         version: 1.12.0
 
     - name: 移除 Android 的 cmake
-      shell: bash
-      run: rm -rf "$ANDROID_HOME/cmake"
+      shell: powershell
+      run: Remove-Item -Path "$env:ANDROID_HOME\cmake" -Recurse -Force -ErrorAction SilentlyContinue
 
     - name: 設定構建環境
+      shell: powershell
       run: |
         # for libxposed/api build
-        echo 'org.gradle.jvmargs=-Xmx2048m' >> libxposed/api/gradle.properties
+        "org.gradle.jvmargs=-Xmx2048m" | Out-File -Append -FilePath libxposed/api/gradle.properties
 
         # for main project build
-        {
-          echo 'org.gradle.parallel=true'
-          echo 'org.gradle.jvmargs=-Xmx2048m'
-          echo 'android.native.buildOutput=verbose'
-        } >> gradle.properties
+        "org.gradle.parallel=true" | Out-File -Append -FilePath gradle.properties
+        "org.gradle.jvmargs=-Xmx2048m" | Out-File -Append -FilePath gradle.properties
+        "android.native.buildOutput=verbose" | Out-File -Append -FilePath gradle.properties
 
         # for libxposed dependencies build
-        echo 'org.gradle.jvmargs=-Xmx2048m' >> libxposed/api/gradle.properties
-        echo 'org.gradle.jvmargs=-Xmx2048m' >> libxposed/service/gradle.properties
+        "org.gradle.jvmargs=-Xmx2048m" | Out-File -Append -FilePath libxposed/service/gradle.properties
 
     - name: 授予 gradlew 執行權限
       run: chmod +x gradlew
 
     - name: 使用 Gradle 構建依賴項
       working-directory: libxposed
+      shell: powershell
       run: |
         cd api
-        echo 'org.gradle.jvmargs=-Xmx2048m' >> gradle.properties
-        ./gradlew :api:publishApiPublicationToMavenLocal
+        "org.gradle.jvmargs=-Xmx2048m" | Out-File -Append -FilePath gradle.properties
+        .\gradlew.bat :api:publishApiPublicationToMavenLocal
+        
         cd ../service
-        echo 'org.gradle.jvmargs=-Xmx2048m' >> gradle.properties
-        ./gradlew :interface:publishInterfacePublicationToMavenLocal
+        "org.gradle.jvmargs=-Xmx2048m" | Out-File -Append -FilePath gradle.properties
+        .\gradlew.bat :interface:publishInterfacePublicationToMavenLocal
 
     - name: 設定 commit id
-      run: echo "commit=$(echo ${{ github.sha }} | cut -c-7)" > $GITHUB_ENV
+      shell: powershell
+      run: |
+        $commit = "${{ github.sha }}".Substring(0, 7)
+        echo "commit=$commit" | Out-File -FilePath $env:GITHUB_ENV -Append
 
     - name: 使用 Gradle 構建
-      run: ./gradlew buildAll
+      run: .\gradlew.bat buildAll
 
     - name: 上傳 Release Artifact
       uses: actions/upload-artifact@v4
       with:
         name: npatch-release-${{ env.commit }}
         path: out/release/*
+        retention-days: 7
 
     - name: 上傳 Debug Artifact
       uses: actions/upload-artifact@v4
       with:
         name: npatch-debug-${{ env.commit }}
         path: out/debug/*
+        retention-days: 7
 
     - name: 上傳 mappings
       uses: actions/upload-artifact@v4
