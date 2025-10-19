@@ -71,7 +71,7 @@ public class RemoteApplicationService implements ILSPApplicationService {
                 var userHandle = (UserHandle) getUserMethod.invoke(context);
                 bindServiceAsUserMethod.invoke(context, intent, conn, Context.BIND_AUTO_CREATE, handler, userHandle);
             }
-            boolean success = latch.await(1, TimeUnit.SECONDS);
+            boolean success = latch.await(3, TimeUnit.SECONDS);
 
             if (!success) {
                 // Attempt to unbind the service before throwing a timeout for cleanup
@@ -106,8 +106,12 @@ public class RemoteApplicationService implements ILSPApplicationService {
     }
 
     @Override
-    public String getPrefsPath(String packageName) {
-        return new File(Environment.getDataDirectory(), "data/" + packageName + "/shared_prefs/").getAbsolutePath();
+    public String getPrefsPath(String packageName) throws RemoteException {
+        if (service != null) {
+            return service.getPrefsPath(packageName);
+        }
+        Log.e(TAG, "Manager service null,  無法取得遠端首選項路徑.");
+        throw new RemoteException("Manager service is unavailable for getPrefsPath.");
     }
 
     @Override

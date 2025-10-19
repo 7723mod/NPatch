@@ -1,17 +1,17 @@
-name: Clean Build
+name: 清理構建 (Windows)
 
 on:
   workflow_dispatch:
 
 jobs:
   clean:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
-      - name: 删除 Gradle 缓存
-        run: rm -rf ~/.gradle/caches/
+      - name: 刪除 Gradle 緩存
+        run: Remove-Item -Path $env:USERPROFILE\.gradle\caches -Recurse -Force -ErrorAction SilentlyContinue
 
-      - name: 删除 m2 缓存
-        run: rm -rf ~/.m2/repository/
+      - name: 刪除 m2 緩存
+        run: Remove-Item -Path $env:USERPROFILE\.m2\repository -Recurse -Force -ErrorAction SilentlyContinue
 
-      - name: 删除 ccache 缓存
-        run: rm -rf ~/.ccache/
+      - name: 刪除 ccache 緩存
+        run: Remove-Item -Path $env:USERPROFILE\.ccache -Recurse -Force -ErrorAction SilentlyContinue
