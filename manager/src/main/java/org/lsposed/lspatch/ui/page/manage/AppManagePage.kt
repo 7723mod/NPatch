@@ -118,7 +118,7 @@ fun AppManageBody(
                         val result = snackbarHost.showSnackbar(updateFailed, copyError)
                         if (result == SnackbarResult.ActionPerformed) {
                             val cm = lspApp.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            cm.setPrimaryClip(ClipData.newPlainText("LSPatch", it.toString()))
+                            cm.setPrimaryClip(ClipData.newPlainText("NPatch", it.toString()))
                         }
                     }
                     viewModel.dispatch(AppManageViewModel.ViewAction.ClearUpdateLoaderResult)

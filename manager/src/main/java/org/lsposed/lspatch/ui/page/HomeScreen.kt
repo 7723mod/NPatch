@@ -209,7 +209,7 @@ private fun InfoCard() {
                 modifier = Modifier.align(Alignment.End),
                 onClick = {
                     val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    cm.setPrimaryClip(ClipData.newPlainText("LSPatch", contents.toString()))
+                    cm.setPrimaryClip(ClipData.newPlainText("NPatch", contents.toString()))
                     scope.launch { snackbarHost.showSnackbar(copiedMessage) }
                 },
                 content = { Text(stringResource(android.R.string.copy)) }

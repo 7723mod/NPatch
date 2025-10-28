@@ -44,7 +44,7 @@ public class SigBypass {
                 try {
                     var metaData = context.getPackageManager().getApplicationInfo(packageName, PackageManager.GET_META_DATA).metaData;
                     String encoded = null;
-                    if (metaData != null) encoded = metaData.getString("lspatch");
+                    if (metaData != null) encoded = metaData.getString("npatch");
                     if (encoded != null) {
                         var json = new String(Base64.decode(encoded, Base64.DEFAULT), StandardCharsets.UTF_8);
                         try {
