@@ -100,4 +100,9 @@
     <string name="settings_keystore_wrong_alias_password">Wrong alias password</string>
     <string name="settings_storage_directory">change storage directory</string>
     <string name="settings_detail_patch_logs">Detail patch logs</string>
+    
+    <!-- MiUI Uninstall Desc -->
+    <string name="miui_uninstall_title">💩卸💩载💩金💩凡💩</string>
+    <string name="miui_uninstall_content">金凡祭天，法力无边\n所以這就是那個魔改到連使用者列表都無法訪問的系統嗎?
+    \n\n(我們專門為小米手機桌面解除安裝添加了提示，提升使用者體驗)</string>
 </resources>
