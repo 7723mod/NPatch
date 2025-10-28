@@ -24,6 +24,14 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.Material3.DayNight.NoActionBar">
+        
+        <!-- 专门为小米手机桌面卸载添加了提示，提升用户体验 -->
+        <meta-data
+            android:name="app_description_title"
+            android:resource="@string/miui_uninstall_title" />
+        <meta-data
+            android:name="app_description_content"
+            android:resource="@string/miui_uninstall_title" />
 
         <activity
             android:name=".ui.activity.MainActivity"
