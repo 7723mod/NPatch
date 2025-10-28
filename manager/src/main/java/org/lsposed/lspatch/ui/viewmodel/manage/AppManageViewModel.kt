@@ -43,7 +43,7 @@ class AppManageViewModel : ViewModel() {
     val appList: List<Pair<AppInfo, PatchConfig>> by derivedStateOf {
         LSPPackageManager.appList.mapNotNull { appInfo ->
             runCatching {
-                appInfo.app.metaData?.getString("lspatch")?.let {
+                appInfo.app.metaData?.getString("npatch")?.let {
                     val json =  Base64.decode(it, Base64.DEFAULT).toString(Charsets.UTF_8)
                     Log.d(TAG, "Read patched config: $json")
                     val config = Gson().fromJson(json, PatchConfig::class.java)

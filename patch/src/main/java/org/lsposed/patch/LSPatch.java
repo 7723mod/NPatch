@@ -475,7 +475,7 @@ public class LSPatch {
             }
         });
 
-        property.addMetaData(new ModificationProperty.MetaData("lspatch", metadata));
+        property.addMetaData(new ModificationProperty.MetaData("npatch", metadata));
         // TODO: replace query_all with queries -> manager
         if (useManager)
             property.addUsesPermission("android.permission.QUERY_ALL_PACKAGES");

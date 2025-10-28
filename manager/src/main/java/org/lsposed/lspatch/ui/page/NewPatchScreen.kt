@@ -471,7 +471,7 @@ private fun DoPatchBody(modifier: Modifier, navigator: DestinationsNavigator) {
                                 val result = snackbarHost.showSnackbar(installFailed, copyError)
                                 if (result == SnackbarResult.ActionPerformed) {
                                     val cm = lspApp.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                    cm.setPrimaryClip(ClipData.newPlainText("LSPatch", message))
+                                    cm.setPrimaryClip(ClipData.newPlainText("NPatch", message))
                                 }
                             }
                             installation = null // Reset installation state
@@ -511,7 +511,7 @@ private fun DoPatchBody(modifier: Modifier, navigator: DestinationsNavigator) {
                             modifier = Modifier.weight(1f),
                             onClick = {
                                 val cm = lspApp.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                cm.setPrimaryClip(ClipData.newPlainText("LSPatch", viewModel.logs.joinToString(separator = "\n") { it.second }))
+                                cm.setPrimaryClip(ClipData.newPlainText("NPatch", viewModel.logs.joinToString(separator = "\n") { it.second }))
                             },
                             content = { Text(stringResource(R.string.copy_error)) }
                         )
