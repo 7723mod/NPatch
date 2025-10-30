@@ -16,6 +16,6 @@ dependencies {
     implementation("org.bouncycastle:bcprov-jdk15on:1.70")
     api("com.google.guava:guava:32.0.1-jre")
     api("com.android.tools.build:apksig:8.0.2")
-    compileOnlyApi("com.google.auto.value:auto-value-annotations:1.10.1")
-    annotationProcessor("com.google.auto.value:auto-value:1.10.1")
+    compileOnlyApi("com.google.auto.value:auto-value-annotations:1.11.0")
+    annotationProcessor("com.google.auto.value:auto-value:1.11.0")
 }
