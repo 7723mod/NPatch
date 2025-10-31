@@ -31,29 +31,29 @@ android {
 androidComponents.onVariants { variant ->
     val variantCapped = variant.name.replaceFirstChar { it.uppercase() }
 
-    task<Copy>("copyDex$variantCapped") {
+    val copyDexTask = tasks.register<Copy>("copyDex$variantCapped") {
         dependsOn("assemble$variantCapped")
-        from("$buildDir/intermediates/dex/${variant.name}/mergeDex$variantCapped/classes.dex")
+        from(layout.buildDirectory.file("intermediates/dex/${variant.name}/mergeDex$variantCapped/classes.dex"))
         rename("classes.dex", "loader.dex")
         into("${rootProject.projectDir}/out/assets/${variant.name}/lspatch")
     }
 
-    task<Copy>("copySo$variantCapped") {
+    val copySoTask = tasks.register<Copy>("copySo$variantCapped") {
         dependsOn("assemble$variantCapped")
         dependsOn("strip${variantCapped}DebugSymbols")
         val libDir = variant.name + "/strip${variantCapped}DebugSymbols"
         from(
             fileTree(
-                "dir" to "$buildDir/intermediates/stripped_native_libs/${variant.name}/strip${variantCapped}DebugSymbols/out/lib",
+                "dir" to layout.buildDirectory.dir("intermediates/stripped_native_libs/${variant.name}/strip${variantCapped}DebugSymbols/out/lib"),
                 "include" to listOf("**/liblspatch.so")
             )
         )
         into("${rootProject.projectDir}/out/assets/${variant.name}/lspatch/so")
     }
 
-    task("copy$variantCapped") {
-        dependsOn("copySo$variantCapped")
-        dependsOn("copyDex$variantCapped")
+    tasks.register("copy$variantCapped") {
+        dependsOn(copySoTask)
+        dependsOn(copyDexTask)
 
         doLast {
             println("Dex and so files has been copied to ${rootProject.projectDir}${File.separator}out")
