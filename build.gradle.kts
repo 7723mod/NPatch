@@ -20,7 +20,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("org.eclipse.jgit:org.eclipse.jgit:7.3.0.202506031305-r")
+        classpath("org.eclipse.jgit:org.eclipse.jgit:7.4.0.202509020913-r")
     }
 }
 
