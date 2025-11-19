@@ -53,15 +53,32 @@ object LSPPackageManager {
     private val iconLoader = AppIconLoader(lspApp.resources.getDimensionPixelSize(android.R.dimen.app_icon_size), false, lspApp)
     private val appIcon = mutableMapOf<String, ImageBitmap>()
 
+
     suspend fun fetchAppList() {
         withContext(Dispatchers.IO) {
             val pm = lspApp.packageManager
             val collection = mutableListOf<AppInfo>()
-            pm.getInstalledApplications(PackageManager.GET_META_DATA).forEach {
+            val applicationList: List<ApplicationInfo>
+
+            if (ShizukuApi.isPermissionGranted) {
+                Log.i(TAG, "Fetching app list using Shizuku API")
+                applicationList = runCatching {
+                    ShizukuApi.getInstalledApplications()
+                }.getOrElse { t ->
+                    Log.e(TAG, "Shizuku failed to fetch app list, falling back to standard PM", t)
+                    pm.getInstalledApplications(PackageManager.GET_META_DATA)
+                }
+            } else {
+                Log.i(TAG, "Fetching app list using standard PackageManager")
+                applicationList = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+            }
+
+            applicationList.forEach {
                 val label = pm.getApplicationLabel(it)
                 collection.add(AppInfo(it, label.toString()))
                 appIcon[it.packageName] = iconLoader.loadIcon(it).asImageBitmap()
             }
+
             collection.sortWith(compareBy(Collator.getInstance(Locale.getDefault()), AppInfo::label))
             val modules = buildMap {
                 collection.forEach { if (it.isXposedModule) put(it.app.packageName, it.app.sourceDir) }

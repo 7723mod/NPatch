@@ -50,6 +50,16 @@ object ShizukuApi {
             isPermissionGranted = false
         }
     }
+    
+    fun getInstalledApplications(): List<ApplicationInfo> {
+        val userId = Process.myUserHandle().hashCode()
+        val flags: Long = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            PackageManager.GET_META_DATA.toLong()
+        }else {
+            PackageManager.GET_META_DATA.toLong()
+        }
+        return iPackageManager.getInstalledApplications(flags, userId).list
+    }
 
     fun createPackageInstallerSession(params: PackageInstaller.SessionParams): PackageInstaller.Session {
         val sessionId = packageInstaller.createSession(params)
