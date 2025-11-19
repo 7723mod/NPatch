@@ -20,6 +20,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.lsposed.lspatch.loader.util.FileUtils;
 import org.lsposed.lspatch.loader.util.XLog;
+import org.lsposed.lspatch.service.IntegrApplicationService;
 import org.lsposed.lspatch.service.NeoLocalApplicationService;
 import org.lsposed.lspatch.service.RemoteApplicationService;
 import org.lsposed.lspatch.share.PatchConfig;
@@ -71,6 +72,15 @@ public class LSPApplication {
         return (android.os.Process.myUid() % PER_USER_RANGE) >= FIRST_APP_ZYGOTE_ISOLATED_UID;
     }
 
+    private static boolean hasEmbeddedModules(Context context) {
+        try {
+            String[] list = context.getAssets().list("lspatch/modules");
+            return list != null && list.length > 0;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
     public static void onLoad() throws RemoteException, IOException {
         if (isIsolated()) {
             XLog.d(TAG, "Skip isolated process");
@@ -84,7 +94,7 @@ public class LSPApplication {
         }
 
         Log.d(TAG, "Initialize service client");
-        ILSPApplicationService service;
+        ILSPApplicationService service = null;
 
         if (config.useManager) {
             try {
@@ -93,21 +103,31 @@ public class LSPApplication {
                 JSONArray moduleArr = new JSONArray();
                 for (Module module : m) {
                     JSONObject moduleObj = new JSONObject();
-                    moduleObj.put("path",module.apkPath);
-                    moduleObj.put("packageName",module.packageName);
+                    moduleObj.put("path", module.apkPath);
+                    moduleObj.put("packageName", module.packageName);
                     moduleArr.put(moduleObj);
                 }
                 SharedPreferences shared = context.getSharedPreferences("npatch", Context.MODE_PRIVATE);
-                shared.edit().putString("modules",moduleArr.toString()).apply();
+                shared.edit().putString("modules", moduleArr.toString()).apply();
                 Log.i(TAG, "Success update module scope from Manager");
-            }catch (Exception e){
-                Log.e(TAG, "Failed to connect to manager, fallback to fixed local service (NLAS)");
+
+            } catch (Throwable e) {
+                Log.w(TAG, "Failed to connect to manager: " + e.getMessage());
+                service = null;
+            }
+        }
+
+        if (service == null) {
+
+            if (hasEmbeddedModules(context)) {
+                Log.i(TAG, "Using Integrated Service (Embedded Modules Found)");
+                service = new IntegrApplicationService(context);
+            } else {
+                Log.i(TAG, "Using NeoLocal Service (Cached Config)");
                 service = new NeoLocalApplicationService(context);
             }
-        } else {
-            Log.i(TAG, "Manager is disabled, using remote service (NLAS)");
-            service = new NeoLocalApplicationService(context);
         }
+
 
         Startup.initXposed(false, ActivityThread.currentProcessName(), context.getApplicationInfo().dataDir, service);
         Startup.bootstrapXposed();

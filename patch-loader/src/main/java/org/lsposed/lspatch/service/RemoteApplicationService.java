@@ -19,9 +19,9 @@ import org.lsposed.lspatch.share.Constants;
 import org.lsposed.lspd.models.Module;
 import org.lsposed.lspd.service.ILSPApplicationService;
 
-import java.io.Closeable;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -29,143 +29,105 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class RemoteApplicationService implements ILSPApplicationService, IBinder.DeathRecipient, Closeable {
+public class RemoteApplicationService implements ILSPApplicationService {
 
     private static final String TAG = "NPatch";
     private static final String MODULE_SERVICE = "org.lsposed.lspatch.manager.ModuleService";
+    private static final int CONNECTION_TIMEOUT_SEC = 1;
 
-    private volatile ILSPApplicationService mService;
-    private final Context mContext;
-    private final ServiceConnection mConnection;
-    private HandlerThread mHandlerThread;
+    private volatile ILSPApplicationService service;
 
     @SuppressLint("DiscouragedPrivateApi")
     public RemoteApplicationService(Context context) throws RemoteException {
-        this.mContext = context.getApplicationContext();
-
-        var intent = new Intent()
-                .setComponent(new ComponentName(Constants.MANAGER_PACKAGE_NAME, MODULE_SERVICE))
-                .putExtra("packageName", mContext.getPackageName());
-        var latch = new CountDownLatch(1);
-        mConnection = new ServiceConnection() {
-            @Override
-            public void onServiceConnected(ComponentName name, IBinder binder) {
-                Log.i(TAG, "Manager binder received");
-                mService = ILSPApplicationService.Stub.asInterface(binder);
-                try {
-                    // 註冊 Binder 死亡通知
-                    binder.linkToDeath(RemoteApplicationService.this, 0);
-                } catch (RemoteException e) {
-                    Log.e(TAG, "Failed to link to death", e);
-                    mService = null;
-                }
-                latch.countDown();
-            }
-
-            @Override
-            public void onServiceDisconnected(ComponentName name) {
-                Log.e(TAG, "Manager service died");
-                mService = null;
-            }
-        };
-
-        Log.i(TAG, "Request manager binder");
-        mHandlerThread = null; // Initialize member
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                mContext.bindService(intent, Context.BIND_AUTO_CREATE, Executors.newSingleThreadExecutor(), mConnection);
-            } else {
-                // 為 ＜29 創建一個臨時的 HandlerThread
-                mHandlerThread = new HandlerThread("RemoteApplicationService");
-                mHandlerThread.start();
-                var handler = new Handler(mHandlerThread.getLooper());
-                var contextImplClass = context.getClass();
-                var getUserMethod = contextImplClass.getMethod("getUser");
-                var bindServiceAsUserMethod = contextImplClass.getDeclaredMethod(
-                        "bindServiceAsUser", Intent.class, ServiceConnection.class, int.class, Handler.class, UserHandle.class);
-                var userHandle = (UserHandle) getUserMethod.invoke(context);
-                bindServiceAsUserMethod.invoke(context, intent, mConnection, Context.BIND_AUTO_CREATE, handler, userHandle);
-            }
-            boolean success = latch.await(3, TimeUnit.SECONDS);
+            Intent intent = new Intent()
+                    .setComponent(new ComponentName(Constants.MANAGER_PACKAGE_NAME, MODULE_SERVICE))
+                    .putExtra("packageName", context.getPackageName());
 
-            if (!success) {
-                // Attempt to unbind the service before throwing a timeout for cleanup
-                try {
-                    mContext.unbindService(mConnection);
-                } catch (IllegalArgumentException | IllegalStateException ignored) {
-                    // Ignored
+            CountDownLatch latch = new CountDownLatch(1);
+
+            ServiceConnection conn = new ServiceConnection() {
+                @Override
+                public void onServiceConnected(ComponentName name, IBinder binder) {
+                    Log.i(TAG, "Manager binder received");
+                    service = Stub.asInterface(binder);
+                    latch.countDown();
                 }
+
+                @Override
+                public void onServiceDisconnected(ComponentName name) {
+                    Log.e(TAG, "Manager service died");
+                    service = null;
+                }
+            };
+
+            Log.i(TAG, "Requesting manager binder...");
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                context.bindService(intent, Context.BIND_AUTO_CREATE, Executors.newSingleThreadExecutor(), conn);
+            } else {
+                HandlerThread handlerThread = new HandlerThread("RemoteApplicationService");
+                handlerThread.start();
+                Handler handler = new Handler(handlerThread.getLooper());
+
+                Class<?> contextImplClass = context.getClass();
+                Method getUserMethod = contextImplClass.getMethod("getUser");
+                UserHandle userHandle = (UserHandle) getUserMethod.invoke(context);
+
+                Method bindServiceAsUserMethod = contextImplClass.getDeclaredMethod(
+                        "bindServiceAsUser",
+                        Intent.class,
+                        ServiceConnection.class,
+                        int.class,
+                        Handler.class,
+                        UserHandle.class
+                );
+
+                bindServiceAsUserMethod.invoke(context, intent, conn, Context.BIND_AUTO_CREATE, handler, userHandle);
+            }
+
+            boolean success = latch.await(CONNECTION_TIMEOUT_SEC, TimeUnit.SECONDS);
+            if (!success) {
                 throw new TimeoutException("Bind service timeout");
             }
+
         } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException |
                  InterruptedException | TimeoutException e) {
-            var r = new RemoteException("Failed to get manager binder");
-            r.initCause(e);
-            throw r;
-        } finally {
+            
+            RemoteException remoteException = new RemoteException("Failed to get manager binder");
+            remoteException.initCause(e);
+            throw remoteException;
         }
     }
 
-    private ILSPApplicationService getServiceOrThrow() throws RemoteException {
-        ILSPApplicationService service = mService;
-        if (service == null) {
-            throw new RemoteException("Manager service is not connected or has died.");
-        }
-        return service;
+    @Override
+    public List<Module> getLegacyModulesList() throws RemoteException {
+        return service == null ? new ArrayList<>() : service.getLegacyModulesList();
+    }
+
+    @Override
+    public List<Module> getModulesList() throws RemoteException {
+        return service == null ? new ArrayList<>() : service.getModulesList();
+    }
+
+    @Override
+    public String getPrefsPath(String packageName) {
+        return new File(Environment.getDataDirectory(), "data/" + packageName + "/shared_prefs/")
+                .getAbsolutePath();
+    }
+
+    @Override
+    public IBinder asBinder() {
+        return service == null ? null : service.asBinder();
+    }
+
+    @Override
+    public ParcelFileDescriptor requestInjectedManagerBinder(List<IBinder> binder) {
+        return null;
+
     }
 
     @Override
     public boolean isLogMuted() throws RemoteException {
         return false;
-    }
-
-    @Override
-    public List<Module> getLegacyModulesList() throws RemoteException {
-        return getServiceOrThrow().getLegacyModulesList();
-    }
-
-    @Override
-    public List<Module> getModulesList() throws RemoteException {
-        return getServiceOrThrow().getModulesList();
-    }
-
-    @Override
-    public String getPrefsPath(String packageName) throws RemoteException {
-        return getServiceOrThrow().getPrefsPath(packageName);
-    }
-
-    @Override
-    public IBinder asBinder() {
-        return mService == null ? null : mService.asBinder();
-    }
-
-    @Override
-    public ParcelFileDescriptor requestInjectedManagerBinder(List<IBinder> binder) throws RemoteException {
-        // return getServiceOrThrow().requestInjectedManagerBinder(binder);
-        return null;
-    }
-
-    @Override
-    public void binderDied() {
-        Log.e(TAG, "Manager service binder has died.");
-        if (mService != null) {
-            mService.asBinder().unlinkToDeath(this, 0);
-        }
-        mService = null;
-    }
-
-    @Override
-    public void close() {
-        if (mService != null) {
-            mService.asBinder().unlinkToDeath(this, 0);
-        }
-        try {
-            // 解綁服務
-            mContext.unbindService(mConnection);
-        } catch (IllegalArgumentException e) {
-            Log.w(TAG, "Service was not registered or already unbound: " + e.getMessage());
-        }
-        
-        mService = null;
     }
 }
