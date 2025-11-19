@@ -131,14 +131,16 @@ public class ApkSignatureHelper {
             while (block.remaining() > 24) {
                 size = (int) block.getLong();
                 if (block.getInt() == 0x7109871a) {
-                    // signer-sequence length, signer length, signed data length
+                    // SignerSequence length(4) + Signer length(4) + SignedData length(4)
                     block.position(block.position() + 12);
-                    size = block.getInt(); // digests-sequence length
-
-                    // digests, certificates length
-                    block.position(block.position() + size + 0x4);
-
-                    size = block.getInt(); // certificate length
+                    // 读取 DigestsSequence
+                    int digestsLen = block.getInt();
+                    block.position(block.position() + digestsLen);
+                    // 不使用，仅为了移动指针
+                    block.getInt();
+                    // 这里赋值给 size，供循环外读取数据使用
+                    size = block.getInt();
+                    // 此时 block 指针正好位于第一个证书数据的开头
                     break;
                 } else {
                     block.position(block.position() + size - 0x4);
