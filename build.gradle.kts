@@ -5,6 +5,7 @@ import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.internal.storage.file.FileRepository
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
 import com.android.build.gradle.LibraryExtension
+import org.gradle.kotlin.dsl.extra
 
 plugins {
     alias(libs.plugins.agp.lib) apply false
@@ -66,8 +67,8 @@ tasks.register<Delete>("clean") {
 listOf("Debug", "Release").forEach { variant ->
     tasks.register("build$variant") {
         description = "Build NPatch with $variant"
-        dependsOn(projects.jar.dependencyProject.tasks["build$variant"])
-        dependsOn(projects.manager.dependencyProject.tasks["build$variant"])
+        dependsOn(tasks.findByPath(":jar:build$variant") ?: "jar:build$variant")
+        dependsOn(tasks.findByPath(":manager:build$variant") ?: "manager:build$variant")
     }
 }
 
@@ -105,7 +106,8 @@ fun Project.configureBaseExtension() {
             externalNativeBuild {
                 cmake {
                     arguments += "-DEXTERNAL_ROOT=${File(rootDir.absolutePath, "core/external")}"
-                    arguments += "-DCORE_ROOT=${File(rootDir.absolutePath, "core/core/src/main/jni")}"
+                    arguments += "-DCORE_ROOT=${File(rootDir.absolutePath, 
+                    "core/core/src/main/jni")}"
                     abiFilters("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
                     val flags = arrayOf(
                         "-Wall",
@@ -165,7 +167,7 @@ fun Project.configureBaseExtension() {
                             "-fno-asynchronous-unwind-tables",
                             "-flto=thin",
                             "-Wl,--thinlto-cache-policy,cache_size_bytes=300m",
-                            "-Wl,--thinlto-cache-dir=${buildDir.absolutePath}/.lto-cache",
+                            "-Wl,--thinlto-cache-dir=${layout.buildDirectory.get().asFile.absolutePath}/.lto-cache", 
                         )
                         cppFlags.addAll(flags)
                         cFlags.addAll(flags)
@@ -179,7 +181,7 @@ fun Project.configureBaseExtension() {
                                 "-DCMAKE_CXX_FLAGS_RELWITHDEBINFO=$configFlags",
                                 "-DCMAKE_C_FLAGS_RELEASE=$configFlags",
                                 "-DCMAKE_C_FLAGS_RELWITHDEBINFO=$configFlags",
-                                "-DDEBUG_SYMBOLS_PATH=${buildDir.absolutePath}/symbols",
+                                "-DDEBUG_SYMBOLS_PATH=${layout.buildDirectory.get().asFile.absolutePath}/symbols", 
                             )
                         )
                     }
