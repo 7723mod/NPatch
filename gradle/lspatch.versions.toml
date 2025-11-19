@@ -10,7 +10,7 @@ ksp = "2.3.2"
 commons-io = "2.20.0"
 beust-jcommander = "1.82"
 google-gson = "2.13.1"
-core-ktx = "1.16.0"
+core-ktx = "1.17.0"
 
 [plugins]
 google-devtools-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
