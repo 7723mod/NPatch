@@ -12,6 +12,7 @@ import android.content.pm.ApplicationInfo;
 import android.content.res.CompatibilityInfo;
 import android.os.Build;
 import android.os.RemoteException;
+import android.system.Os;
 import android.util.Log;
 
 import com.google.gson.Gson;
@@ -40,6 +41,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -72,15 +74,6 @@ public class LSPApplication {
         return (android.os.Process.myUid() % PER_USER_RANGE) >= FIRST_APP_ZYGOTE_ISOLATED_UID;
     }
 
-    private static boolean hasEmbeddedModules(Context context) {
-        try {
-            String[] list = context.getAssets().list("lspatch/modules");
-            return list != null && list.length > 0;
-        } catch (IOException e) {
-            return false;
-        }
-    }
-
     public static void onLoad() throws RemoteException, IOException {
         if (isIsolated()) {
             XLog.d(TAG, "Skip isolated process");
@@ -94,8 +87,7 @@ public class LSPApplication {
         }
 
         Log.d(TAG, "Initialize service client");
-        ILSPApplicationService service = null;
-
+        ILSPApplicationService service;
         if (config.useManager) {
             try {
                 service = new RemoteApplicationService(context);
@@ -107,28 +99,19 @@ public class LSPApplication {
                     moduleObj.put("packageName", module.packageName);
                     moduleArr.put(moduleObj);
                 }
-                SharedPreferences shared = context.getSharedPreferences("npatch", Context.MODE_PRIVATE);
-                shared.edit().putString("modules", moduleArr.toString()).apply();
-                Log.i(TAG, "Success update module scope from Manager");
-
-            } catch (Throwable e) {
-                Log.w(TAG, "Failed to connect to manager: " + e.getMessage());
-                service = null;
-            }
-        }
-
-        if (service == null) {
-
-            if (hasEmbeddedModules(context)) {
-                Log.i(TAG, "Using Integrated Service (Embedded Modules Found)");
-                service = new IntegrApplicationService(context);
-            } else {
-                Log.i(TAG, "Using NeoLocal Service (Cached Config)");
+                SharedPreferences shared = context.getSharedPreferences("opatch", Context.MODE_PRIVATE);
+                shared.edit().putString("modules",moduleArr.toString()).commit();
+                Log.e(TAG, "Success update module scope");
+            }catch (Exception e){
+                Log.e(TAG, "Failed to connect to manager, fallback to fixed local service");
                 service = new NeoLocalApplicationService(context);
             }
+
+        } else {
+            service = new IntegrApplicationService(context);
         }
 
-
+        disableProfile(context);
         Startup.initXposed(false, ActivityThread.currentProcessName(), context.getApplicationInfo().dataDir, service);
         Startup.bootstrapXposed();
         // WARN: Since it uses `XResource`, the following class should not be initialized
@@ -209,6 +192,7 @@ public class LSPApplication {
             appLoadedApk = activityThread.getPackageInfoNoCheck(appInfo, compatInfo);
 
 
+
             if (config.injectProvider){
                 ClassLoader loader = appLoadedApk.getClassLoader();
                 Object dexPathList = XposedHelpers.getObjectField(loader, "pathList");
@@ -265,6 +249,53 @@ public class LSPApplication {
         } catch (Throwable e) {
             Log.e(TAG, "createLoadedApk", e);
             return null;
+        }
+    }
+
+    public static void disableProfile(Context context) {
+        final ArrayList<String> codePaths = new ArrayList<>();
+        var appInfo = context.getApplicationInfo();
+        var pkgName = context.getPackageName();
+        if (appInfo == null) return;
+        if ((appInfo.flags & ApplicationInfo.FLAG_HAS_CODE) != 0) {
+            codePaths.add(appInfo.sourceDir);
+        }
+        if (appInfo.splitSourceDirs != null) {
+            Collections.addAll(codePaths, appInfo.splitSourceDirs);
+        }
+
+        if (codePaths.isEmpty()) {
+            // If there are no code paths there's no need to setup a profile file and register with
+            // the runtime,
+            return;
+        }
+
+        var profileDir = HiddenApiBridge.Environment_getDataProfilesDePackageDirectory(appInfo.uid / PER_USER_RANGE, pkgName);
+
+        var attrs = PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("r--------"));
+
+        for (int i = codePaths.size() - 1; i >= 0; i--) {
+            String splitName = i == 0 ? null : appInfo.splitNames[i - 1];
+            File curProfileFile = new File(profileDir, splitName == null ? "primary.prof" : splitName + ".split.prof").getAbsoluteFile();
+            Log.d(TAG, "Processing " + curProfileFile.getAbsolutePath());
+            try {
+                if (!curProfileFile.canWrite() && Files.size(curProfileFile.toPath()) == 0) {
+                    Log.d(TAG, "Skip profile " + curProfileFile.getAbsolutePath());
+                    continue;
+                }
+                if (curProfileFile.exists() && !curProfileFile.delete()) {
+                    try (var writer = new FileOutputStream(curProfileFile)) {
+                        Log.d(TAG, "Failed to delete, try to clear content " + curProfileFile.getAbsolutePath());
+                    } catch (Throwable e) {
+                        Log.e(TAG, "Failed to delete and clear profile file " + curProfileFile.getAbsolutePath(), e);
+                    }
+                    Os.chmod(curProfileFile.getAbsolutePath(), 00400);
+                } else {
+                    Files.createFile(curProfileFile.toPath(), attrs);
+                }
+            } catch (Throwable e) {
+                Log.e(TAG, "Failed to disable profile file " + curProfileFile.getAbsolutePath(), e);
+            }
         }
     }
 

@@ -1,8 +1,8 @@
 package org.lsposed.lspatch.metaloader;
 
 import android.annotation.SuppressLint;
-import android.app.AppComponentFactory;
 import android.app.ActivityThread;
+import android.app.AppComponentFactory;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.IPackageManager;
 import android.os.Build;
@@ -76,14 +76,16 @@ public class LSPAppComponentFactoryStub extends AppComponentFactory {
                 }
             }
 
+            int currentUserId = Process.myUid() / 100000;
+
             if (useManager) {
                 Log.i(TAG, "Bootstrap loader from manager");
                 var ipm = IPackageManager.Stub.asInterface(ServiceManager.getService("package"));
                 ApplicationInfo manager;
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    manager = (ApplicationInfo) HiddenApiBypass.invoke(IPackageManager.class, ipm, "getApplicationInfo", Constants.MANAGER_PACKAGE_NAME, 0L, Process.myUid() / 100000);
+                    manager = (ApplicationInfo) HiddenApiBypass.invoke(IPackageManager.class, ipm, "getApplicationInfo", Constants.MANAGER_PACKAGE_NAME, 0L, currentUserId);
                 } else {
-                    manager = ipm.getApplicationInfo(Constants.MANAGER_PACKAGE_NAME, 0, Process.myUid() / 100000);
+                    manager = ipm.getApplicationInfo(Constants.MANAGER_PACKAGE_NAME, 0, currentUserId);
                 }
                 try (var zip = new ZipFile(new File(manager.sourceDir));
                      var is = zip.getInputStream(zip.getEntry(Constants.LOADER_DEX_ASSET_PATH));
