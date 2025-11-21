@@ -328,9 +328,12 @@ public class LSPatch {
             if (!useManager) {
                 logger.i("Adding loader dex...");
                 try (var is = getClass().getClassLoader().getResourceAsStream(LOADER_DEX_ASSET_PATH)) {
+                    if (is == null) {
+                        throw new PatchError("Fatal: Could not find " + LOADER_DEX_ASSET_PATH + " in the patcher resources!");
+                    }
                     dstZFile.add(LOADER_DEX_ASSET_PATH, is);
                 } catch (Throwable e) {
-                    throw new PatchError("Error when adding assets", e);
+                    throw new PatchError("Error when adding loader.dex", e);
                 }
 
                 logger.i("Adding native lib...");

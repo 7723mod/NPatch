@@ -74,6 +74,15 @@ public class LSPApplication {
         return (android.os.Process.myUid() % PER_USER_RANGE) >= FIRST_APP_ZYGOTE_ISOLATED_UID;
     }
 
+    private static boolean hasEmbeddedModules(Context context) {
+        try {
+            String[] list = context.getAssets().list("lspatch/modules");
+            return list != null && list.length > 0;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
     public static void onLoad() throws RemoteException, IOException {
         if (isIsolated()) {
             XLog.d(TAG, "Skip isolated process");
@@ -87,7 +96,8 @@ public class LSPApplication {
         }
 
         Log.d(TAG, "Initialize service client");
-        ILSPApplicationService service;
+        ILSPApplicationService service = null;
+
         if (config.useManager) {
             try {
                 service = new RemoteApplicationService(context);
@@ -106,7 +116,6 @@ public class LSPApplication {
                 Log.e(TAG, "Failed to connect to manager, fallback to fixed local service");
                 service = new NeoLocalApplicationService(context);
             }
-
         } else {
             service = new IntegrApplicationService(context);
         }
@@ -114,11 +123,12 @@ public class LSPApplication {
         disableProfile(context);
         Startup.initXposed(false, ActivityThread.currentProcessName(), context.getApplicationInfo().dataDir, service);
         Startup.bootstrapXposed();
+        
         // WARN: Since it uses `XResource`, the following class should not be initialized
         // before forkPostCommon is invoke. Otherwise, you will get failure of XResources
 
-        if (config.outputLog){
-            XposedBridge.setLogPrinter(new XposedLogPrinter(0,"NPatch"));
+        if (config.outputLog) {
+            XposedBridge.setLogPrinter(new XposedLogPrinter(0, "NPatch"));
         }
         Log.i(TAG, "Load modules");
         LSPLoader.initModules(appLoadedApk);
@@ -170,19 +180,19 @@ public class LSPApplication {
                 }
             }
             Path providerPath = null;
-            if (config.injectProvider){
+            if (config.injectProvider) {
                 try (ZipFile sourceFile = new ZipFile(sourceFileaa)) {
-
-                    providerPath = Paths.get(appInfo.dataDir, "cache/npatch/origin/p_" + sourceFile.getEntry(ORIGINAL_APK_ASSET_PATH).getCrc()+".dex");
+                    providerPath = Paths.get(appInfo.dataDir, "cache/npatch/origin/p_" + sourceFile.getEntry(ORIGINAL_APK_ASSET_PATH).getCrc() + ".dex");
                     Files.deleteIfExists(providerPath);
                     try (InputStream is = baseClassLoader.getResourceAsStream(PROVIDER_DEX_ASSET_PATH)) {
                         Files.copy(is, providerPath);
                     }
-                    providerPath.toFile().setWritable(false);
-                }catch (Exception e){
+                    if (providerPath != null) {
+                        providerPath.toFile().setWritable(false);
+                    }
+                } catch (Exception e) {
                     Log.e(TAG, "Failed to inject provider:" + Log.getStackTraceString(e));
                 }
-
             }
 
             cacheApkPath.toFile().setWritable(false);
@@ -191,9 +201,7 @@ public class LSPApplication {
             mPackages.remove(appInfo.packageName);
             appLoadedApk = activityThread.getPackageInfoNoCheck(appInfo, compatInfo);
 
-
-
-            if (config.injectProvider){
+            if (config.injectProvider && providerPath != null) {
                 ClassLoader loader = appLoadedApk.getClassLoader();
                 Object dexPathList = XposedHelpers.getObjectField(loader, "pathList");
                 Object dexElements = XposedHelpers.getObjectField(dexPathList, "dexElements");
@@ -202,13 +210,12 @@ public class LSPApplication {
                 System.arraycopy(dexElements, 0, newElements, 0, length);
 
                 DexFile dexFile = new DexFile(providerPath.toString());
-                Object element = XposedHelpers.newInstance(XposedHelpers.findClass("dalvik.system.DexPathList$Element",loader), new Class[]{
+                Object element = XposedHelpers.newInstance(XposedHelpers.findClass("dalvik.system.DexPathList$Element", loader), new Class[]{
                         DexFile.class
-                },dexFile);
+                }, dexFile);
                 Array.set(newElements, length, element);
                 XposedHelpers.setObjectField(dexPathList, "dexElements", newElements);
             }
-
 
             XposedHelpers.setObjectField(mBoundApplication, "info", appLoadedApk);
 
@@ -242,7 +249,7 @@ public class LSPApplication {
                     appInfo.appComponentFactory = null;
                 }
             }
-            Log.i(TAG,"createLoadedApkWithContext cost: " + (System.currentTimeMillis() - timeStart) + "ms");
+            Log.i(TAG, "createLoadedApkWithContext cost: " + (System.currentTimeMillis() - timeStart) + "ms");
 
             SigBypass.replaceApplication(appInfo.packageName, appInfo.sourceDir, appInfo.publicSourceDir);
             return context;
