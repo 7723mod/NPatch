@@ -6,7 +6,7 @@
 
 Rootless implementation of LSPosed framework, integrating Xposed API by inserting dex and so into the target APK.
 
-We sincerely invite you to join our [Telegram](t.me/NPatch) group to get more information and updates about NPatch.
+We sincerely invite you to join our [Telegram](https://t.me/NPatch) group to get more information and updates about NPatch.
 
 ## Supported Versions
 
