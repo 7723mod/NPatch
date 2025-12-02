@@ -1,10 +1,12 @@
 package org.lsposed.npatch.ui.page
 
 import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Context.RECEIVER_NOT_EXPORTED
+import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageInstaller
 import android.net.Uri
@@ -406,6 +408,35 @@ private fun DoPatchBody(modifier: Modifier, navigator: DestinationsNavigator) {
     val viewModel = viewModel<NewPatchViewModel>()
     val snackbarHost = LocalSnackbarHost.current
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    // 监听应用安装广播
+    DisposableEffect(viewModel.patchApp.app.packageName) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                val action = intent.action
+                val data = intent.data
+                val pkgName = data?.schemeSpecificPart
+
+                // 只有当包名匹配，且动作是 添加 或 替换 时才认为是安装成功
+                if (pkgName == viewModel.patchApp.app.packageName) {
+                    if (action == Intent.ACTION_PACKAGE_ADDED || action == Intent.ACTION_PACKAGE_REPLACED) {
+                        scope.launch {
+                            snackbarHost.showSnackbar(context.getString(R.string.patch_install_successfully))
+                            navigator.navigateUp()
+                        }
+                    }
+                }
+            }
+        }
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_PACKAGE_ADDED)
+            addAction(Intent.ACTION_PACKAGE_REPLACED)
+            addDataScheme("package")
+        }
+        context.registerReceiver(receiver, filter)
+        onDispose { context.unregisterReceiver(receiver) }
+    }
 
     LaunchedEffect(Unit) {
         if (viewModel.logs.isEmpty()) {
@@ -454,16 +485,20 @@ private fun DoPatchBody(modifier: Modifier, navigator: DestinationsNavigator) {
             when (viewModel.patchState) {
                 PatchState.PATCHING -> BackHandler {}
                 PatchState.FINISHED -> {
-                    val installSuccessfully = stringResource(R.string.patch_install_successfully)
+                    // val installSuccessfully = stringResource(R.string.patch_install_successfully) // 移交给 BroadcastReceiver 处理
                     val installFailed = stringResource(R.string.patch_install_failed)
                     val copyError = stringResource(R.string.copy_error)
                     var installation by remember { mutableStateOf<NewPatchViewModel.InstallMethod?>(null) }
+
                     val onFinish: (Int, String?) -> Unit = { status, message ->
                         scope.launch {
                             if (status == PackageInstaller.STATUS_SUCCESS) {
-                                snackbarHost.showSnackbar(installSuccessfully)
-                                navigator.navigateUp()
+                                // Shizuku 安装成功的情况
+                                // 此处不执行 navigateUp，等待 BroadcastReceiver 收到系统广播后再统一跳转
+                                // 这样可以保证应用确实已被系统注册
+                                Log.i(TAG, "Install reported success, waiting for broadcast to navigate.")
                             } else if (status != NPackageManager.STATUS_USER_CANCELLED) {
+                                // 安装失败处理
                                 val result = snackbarHost.showSnackbar(installFailed, copyError)
                                 if (result == SnackbarResult.ActionPerformed) {
                                     val cm = lspApp.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -565,7 +600,7 @@ private fun InstallDialog(patchApp: AppInfo, onFinish: (Int, String?) -> Unit) {
     }
 
     LaunchedEffect(uninstallFirst) {
-        if (!uninstallFirst && installing == 0) {       
+        if (!uninstallFirst && installing == 0) {
             onFinish(NPackageManager.STATUS_USER_CANCELLED, "User cancelled")
             doInstall()
         }
