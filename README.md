@@ -22,8 +22,8 @@ Note: debug builds are only available in Github Actions
 ## Usage
 
 + Through jar
-1. Download `lspatch.jar`
-1. Run `java -jar lspatch.jar`
+1. Download `npatch.jar`
+1. Run `java -jar npatch.jar`
 
 + Through manager
 1. Download and install `manager.apk` on an Android device

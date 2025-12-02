@@ -25,7 +25,7 @@ android {
             path("src/main/jni/CMakeLists.txt")
         }
     }
-    namespace = "org.lsposed.lspatch.loader"
+    namespace = "org.lsposed.npatch.loader"
 }
 
 androidComponents.onVariants { variant ->
@@ -35,7 +35,7 @@ androidComponents.onVariants { variant ->
         dependsOn("assemble$variantCapped")
         from(layout.buildDirectory.file("intermediates/dex/${variant.name}/mergeDex$variantCapped/classes.dex"))
         rename("classes.dex", "loader.dex")
-        into("${rootProject.projectDir}/out/assets/${variant.name}/lspatch")
+        into("${rootProject.projectDir}/out/assets/${variant.name}/npatch")
     }
 
     val copySoTask = tasks.register<Copy>("copySo$variantCapped") {
@@ -45,10 +45,10 @@ androidComponents.onVariants { variant ->
         from(
             fileTree(
                 "dir" to layout.buildDirectory.dir("intermediates/stripped_native_libs/${variant.name}/strip${variantCapped}DebugSymbols/out/lib"),
-                "include" to listOf("**/liblspatch.so")
+                "include" to listOf("**/libnpatch.so")
             )
         )
-        into("${rootProject.projectDir}/out/assets/${variant.name}/lspatch/so")
+        into("${rootProject.projectDir}/out/assets/${variant.name}/npatch/so")
     }
 
     tasks.register("copy$variantCapped") {

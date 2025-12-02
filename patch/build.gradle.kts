@@ -21,7 +21,7 @@ dependencies {
     implementation(projects.apkzlib)
     implementation(projects.share.java)
 
-    implementation(lspatch.commons.io)
-    implementation(lspatch.beust.jcommander)
-    implementation(lspatch.google.gson)
+    implementation(npatch.commons.io)
+    implementation(npatch.beust.jcommander)
+    implementation(npatch.google.gson)
 }

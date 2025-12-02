@@ -9,10 +9,10 @@ val coreVerName: String by rootProject.extra
 
 plugins {
     alias(libs.plugins.agp.app)
-    alias(lspatch.plugins.compose.compiler)
-    alias(lspatch.plugins.google.devtools.ksp)
-    alias(lspatch.plugins.rikka.tools.refine)
-    alias(lspatch.plugins.kotlin.android)
+    alias(npatch.plugins.compose.compiler)
+    alias(npatch.plugins.google.devtools.ksp)
+    alias(npatch.plugins.rikka.tools.refine)
+    alias(npatch.plugins.kotlin.android)
     id("kotlin-parcelize")
 }
 
@@ -47,7 +47,7 @@ android {
         kotlinCompilerExtensionVersion = "1.5.13"
     }
 
-    namespace = "org.lsposed.lspatch"
+    namespace = "org.lsposed.npatch"
 
     applicationVariants.all {
         kotlin.sourceSets {
@@ -86,35 +86,35 @@ dependencies {
     implementation(projects.services.daemonService)
     implementation(projects.share.android)
     implementation(projects.share.java)
-    implementation(platform(lspatch.androidx.compose.bom))
+    implementation(platform(npatch.androidx.compose.bom))
 
-    annotationProcessor(lspatch.androidx.room.compiler)
-    compileOnly(lspatch.rikka.hidden.stub)
-    debugImplementation(lspatch.androidx.compose.ui.tooling)
-    debugImplementation(lspatch.androidx.customview)
-    debugImplementation(lspatch.androidx.customview.poolingcontainer)
-    implementation(lspatch.androidx.activity.compose)
-    implementation(lspatch.androidx.compose.material.icons.extended)
-    implementation(lspatch.androidx.compose.material3)
-    implementation(lspatch.androidx.compose.ui)
-    implementation(lspatch.androidx.compose.ui.tooling.preview)
-    implementation(lspatch.androidx.core.ktx)
-    implementation(lspatch.androidx.lifecycle.viewmodel.compose)
-    implementation(lspatch.androidx.navigation.compose)
+    annotationProcessor(npatch.androidx.room.compiler)
+    compileOnly(npatch.rikka.hidden.stub)
+    debugImplementation(npatch.androidx.compose.ui.tooling)
+    debugImplementation(npatch.androidx.customview)
+    debugImplementation(npatch.androidx.customview.poolingcontainer)
+    implementation(npatch.androidx.activity.compose)
+    implementation(npatch.androidx.compose.material.icons.extended)
+    implementation(npatch.androidx.compose.material3)
+    implementation(npatch.androidx.compose.ui)
+    implementation(npatch.androidx.compose.ui.tooling.preview)
+    implementation(npatch.androidx.core.ktx)
+    implementation(npatch.androidx.lifecycle.viewmodel.compose)
+    implementation(npatch.androidx.navigation.compose)
     implementation(libs.androidx.preference)
-    implementation(lspatch.androidx.room.ktx)
-    implementation(lspatch.androidx.room.runtime)
-    implementation(lspatch.google.accompanist.navigation.animation)
-    implementation(lspatch.google.accompanist.pager)
-    implementation(lspatch.google.accompanist.swiperefresh)
+    implementation(npatch.androidx.room.ktx)
+    implementation(npatch.androidx.room.runtime)
+    implementation(npatch.google.accompanist.navigation.animation)
+    implementation(npatch.google.accompanist.pager)
+    implementation(npatch.google.accompanist.swiperefresh)
     implementation(libs.material)
     implementation(libs.gson)
-    implementation(lspatch.rikka.shizuku.api)
-    implementation(lspatch.rikka.shizuku.provider)
-    implementation(lspatch.rikka.refine)
-    implementation(lspatch.raamcosta.compose.destinations)
+    implementation(npatch.rikka.shizuku.api)
+    implementation(npatch.rikka.shizuku.provider)
+    implementation(npatch.rikka.refine)
+    implementation(npatch.raamcosta.compose.destinations)
     implementation(libs.appiconloader)
     implementation(libs.hiddenapibypass)
-    ksp(lspatch.androidx.room.compiler)
-    ksp(lspatch.raamcosta.compose.destinations.ksp)
+    ksp(npatch.androidx.room.compiler)
+    ksp(npatch.raamcosta.compose.destinations.ksp)
 }

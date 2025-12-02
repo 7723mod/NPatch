@@ -10,8 +10,8 @@ import org.gradle.kotlin.dsl.extra
 plugins {
     alias(libs.plugins.agp.lib) apply false
     alias(libs.plugins.agp.app) apply false
-    alias(lspatch.plugins.compose.compiler) apply false
-    alias(lspatch.plugins.kotlin.android) apply false
+    alias(npatch.plugins.compose.compiler) apply false
+    alias(npatch.plugins.kotlin.android) apply false
 }
 
 buildscript {
@@ -156,6 +156,7 @@ fun Project.configureBaseExtension() {
                 }
             }
             named("release") {
+                signingConfig = null
                 externalNativeBuild {
                     cmake {
                         val flags = arrayOf(
@@ -197,9 +198,12 @@ fun Project.configureBaseExtension() {
 
     extensions.findByType(ApplicationAndroidComponentsExtension::class)?.let { androidComponents ->
         val optimizeReleaseRes = task("optimizeReleaseRes").doLast {
+            val isWindows = System.getProperty("os.name").lowercase().contains("windows")
+            val aapt2Name = if (isWindows) "aapt2.exe" else "aapt2"
+
             val aapt2 = File(
                 androidComponents.sdkComponents.sdkDirectory.get().asFile,
-                "build-tools/${androidBuildToolsVersion}/aapt2"
+                "build-tools/${androidBuildToolsVersion}/$aapt2Name"
             )
             val zip = java.nio.file.Paths.get(
                 project.buildDir.path,

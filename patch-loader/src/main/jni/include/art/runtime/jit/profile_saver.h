@@ -2,8 +2,8 @@
 // Created by loves on 6/19/2021.
 //
 
-#ifndef LSPATCH_PROFILE_SAVER_H
-#define LSPATCH_PROFILE_SAVER_H
+#ifndef NPATCH_PROFILE_SAVER_H
+#define NPATCH_PROFILE_SAVER_H
 
 #include "utils/hook_helper.hpp"
 
@@ -54,4 +54,4 @@ public:
 };
 }  // namespace art
 
-#endif  // LSPATCH_PROFILE_SAVER_H
+#endif  // NPATCH_PROFILE_SAVER_H

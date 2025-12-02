@@ -1,4 +1,4 @@
-package org.lsposed.lspatch.share;
+package org.lsposed.npatch.share;
 
 public class LSPConfig {
 
