@@ -18,7 +18,7 @@ jobs:
 
     steps:
     - name: 檢出程式碼
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
       with:
         ref: ${{ github.sha }}
         submodules: 'recursive'
@@ -117,21 +117,21 @@ jobs:
       run: .\gradlew.bat buildAll
 
     - name: 上傳 Release Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: npatch-release-${{ env.commit }}
         path: out/release/*
         retention-days: 7
 
     - name: 上傳 Debug Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: npatch-debug-${{ env.commit }}
         path: out/debug/*
         retention-days: 7
 
     - name: 上傳 mappings
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: mappings-${{ env.commit }}
         path: |
@@ -139,7 +139,7 @@ jobs:
           manager/build/outputs/mapping
 
     - name: 上傳 symbols
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: symbols-${{ env.commit }}
         path: |
