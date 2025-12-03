@@ -5,7 +5,7 @@ public class Constants {
     final static public String CONFIG_ASSET_PATH = "assets/npatch/config.json";
     final static public String LOADER_DEX_ASSET_PATH = "assets/npatch/loader.dex";
     final static public String META_LOADER_DEX_ASSET_PATH = "assets/npatch/metaloader.dex";
-    final static public String PROVIDER_DEX_ASSET_PATH = "assets/npatch/provider.dex";
+    final static public String PROVIDER_DEX_ASSET_PATH = "assets/npatch/mtprovider.dex";
     final static public String ORIGINAL_APK_ASSET_PATH = "assets/npatch/origin.apk";
     final static public String EMBEDDED_MODULES_ASSET_PATH = "assets/npatch/modules/";
 

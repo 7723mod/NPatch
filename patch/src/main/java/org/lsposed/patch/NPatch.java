@@ -315,8 +315,8 @@ public class NPatch {
             }
 
             if (isInjectProvider){
-                try (var is = getClass().getClassLoader().getResourceAsStream("assets/provider.dex")) {
-                    dstZFile.add("assets/npatch/provider.dex", is);
+                try (var is = getClass().getClassLoader().getResourceAsStream("assets/mtprovider.dex")) {
+                    dstZFile.add("assets/npatch/mtprovider.dex", is);
                 } catch (Throwable e) {
                     throw new PatchError("Error when adding dex", e);
                 }
