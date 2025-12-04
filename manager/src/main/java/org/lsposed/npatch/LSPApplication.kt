@@ -8,8 +8,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 import org.lsposed.npatch.manager.AppBroadcastReceiver
-import org.lsposed.npatch.util.NPackageManager
-import org.lsposed.npatch.util.ShizukuApi
+import nkbe.util.NPackageManager
+import nkbe.util.ShizukuApi
 import java.io.File
 
 lateinit var lspApp: LSPApplication

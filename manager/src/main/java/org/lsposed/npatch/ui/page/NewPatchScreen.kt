@@ -66,9 +66,9 @@ import org.lsposed.npatch.ui.util.uninstallApkByPackageName
 import org.lsposed.npatch.ui.viewmodel.NewPatchViewModel
 import org.lsposed.npatch.ui.viewmodel.NewPatchViewModel.PatchState
 import org.lsposed.npatch.ui.viewmodel.NewPatchViewModel.ViewAction
-import org.lsposed.npatch.util.NPackageManager
-import org.lsposed.npatch.util.NPackageManager.AppInfo
-import org.lsposed.npatch.util.ShizukuApi
+import nkbe.util.NPackageManager
+import nkbe.util.NPackageManager.AppInfo
+import nkbe.util.ShizukuApi
 
 private const val TAG = "NewPatchPage"
 

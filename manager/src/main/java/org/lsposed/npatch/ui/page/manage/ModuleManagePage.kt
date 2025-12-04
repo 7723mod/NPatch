@@ -26,7 +26,7 @@ import org.lsposed.npatch.ui.component.AnywhereDropdown
 import org.lsposed.npatch.ui.component.AppItem
 import org.lsposed.npatch.R
 import org.lsposed.npatch.ui.viewmodel.manage.ModuleManageViewModel
-import org.lsposed.npatch.util.NPackageManager
+import nkbe.util.NPackageManager
 
 @Composable
 fun ModuleManageBody() {

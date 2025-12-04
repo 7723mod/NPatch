@@ -29,8 +29,8 @@ import org.lsposed.npatch.R
 import org.lsposed.npatch.ui.component.AppItem
 import org.lsposed.npatch.ui.component.SearchAppBar
 import org.lsposed.npatch.ui.viewmodel.SelectAppsViewModel
-import org.lsposed.npatch.util.NPackageManager
-import org.lsposed.npatch.util.NPackageManager.AppInfo
+import nkbe.util.NPackageManager
+import nkbe.util.NPackageManager.AppInfo
 
 @Parcelize
 sealed class SelectAppsResult : Parcelable {

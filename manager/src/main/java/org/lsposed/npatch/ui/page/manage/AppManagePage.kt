@@ -53,8 +53,8 @@ import org.lsposed.npatch.ui.page.destinations.SelectAppsScreenDestination
 import org.lsposed.npatch.ui.util.LocalSnackbarHost
 import org.lsposed.npatch.ui.viewmodel.manage.AppManageViewModel
 import org.lsposed.npatch.ui.viewstate.ProcessingState
-import org.lsposed.npatch.util.NPackageManager
-import org.lsposed.npatch.util.ShizukuApi
+import nkbe.util.NPackageManager
+import nkbe.util.ShizukuApi
 import java.io.IOException
 
 private const val TAG = "AppManagePage"

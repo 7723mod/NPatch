@@ -7,7 +7,7 @@ import android.content.IntentFilter
 import android.util.Log
 import kotlinx.coroutines.launch
 import org.lsposed.npatch.lspApp
-import org.lsposed.npatch.util.NPackageManager
+import nkbe.util.NPackageManager
 
 class AppBroadcastReceiver : BroadcastReceiver() {
 

@@ -46,7 +46,7 @@
             android:name=".ui.activity.InstallActivity"
             android:enabled="false"
             android:exported="true"
-            android:targetActivity="org.lsposed.npatch.ui.activity.MainActivity">
+            android:targetActivity=".ui.activity.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

@@ -10,8 +10,8 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import org.lsposed.npatch.Patcher
 import org.lsposed.npatch.share.PatchConfig
-import org.lsposed.npatch.util.NPackageManager
-import org.lsposed.npatch.util.NPackageManager.AppInfo
+import nkbe.util.NPackageManager
+import nkbe.util.NPackageManager.AppInfo
 import org.lsposed.patch.util.Logger
 
 class NewPatchViewModel : ViewModel() {

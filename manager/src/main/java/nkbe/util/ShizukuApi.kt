@@ -1,4 +1,4 @@
-package org.lsposed.npatch.util
+package nkbe.util
 
 import android.content.IntentSender
 import android.content.pm.*

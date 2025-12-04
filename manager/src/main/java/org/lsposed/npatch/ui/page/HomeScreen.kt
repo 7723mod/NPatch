@@ -42,7 +42,7 @@ import org.lsposed.npatch.ui.page.destinations.ManageScreenDestination
 import org.lsposed.npatch.ui.page.destinations.NewPatchScreenDestination
 import org.lsposed.npatch.ui.util.HtmlText
 import org.lsposed.npatch.ui.util.LocalSnackbarHost
-import org.lsposed.npatch.util.ShizukuApi
+import nkbe.util.ShizukuApi
 import rikka.shizuku.Shizuku
 
 @OptIn(ExperimentalMaterial3Api::class)

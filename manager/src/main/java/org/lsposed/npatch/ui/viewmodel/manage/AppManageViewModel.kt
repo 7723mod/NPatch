@@ -23,9 +23,9 @@ import org.lsposed.npatch.share.PatchConfig
 import org.lsposed.npatch.ui.util.installApk
 import org.lsposed.npatch.ui.util.installApks
 import org.lsposed.npatch.ui.viewstate.ProcessingState
-import org.lsposed.npatch.util.NPackageManager
-import org.lsposed.npatch.util.NPackageManager.AppInfo
-import org.lsposed.npatch.util.ShizukuApi
+import nkbe.util.NPackageManager
+import nkbe.util.NPackageManager.AppInfo
+import nkbe.util.ShizukuApi
 import org.lsposed.patch.util.Logger
 import java.io.FileNotFoundException
 import java.util.zip.ZipFile

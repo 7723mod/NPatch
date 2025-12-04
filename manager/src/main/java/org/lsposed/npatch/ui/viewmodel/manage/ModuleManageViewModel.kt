@@ -4,7 +4,7 @@ import android.util.Log
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.ViewModel
-import org.lsposed.npatch.util.NPackageManager
+import nkbe.util.NPackageManager
 
 class ModuleManageViewModel : ViewModel() {
 

@@ -8,8 +8,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
-import org.lsposed.npatch.util.NPackageManager
-import org.lsposed.npatch.util.NPackageManager.AppInfo
+import nkbe.util.NPackageManager
+import nkbe.util.NPackageManager.AppInfo
 
 class SelectAppsViewModel : ViewModel() {
 

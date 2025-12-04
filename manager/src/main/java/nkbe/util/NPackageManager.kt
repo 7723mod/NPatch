@@ -1,5 +1,6 @@
-package org.lsposed.npatch.util
+package nkbe.util
 
+import android.R
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.ApplicationInfo
@@ -50,7 +51,7 @@ object NPackageManager {
         private set
 
     @SuppressLint("StaticFieldLeak")
-    private val iconLoader = AppIconLoader(lspApp.resources.getDimensionPixelSize(android.R.dimen.app_icon_size), false, lspApp)
+    private val iconLoader = AppIconLoader(lspApp.resources.getDimensionPixelSize(R.dimen.app_icon_size), false, lspApp)
     private val appIcon = mutableMapOf<String, ImageBitmap>()
 
 

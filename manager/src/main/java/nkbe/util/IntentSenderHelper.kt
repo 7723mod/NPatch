@@ -1,4 +1,4 @@
-package org.lsposed.npatch.util
+package nkbe.util
 
 import android.content.IIntentReceiver
 import android.content.IIntentSender
