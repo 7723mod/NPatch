@@ -493,9 +493,6 @@ private fun DoPatchBody(modifier: Modifier, navigator: DestinationsNavigator) {
                     val onFinish: (Int, String?) -> Unit = { status, message ->
                         scope.launch {
                             if (status == PackageInstaller.STATUS_SUCCESS) {
-                                // Shizuku 安装成功的情况
-                                // 此处不执行 navigateUp，等待 BroadcastReceiver 收到系统广播后再统一跳转
-                                // 这样可以保证应用确实已被系统注册
                                 Log.i(TAG, "Install reported success, waiting for broadcast to navigate.")
                             } else if (status != NPackageManager.STATUS_USER_CANCELLED) {
                                 // 安装失败处理

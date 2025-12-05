@@ -44,7 +44,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.13"
+        kotlinCompilerExtensionVersion = "1.5.15"
     }
 
     namespace = "org.lsposed.npatch"
@@ -63,17 +63,22 @@ afterEvaluate {
         val variantLowered = variant.name.lowercase()
         val variantCapped = variant.name.replaceFirstChar { it.uppercase() }
 
-        task<Copy>("copy${variantCapped}Assets") {
+        val copyAssetsTaskProvider = tasks.register<Copy>("copy${variantCapped}Assets") {
             dependsOn(":meta-loader:copy$variantCapped")
             dependsOn(":patch-loader:copy$variantCapped")
-            tasks["merge${variantCapped}Assets"].dependsOn(this)
 
-            into("$buildDir/intermediates/assets/$variantLowered/merge${variantCapped}Assets")
+            val targetDir = layout.buildDirectory.dir("intermediates/assets/$variantLowered/merge${variantCapped}Assets")
+            into(targetDir)
+
             from("${rootProject.projectDir}/out/assets/${variant.name}")
         }
 
-        task<Copy>("build$variantCapped") {
-            dependsOn(tasks["assemble$variantCapped"])
+        tasks.named("merge${variantCapped}Assets").configure {
+            dependsOn(copyAssetsTaskProvider)
+        }
+
+        tasks.register<Copy>("build$variantCapped") {
+            dependsOn("assemble$variantCapped")
             from(variant.outputs.map { it.outputFile })
             into("${rootProject.projectDir}/out/$variantLowered")
             rename(".*.apk", "NPatch-v$verName-$verCode-$variantLowered.apk")
@@ -82,17 +87,16 @@ afterEvaluate {
 }
 
 dependencies {
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-moshi:2.9.0")
+    implementation("com.squareup.moshi:moshi-kotlin:1.15.0")
+
     implementation(projects.patch)
     implementation(projects.services.daemonService)
     implementation(projects.share.android)
     implementation(projects.share.java)
-    implementation(platform(npatch.androidx.compose.bom))
 
-    annotationProcessor(npatch.androidx.room.compiler)
-    compileOnly(npatch.rikka.hidden.stub)
-    debugImplementation(npatch.androidx.compose.ui.tooling)
-    debugImplementation(npatch.androidx.customview)
-    debugImplementation(npatch.androidx.customview.poolingcontainer)
+    implementation(platform(npatch.androidx.compose.bom))
     implementation(npatch.androidx.activity.compose)
     implementation(npatch.androidx.compose.material.icons.extended)
     implementation(npatch.androidx.compose.material3)
@@ -104,6 +108,7 @@ dependencies {
     implementation(libs.androidx.preference)
     implementation(npatch.androidx.room.ktx)
     implementation(npatch.androidx.room.runtime)
+
     implementation(npatch.google.accompanist.navigation.animation)
     implementation(npatch.google.accompanist.pager)
     implementation(npatch.google.accompanist.swiperefresh)
@@ -115,6 +120,13 @@ dependencies {
     implementation(npatch.raamcosta.compose.destinations)
     implementation(libs.appiconloader)
     implementation(libs.hiddenapibypass)
+
+    annotationProcessor(npatch.androidx.room.compiler)
+    compileOnly(npatch.rikka.hidden.stub)
     ksp(npatch.androidx.room.compiler)
     ksp(npatch.raamcosta.compose.destinations.ksp)
+
+    debugImplementation(npatch.androidx.compose.ui.tooling)
+    debugImplementation(npatch.androidx.customview)
+    debugImplementation(npatch.androidx.customview.poolingcontainer)
 }
