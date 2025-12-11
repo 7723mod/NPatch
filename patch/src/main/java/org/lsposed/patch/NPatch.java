@@ -458,8 +458,9 @@ public class NPatch {
                     return permission.replaceFirst(originPackage, newPackage);
                 }
                 if (permission.startsWith("android")
-                        || permission.startsWith("com.android")){
-                    return permission;
+                || permission.startsWith("com.android")
+                || permission.startsWith("com.google.android")) {
+                return permission;
                 }
                 return newPackage + "_" + permission;
             }
