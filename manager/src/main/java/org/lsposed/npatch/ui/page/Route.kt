@@ -1,0 +1,24 @@
+package org.lsposed.npatch.ui.page
+
+import androidx.navigation3.runtime.NavKey
+import kotlinx.serialization.Serializable
+
+/**
+ * Navigation3 路由定义。
+ * 包含主页容器 (Main) 和其他全屏页面。
+ */
+sealed interface Route : NavKey {
+    @Serializable data object Main : Route
+    
+    @Serializable 
+    data class NewPatch(
+        val id: Int, 
+        val data: String? = null
+    ) : Route
+
+    @Serializable 
+    data class SelectApps(
+        val multiSelect: Boolean, 
+        val initialSelected: List<String>? = null
+    ) : Route
+}
