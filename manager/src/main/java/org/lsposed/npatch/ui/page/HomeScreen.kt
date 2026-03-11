@@ -244,10 +244,9 @@ private fun SupportCard() {
             .padding(horizontal = 12.dp)
             .padding(bottom = 12.dp),
     ) {
-        // 使用原生的 SuperArrow 替代原有的 HtmlText 丑陋连接体验
         SuperArrow(
             title = "GitHub",
-            summary = stringResource(R.string.home_view_source_code, "GitHub", ""), // 兼容你原有的文本，可适当更改
+            summary = stringResource(R.string.home_view_source_code, "GitHub", ""),
             onClick = {
                 val intent = Intent(Intent.ACTION_VIEW, "https://github.com/7723mod/NPatch".toUri())
                 context.startActivity(intent)
@@ -255,7 +254,7 @@ private fun SupportCard() {
         )
         SuperArrow(
             title = "Telegram",
-            summary = "加入我们的讨论群",
+            summary = "Subscribe to our channel",
             onClick = {
                 val intent = Intent(Intent.ACTION_VIEW, "https://t.me/NPatch".toUri())
                 context.startActivity(intent)

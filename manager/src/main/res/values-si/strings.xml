@@ -25,7 +25,7 @@
     <string name="home_info_copied">පසුරු පුවරුවට පිටපත් කර ඇත</string>
     <string name="home_support">සහාය</string>
     <string name="home_description">NPatch යනු LSPosed core මත පදනම් වූ නොමිලේ Root නොවන Xposed රාමුවකි.</string>
-    <string name="home_view_source_code"><![CDATA[මූල කේතය %1$s<br/>ට බලන්න අපගේ %2$s නාලිකාවට සම්බන්ධ වන්න]]></string>
+    <string name="home_view_source_code"><![CDATA[මූල කේතය %1$s]]></string>
     <!-- Manage Screen -->
     <string name="screen_manage">කළමනාකරණය කරන්න</string>
     <string name="manage_loading">පැටවීම</string>
