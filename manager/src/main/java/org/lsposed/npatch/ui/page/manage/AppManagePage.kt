@@ -6,35 +6,39 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.provider.Settings
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardCapslock
-import androidx.compose.material3.*
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.accompanist.swiperefresh.SwipeRefresh
-import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
-import com.ramcosta.composedestinations.navigation.DestinationsNavigator
-import com.ramcosta.composedestinations.result.NavResult
-import com.ramcosta.composedestinations.result.ResultRecipient
 import kotlinx.coroutines.launch
 import org.lsposed.npatch.R
 import org.lsposed.npatch.BuildConfig
@@ -44,53 +48,83 @@ import org.lsposed.npatch.database.entity.Module
 import org.lsposed.npatch.lspApp
 import org.lsposed.npatch.share.Constants
 import org.lsposed.npatch.share.LSPConfig
-import org.lsposed.npatch.ui.component.AnywhereDropdown
+
 import org.lsposed.npatch.ui.component.AppItem
-import org.lsposed.npatch.ui.component.LoadingDialog
 import org.lsposed.npatch.ui.page.ACTION_APPLIST
 import org.lsposed.npatch.ui.page.ACTION_STORAGE
+import org.lsposed.npatch.ui.page.Navigator
+import org.lsposed.npatch.ui.page.Route
 import org.lsposed.npatch.ui.page.SelectAppsResult
-import org.lsposed.npatch.ui.page.destinations.NewPatchScreenDestination
-import org.lsposed.npatch.ui.page.destinations.SelectAppsScreenDestination
 import org.lsposed.npatch.ui.util.LocalSnackbarHost
 import org.lsposed.npatch.ui.viewmodel.manage.AppManageViewModel
+import org.lsposed.npatch.ui.viewmodel.manage.ModuleManageViewModel
 import org.lsposed.npatch.ui.viewstate.ProcessingState
 import nkbe.util.NPackageManager
 import nkbe.util.ShizukuApi
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.DropdownDefaults
+import top.yukonga.miuix.kmp.basic.DropdownImpl
+import top.yukonga.miuix.kmp.basic.FloatingActionButton
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
+import top.yukonga.miuix.kmp.basic.ListPopupColumn
+import top.yukonga.miuix.kmp.basic.PopupPositionProvider
+import top.yukonga.miuix.kmp.basic.PullToRefresh
+import top.yukonga.miuix.kmp.basic.SnackbarResult
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
+import top.yukonga.miuix.kmp.extra.SuperDialog
+import top.yukonga.miuix.kmp.extra.SuperListPopup
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.utils.overScrollVertical
+import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import java.io.IOException
 
 private const val TAG = "AppManagePage"
 
 @Composable
 fun AppManageBody(
-    navigator: DestinationsNavigator,
-    resultRecipient: ResultRecipient<SelectAppsScreenDestination, SelectAppsResult>
+    navigator: Navigator,
 ) {
     val viewModel = viewModel<AppManageViewModel>()
     val snackbarHost = LocalSnackbarHost.current
     val scope = rememberCoroutineScope()
+    val pullToRefreshState = rememberPullToRefreshState()
 
     var scopeApp by rememberSaveable { mutableStateOf("") }
-    var afterCheckManager by remember { mutableStateOf<(() -> Unit)?>(null) }
-    
-    resultRecipient.onNavResult {
-        if (it is NavResult.Value) {
+    val uninstallSuccessfully = stringResource(R.string.manage_uninstall_successfully)
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
             scope.launch {
-                val result = it.value as SelectAppsResult.MultipleApps
-                ConfigManager.getModulesForApp(scopeApp).forEach {
-                    ConfigManager.deactivateModule(scopeApp, it)
-                }
-                result.selected.forEach {
-                    Log.d(TAG, "Activate ${it.app.packageName} for $scopeApp")
-                    ConfigManager.activateModule(scopeApp, Module(it.app.packageName, it.app.sourceDir))
-                }
+                snackbarHost.showSnackbar(uninstallSuccessfully)
+                viewModel.dispatch(AppManageViewModel.ViewAction.Refresh)
+            }
+        }
+    }
+
+    // Miuix 风格的处理中弹窗
+    val isProcessing = viewModel.updateLoaderState is ProcessingState.Processing || viewModel.optimizeState is ProcessingState.Processing
+    if (isProcessing) {
+        val showLoading = remember { mutableStateOf(true) }
+        SuperDialog(
+            title = stringResource(R.string.manage_loading),
+            show = showLoading,
+            onDismissRequest = { /* 阻断取消，等待处理完成 */ }
+        ) {
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                InfiniteProgressIndicator()
             }
         }
     }
 
     when (viewModel.updateLoaderState) {
         is ProcessingState.Idle -> Unit
-        is ProcessingState.Processing -> LoadingDialog()
+        is ProcessingState.Processing -> Unit // 上面统一处理了
         is ProcessingState.Done -> {
             val it = viewModel.updateLoaderState as ProcessingState.Done
             val updateSuccessfully = stringResource(R.string.manage_update_loader_successfully)
@@ -110,9 +144,10 @@ fun AppManageBody(
             }
         }
     }
+
     when (viewModel.optimizeState) {
         is ProcessingState.Idle -> Unit
-        is ProcessingState.Processing -> LoadingDialog()
+        is ProcessingState.Processing -> Unit
         is ProcessingState.Done -> {
             val it = viewModel.optimizeState as ProcessingState.Done
             val optimizeSucceed = stringResource(R.string.manage_optimize_successfully)
@@ -123,116 +158,120 @@ fun AppManageBody(
             }
         }
     }
-    // 下拉刷新
-    SwipeRefresh(
-        state = rememberSwipeRefreshState(viewModel.isRefreshing),
+
+    PullToRefresh(
+        isRefreshing = viewModel.isRefreshing,
         onRefresh = { viewModel.dispatch(AppManageViewModel.ViewAction.Refresh) },
+        pullToRefreshState = pullToRefreshState,
         modifier = Modifier.fillMaxSize()
     ) {
         if (viewModel.appList.isEmpty()) {
-            Box(Modifier.fillMaxSize()) {
-                Text(
-                    modifier = Modifier.align(Alignment.Center),
-                    text = run {
-                        if (NPackageManager.appList.isEmpty()) stringResource(R.string.manage_loading)
-                        else stringResource(R.string.manage_no_apps)
-                    },
-                    fontFamily = FontFamily.Serif,
-                    style = MaterialTheme.typography.headlineSmall
-                )
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    if (NPackageManager.appList.isEmpty()) {
+                        InfiniteProgressIndicator()
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            text = stringResource(R.string.manage_loading),
+                            style = MiuixTheme.textStyles.body1,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(R.string.manage_no_apps),
+                            style = MiuixTheme.textStyles.body1,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                        )
+                    }
+                }
             }
         } else {
-            LazyColumn(Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .scrollEndHaptic()
+                    .overScrollVertical(),
+                overscrollEffect = null
+            ) {
                 items(
                     items = viewModel.appList,
                     key = { it.first.app.packageName }
                 ) { (appInfo, patchConfig) ->
                     val isRolling = patchConfig.useManager && patchConfig.lspConfig.VERSION_CODE >= Constants.MIN_ROLLING_VERSION_CODE
                     val canUpdateLoader = !isRolling && (patchConfig.lspConfig.VERSION_CODE < LSPConfig.instance.VERSION_CODE || patchConfig.managerPackageName != BuildConfig.APPLICATION_ID)
-                    var expanded by remember { mutableStateOf(false) }
 
-                    AnywhereDropdown(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false },
-                        onClick = { expanded = true },
-                        onLongClick = { expanded = true },
-                        surface = {
-                            AppItem(
-                                icon = NPackageManager.getIcon(appInfo),
-                                label = appInfo.label,
-                                packageName = appInfo.app.packageName,
-                                additionalContent = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        val patchText = if (patchConfig.useManager) {
-                                            stringResource(R.string.patch_local)
-                                        } else {
-                                            stringResource(R.string.patch_integrated)
-                                        }
-                                        val patchColor = if (patchConfig.useManager) {
-                                            MaterialTheme.colorScheme.secondary
-                                        } else {
-                                            MaterialTheme.colorScheme.tertiary
-                                        }
-                                        val versionText = if (isRolling) {
-                                            stringResource(R.string.manage_rolling)
-                                        } else {
-                                            patchConfig.lspConfig.VERSION_CODE.toString()
-                                        }
+                    val showDropdown = remember { mutableStateOf(false) }
+                    val hapticFeedback = LocalHapticFeedback.current
 
-                                        Text(
-                                            text = "$patchText  $versionText",
-                                            color = patchColor,
-                                            fontWeight = FontWeight.SemiBold,
-                                            fontFamily = FontFamily.Serif,
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                        if (canUpdateLoader) {
-                                            with(LocalDensity.current) {
-                                                val size = MaterialTheme.typography.bodySmall.fontSize * 1.2
-                                                Icon(Icons.Filled.KeyboardCapslock, null, Modifier.size(size.toDp()))
-                                            }
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        AppItem(
+                            modifier = Modifier.clickable {
+                                showDropdown.value = true
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.ContextClick)
+                            },
+                            icon = NPackageManager.getIcon(appInfo),
+                            label = appInfo.label,
+                            packageName = appInfo.app.packageName,
+                            additionalContent = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    val patchText = if (patchConfig.useManager) stringResource(R.string.patch_local) else stringResource(R.string.patch_integrated)
+                                    val patchColor = MiuixTheme.colorScheme.secondary
+                                    val versionText = if (isRolling) stringResource(R.string.manage_rolling) else patchConfig.lspConfig.VERSION_CODE.toString()
+
+                                    Text(
+                                        text = "$patchText  $versionText",
+                                        color = patchColor,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontFamily = FontFamily.Serif,
+                                        style = MiuixTheme.textStyles.footnote1
+                                    )
+                                    if (canUpdateLoader) {
+                                        with(LocalDensity.current) {
+                                            val size = MiuixTheme.textStyles.footnote1.fontSize * 1.2
+                                            Icon(Icons.Filled.KeyboardCapslock, null, Modifier.size(size.toDp()))
                                         }
                                     }
                                 }
-                            )
-                        }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(text = appInfo.label, color = MaterialTheme.colorScheme.primary) },
-                            onClick = {}, enabled = false
+                            }
                         )
-                        val shizukuUnavailable = stringResource(R.string.shizuku_unavailable)
-                        if (canUpdateLoader || BuildConfig.DEBUG) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.manage_update_loader)) },
-                                onClick = {
-                                    expanded = false
-                                    scope.launch {
-                                        viewModel.dispatch(AppManageViewModel.ViewAction.UpdateLoader(appInfo, patchConfig))
-                                    }
-                                }
-                            )
-                        }
-                        if (patchConfig.useManager) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.manage_module_scope)) },
-                                onClick = {
-                                    expanded = false
+
+                        SuperListPopup(
+                            show = showDropdown,
+                            alignment = PopupPositionProvider.Align.End, // 自动右对齐
+                            onDismissRequest = { showDropdown.value = false }
+                        ) {
+                            val actions = mutableListOf<Pair<String, () -> Unit>>()
+
+                            if (canUpdateLoader || BuildConfig.DEBUG) {
+                                actions.add(stringResource(R.string.manage_update_loader) to {
+                                    scope.launch { viewModel.dispatch(AppManageViewModel.ViewAction.UpdateLoader(appInfo, patchConfig)) }
+                                })
+                            }
+                            if (patchConfig.useManager) {
+                                actions.add(stringResource(R.string.manage_module_scope) to {
                                     scope.launch {
                                         scopeApp = appInfo.app.packageName
                                         val activated = ConfigManager.getModulesForApp(scopeApp).map { it.pkgName }.toSet()
-                                        val initialSelected = NPackageManager.appList.mapNotNullTo(ArrayList()) {
+                                        val initialSelected = NPackageManager.appList.mapNotNull {
                                             if (activated.contains(it.app.packageName)) it.app.packageName else null
                                         }
-                                        navigator.navigate(SelectAppsScreenDestination(true, initialSelected))
+                                        val result = navigator.navigateForResult<SelectAppsResult>(
+                                            Route.SelectApps(true, initialSelected)
+                                        )
+                                        if (result is SelectAppsResult.MultipleApps) {
+                                            ConfigManager.getModulesForApp(scopeApp).forEach {
+                                                ConfigManager.deactivateModule(scopeApp, it)
+                                            }
+                                            result.selected.forEach {
+                                                Log.d(TAG, "Activate ${it.app.packageName} for $scopeApp")
+                                                ConfigManager.activateModule(scopeApp, Module(it.app.packageName, it.app.sourceDir))
+                                            }
+                                        }
                                     }
-                                }
-                            )
-                        }
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.manage_optimize)) },
-                            onClick = {
-                                expanded = false
+                                })
+                            }
+                            val shizukuUnavailable = stringResource(R.string.shizuku_unavailable)
+                            actions.add(stringResource(R.string.manage_optimize) to {
                                 scope.launch {
                                     if (!ShizukuApi.isPermissionGranted) {
                                         snackbarHost.showSnackbar(shizukuUnavailable)
@@ -240,28 +279,32 @@ fun AppManageBody(
                                         viewModel.dispatch(AppManageViewModel.ViewAction.PerformOptimize(appInfo))
                                     }
                                 }
-                            }
-                        )
-                        val uninstallSuccessfully = stringResource(R.string.manage_uninstall_successfully)
-                        val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                            if (result.resultCode == Activity.RESULT_OK) {
-                                scope.launch {
-                                    snackbarHost.showSnackbar(uninstallSuccessfully)
-                                    viewModel.dispatch(AppManageViewModel.ViewAction.Refresh)
-                                }
-                            }
-                        }
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.uninstall)) },
-                            onClick = {
-                                expanded = false
+                            })
+                            actions.add(stringResource(R.string.uninstall) to {
                                 val intent = Intent(Intent.ACTION_DELETE).apply {
-                                    data = Uri.parse("package:${appInfo.app.packageName}")
+                                    data = "package:${appInfo.app.packageName}".toUri()
                                     putExtra(Intent.EXTRA_RETURN_RESULT, true)
                                 }
                                 launcher.launch(intent)
+                            })
+
+                            ListPopupColumn {
+                                actions.forEachIndexed { index, (text, action) ->
+                                    DropdownImpl(
+                                        text = text,
+                                        optionSize = actions.size,
+                                        isSelected = false,
+                                        dropdownColors = DropdownDefaults.dropdownColors(),
+                                        onSelectedIndexChange = {
+                                            hapticFeedback.performHapticFeedback(HapticFeedbackType.Confirm)
+                                            showDropdown.value = false
+                                            action()
+                                        },
+                                        index = index
+                                    )
+                                }
                             }
-                        )
+                        }
                     }
                 }
             }
@@ -270,12 +313,12 @@ fun AppManageBody(
 }
 
 @Composable
-fun AppManageFab(navigator: DestinationsNavigator) {
+fun AppManageFab(navigator: Navigator) {
     val context = LocalContext.current
     val snackbarHost = LocalSnackbarHost.current
     val scope = rememberCoroutineScope()
-    var shouldSelectDirectory by remember { mutableStateOf(false) }
-    var showNewPatchDialog by remember { mutableStateOf(false) }
+    val shouldSelectDirectory = remember { mutableStateOf(false) }
+    val showNewPatchDialog = remember { mutableStateOf(false) }
 
     val errorText = stringResource(R.string.patch_select_dir_error)
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -286,113 +329,100 @@ fun AppManageFab(navigator: DestinationsNavigator) {
             context.contentResolver.takePersistableUriPermission(uri, takeFlags)
             Configs.storageDirectory = uri.toString()
             Log.i(TAG, "Storage directory: ${uri.path}")
-            showNewPatchDialog = true
+            showNewPatchDialog.value = true
         } catch (e: Exception) {
             Log.e(TAG, "Error when requesting saving directory", e)
             scope.launch { snackbarHost.showSnackbar(errorText) }
         }
     }
 
-    if (shouldSelectDirectory) {
-        AlertDialog(
-            onDismissRequest = { shouldSelectDirectory = false },
-            confirmButton = {
-                TextButton(
-                    content = { Text(stringResource(android.R.string.ok)) },
-                    onClick = {
-                        launcher.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE))
-                        shouldSelectDirectory = false
-                    }
-                )
-            },
-            dismissButton = {
-                TextButton(
-                    content = { Text(stringResource(android.R.string.cancel)) },
-                    onClick = { shouldSelectDirectory = false }
-                )
-            },
-            title = {
+    if (shouldSelectDirectory.value) {
+        SuperDialog(
+            title = stringResource(R.string.patch_select_dir_title),
+            show = shouldSelectDirectory,
+            onDismissRequest = { shouldSelectDirectory.value = false },
+        ) {
+            Column {
                 Text(
-                    modifier = Modifier.fillMaxWidth(),
-                    text = stringResource(R.string.patch_select_dir_title),
-                    textAlign = TextAlign.Center
+                    text = stringResource(R.string.patch_select_dir_text),
+                    modifier = Modifier.padding(bottom = 16.dp),
                 )
-            },
-            text = { Text(stringResource(R.string.patch_select_dir_text)) }
-        )
-    }
-
-    if (showNewPatchDialog) {
-        AlertDialog(
-            onDismissRequest = { showNewPatchDialog = false },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(
-                    content = { Text(stringResource(android.R.string.cancel)) },
-                    onClick = { showNewPatchDialog = false }
-                )
-            },
-            title = {
-                Text(
-                    modifier = Modifier.fillMaxWidth(),
-                    text = stringResource(R.string.screen_new_patch),
-                    textAlign = TextAlign.Center
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
                     TextButton(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.secondary),
-                        onClick = {
-                            navigator.navigate(NewPatchScreenDestination(id = ACTION_STORAGE))
-                            showNewPatchDialog = false
-                        }
-                    ) {
-                        Text(
-                            modifier = Modifier.padding(vertical = 8.dp),
-                            text = stringResource(R.string.patch_from_storage),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
+                        text = stringResource(android.R.string.cancel),
+                        onClick = { shouldSelectDirectory.value = false },
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(20.dp))
                     TextButton(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.secondary),
+                        text = stringResource(android.R.string.ok),
                         onClick = {
-                            navigator.navigate(NewPatchScreenDestination(id = ACTION_APPLIST))
-                            showNewPatchDialog = false
-                        }
-                    ) {
-                        Text(
-                            modifier = Modifier.padding(vertical = 8.dp),
-                            text = stringResource(R.string.patch_from_applist),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
+                            launcher.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE))
+                            shouldSelectDirectory.value = false
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                    )
                 }
             }
-        )
+        }
+    }
+
+    if (showNewPatchDialog.value) {
+        SuperDialog(
+            title = stringResource(R.string.screen_new_patch),
+            show = showNewPatchDialog,
+            onDismissRequest = { showNewPatchDialog.value = false },
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(
+                    text = stringResource(R.string.patch_from_storage),
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        navigator.navigate(Route.NewPatch(id = ACTION_STORAGE))
+                        showNewPatchDialog.value = false
+                    },
+                )
+                TextButton(
+                    text = stringResource(R.string.patch_from_applist),
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        navigator.navigate(Route.NewPatch(id = ACTION_APPLIST))
+                        showNewPatchDialog.value = false
+                    },
+                )
+                Spacer(Modifier.height(4.dp))
+                TextButton(
+                    text = stringResource(android.R.string.cancel),
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { showNewPatchDialog.value = false },
+                )
+            }
+        }
     }
 
     FloatingActionButton(
-        content = { Icon(Icons.Filled.Add, stringResource(R.string.add)) },
         onClick = {
             val uri = Configs.storageDirectory?.toUri()
             if (uri == null) {
-                shouldSelectDirectory = true
+                shouldSelectDirectory.value = true
             } else {
                 runCatching {
                     val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                     context.contentResolver.takePersistableUriPermission(uri, takeFlags)
                     if (DocumentFile.fromTreeUri(context, uri)?.exists() == false) throw IOException("Storage directory was deleted")
                 }.onSuccess {
-                    showNewPatchDialog = true
+                    showNewPatchDialog.value = true
                 }.onFailure {
                     Log.w(TAG, "Failed to take persistable permission for saved uri", it)
                     Configs.storageDirectory = null
-                    shouldSelectDirectory = true
+                    shouldSelectDirectory.value = true
                 }
             }
         }
-    )
+    ) {
+        Icon(Icons.Filled.Add, stringResource(R.string.add))
+    }
 }

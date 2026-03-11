@@ -6,55 +6,97 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
-import androidx.compose.animation.ExperimentalAnimationApi
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.*
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
-import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.NavHostController
-import com.google.accompanist.navigation.animation.rememberAnimatedNavController
-import com.ramcosta.composedestinations.DestinationsNavHost
-import org.lsposed.npatch.ui.page.BottomBarDestination
-import org.lsposed.npatch.ui.page.NavGraphs
-import org.lsposed.npatch.ui.page.appCurrentDestinationAsState
-import org.lsposed.npatch.ui.page.destinations.Destination
-import org.lsposed.npatch.ui.page.startAppDestination
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.ui.NavDisplay
+import org.lsposed.npatch.ui.page.LocalNavigator
+import org.lsposed.npatch.ui.page.MainScreen
+import org.lsposed.npatch.ui.page.Navigator
+import org.lsposed.npatch.ui.page.NewPatchScreen
+import org.lsposed.npatch.ui.page.Route
+import org.lsposed.npatch.ui.page.SelectAppsScreen
 import org.lsposed.npatch.ui.theme.LSPTheme
 import org.lsposed.npatch.ui.util.LocalSnackbarHost
+import top.yukonga.miuix.kmp.basic.SnackbarHostState
 
 class MainActivity : ComponentActivity() {
 
-    @OptIn(ExperimentalAnimationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 檢查並請求權限
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.auto(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT
+            ) { false },
+            navigationBarStyle = SystemBarStyle.auto(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT
+            ) { false }
+        )
+
         checkAndRequestPermissions()
 
         setContent {
-            val navController = rememberAnimatedNavController()
-            LSPTheme {
+            val isDark = isSystemInDarkTheme()
+
+            DisposableEffect(isDark) {
+                enableEdgeToEdge(
+                    statusBarStyle = SystemBarStyle.auto(
+                        android.graphics.Color.TRANSPARENT,
+                        android.graphics.Color.TRANSPARENT
+                    ) { isDark },
+                    navigationBarStyle = SystemBarStyle.auto(
+                        android.graphics.Color.TRANSPARENT,
+                        android.graphics.Color.TRANSPARENT
+                    ) { isDark }
+                )
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    window.isNavigationBarContrastEnforced = false
+                }
+                onDispose {}
+            }
+
+            LSPTheme(isDarkTheme = isDark) {
                 val snackbarHostState = remember { SnackbarHostState() }
-                CompositionLocalProvider(LocalSnackbarHost provides snackbarHostState) {
-                    Scaffold(
-                        bottomBar = { BottomBar(navController) },
-                        snackbarHost = { SnackbarHost(snackbarHostState) }
-                    ) { innerPadding ->
-                        DestinationsNavHost(
-                            modifier = Modifier.padding(innerPadding),
-                            navGraph = NavGraphs.root,
-                            navController = navController
-                        )
-                    }
+                val backStack = remember { mutableStateListOf<NavKey>(Route.Main) }
+                val navigator = remember { Navigator(backStack) }
+
+                CompositionLocalProvider(
+                    LocalSnackbarHost provides snackbarHostState,
+                    LocalNavigator provides navigator
+                ) {
+                    NavDisplay(
+                        backStack = backStack,
+                        onBack = { navigator.pop() },
+                        entryProvider = entryProvider {
+                            entry<Route.Main> {
+                                MainScreen(navigator)
+                            }
+
+                            entry<Route.NewPatch> { route ->
+                                NewPatchScreen(
+                                    id = route.id,
+                                    data = route.data
+                                )
+                            }
+
+                            entry<Route.SelectApps> { route ->
+                                SelectAppsScreen(
+                                    multiSelect = route.multiSelect,
+                                    initialSelected = route.initialSelected
+                                )
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -86,41 +128,6 @@ class MainActivity : ComponentActivity() {
                     1001
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun BottomBar(navController: NavHostController) {
-    val currentDestination: Destination = navController.appCurrentDestinationAsState().value
-        ?: NavGraphs.root.startAppDestination
-    var topDestination by rememberSaveable { mutableStateOf(currentDestination.route) }
-    LaunchedEffect(currentDestination) {
-        val queue = navController.currentBackStack.value
-        if (queue.size == 2) topDestination = queue[1].destination.route!!
-        else if (queue.size > 2) topDestination = queue[2].destination.route!!
-    }
-
-    NavigationBar(tonalElevation = 8.dp) {
-        BottomBarDestination.values().forEach { destination ->
-            NavigationBarItem(
-                selected = topDestination == destination.direction.route,
-                onClick = {
-                    navController.navigate(destination.direction.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-                icon = {
-                    if (topDestination == destination.direction.route) Icon(destination.iconSelected, stringResource(destination.label))
-                    else Icon(destination.iconNotSelected, stringResource(destination.label))
-                },
-                label = { Text(stringResource(destination.label)) },
-                alwaysShowLabel = false
-            )
         }
     }
 }

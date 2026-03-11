@@ -3,23 +3,25 @@ package org.lsposed.npatch.ui.page
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Construction
-import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.ramcosta.composedestinations.annotation.Destination
+
 import org.lsposed.npatch.R
 import org.lsposed.npatch.ui.component.CenterTopBar
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Destination
 @Composable
 fun RepoScreen() {
     Scaffold(
-        topBar = { CenterTopBar(stringResource(BottomBarDestination.Repo.label)) }
+        topBar = { CenterTopBar(stringResource(R.string.screen_repo)) },
+        popupHost = {}
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -33,21 +35,21 @@ fun RepoScreen() {
                 imageVector = Icons.Outlined.Construction,
                 contentDescription = null,
                 modifier = Modifier.size(72.dp),
-                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                tint = MiuixTheme.colorScheme.primary.copy(alpha = 0.6f)
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = stringResource(R.string.coming_soon),
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onBackground
+                style = MiuixTheme.textStyles.headline1,
+                color = MiuixTheme.colorScheme.onBackground
             )
 
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "This page is not yet implemented",
                 textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MiuixTheme.textStyles.body2,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary
             )
         }
     }

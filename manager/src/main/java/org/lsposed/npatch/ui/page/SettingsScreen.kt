@@ -15,9 +15,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Ballot
 import androidx.compose.material.icons.outlined.BugReport
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -25,79 +30,110 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.ramcosta.composedestinations.annotation.Destination
+
 import kotlinx.coroutines.launch
 import org.lsposed.npatch.R
 import org.lsposed.npatch.config.Configs
 import org.lsposed.npatch.config.MyKeyStore
-import org.lsposed.npatch.ui.component.AnywhereDropdown
-import org.lsposed.npatch.ui.component.CenterTopBar
-import org.lsposed.npatch.ui.component.settings.SettingsItem
-import org.lsposed.npatch.ui.component.settings.SettingsSwitch
+
 import org.lsposed.npatch.ui.util.LocalSnackbarHost
+import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.extra.SuperArrow
+import top.yukonga.miuix.kmp.extra.SuperDialog
+import top.yukonga.miuix.kmp.extra.SuperSwitch
+import top.yukonga.miuix.kmp.extra.SuperDropdown
+import top.yukonga.miuix.kmp.extra.WindowBottomSheet
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.utils.overScrollVertical
+import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.security.KeyStore
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 
 private const val TAG = "SettingsScreen"
 
-@Destination
 @Composable
 fun SettingsScreen() {
+    val scrollBehavior = MiuixScrollBehavior()
     Scaffold(
-        topBar = { CenterTopBar(stringResource(BottomBarDestination.Settings.label)) }
+        topBar = {
+            TopAppBar(
+                color = Color.Transparent,
+                title = stringResource(R.string.screen_settings),
+                scrollBehavior = scrollBehavior
+            )
+        },
+        popupHost = {}
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
+                .scrollEndHaptic()
+                .overScrollVertical()
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .verticalScroll(rememberScrollState())
-                .padding(vertical = 16.dp)
+                .padding(horizontal = 12.dp)
         ) {
-            KeyStore()
-            DetailPatchLogs()
-            StorageDirectory()
+            Card(
+                modifier = Modifier
+                    .padding(top = 12.dp)
+                    .fillMaxWidth(),
+            ) {
+                KeyStore()
+                DetailPatchLogs()
+                StorageDirectory()
+            }
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun KeyStore() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var expanded by remember { mutableStateOf(false) }
-    var showDialog by remember { mutableStateOf(false) }
+    val showDialog = remember { mutableStateOf(false) }
 
-    AnywhereDropdown(
-        expanded = expanded,
-        onDismissRequest = { expanded = false },
-        onClick = { expanded = true },
-        surface = {
-            SettingsItem(
-                icon = Icons.Outlined.Ballot,
-                title = stringResource(R.string.settings_keystore),
-                desc = stringResource(if (MyKeyStore.useDefault) R.string.settings_keystore_default else R.string.settings_keystore_custom)
+    val keyStoreItems = listOf(
+        stringResource(R.string.settings_keystore_default),
+        stringResource(R.string.settings_keystore_custom)
+    )
+    var selectedIndex by remember { mutableStateOf(if (MyKeyStore.useDefault) 0 else 1) }
+
+    SuperDropdown(
+        title = stringResource(R.string.settings_keystore),
+        items = keyStoreItems,
+        selectedIndex = selectedIndex,
+        onSelectedIndexChange = { index ->
+            selectedIndex = index
+            if (index == 0) {
+                scope.launch { MyKeyStore.reset() }
+            } else {
+                showDialog.value = true
+            }
+        },
+        startAction = {
+            Icon(
+                Icons.Outlined.Ballot,
+                modifier = Modifier.padding(end = 6.dp),
+                contentDescription = null,
+                tint = MiuixTheme.colorScheme.onBackground
             )
         }
-    ) {
-        DropdownMenuItem(
-            text = { Text(stringResource(R.string.settings_keystore_default)) },
-            onClick = {
-                scope.launch { MyKeyStore.reset() }
-                expanded = false
-            }
-        )
-        DropdownMenuItem(
-            text = { Text(stringResource(R.string.settings_keystore_custom)) },
-            onClick = {
-                expanded = false
-                showDialog = true
-            }
-        )
-    }
+    )
 
-    if (showDialog) {
+    if (showDialog.value) {
         var wrongKeystore by rememberSaveable { mutableStateOf(false) }
         var wrongPassword by rememberSaveable { mutableStateOf(false) }
         var wrongAliasName by rememberSaveable { mutableStateOf(false) }
@@ -118,146 +154,145 @@ private fun KeyStore() {
             path = uri.path ?: ""
         }
 
-        AlertDialog(
-            onDismissRequest = { expanded = false; showDialog = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        wrongKeystore = false
-                        wrongPassword = false
-                        wrongAliasName = false
-                        wrongAliasPassword = false
-
-                        if (path.isEmpty()) {
-                            wrongKeystore = true
-                            return@TextButton
-                        }
-                        val keyStore = KeyStore.getInstance(KeyStore.getDefaultType())
-                        try {
-                            MyKeyStore.tmpFile.inputStream().use { input ->
-                                keyStore.load(input, password.toCharArray())
-                            }
-                        } catch (e: IOException) {
-                            wrongKeystore = true
-                            if (e.message == "KeyStore integrity check failed.") {
-                                wrongPassword = true
-                            }
-                            return@TextButton
-                        }
-                        if (!keyStore.containsAlias(alias)) {
-                            wrongAliasName = true
-                            return@TextButton
-                        }
-                        try {
-                            keyStore.getKey(alias, aliasPassword.toCharArray())
-                        } catch (e: GeneralSecurityException) {
-                            wrongAliasPassword = true
-                            return@TextButton
-                        }
-
-                        scope.launch { MyKeyStore.setCustom(password, alias, aliasPassword) }
-                        expanded = false
-                        showDialog = false
-                    }
-                ) {
-                    Text(stringResource(android.R.string.ok))
+        val interactionSource = remember { MutableInteractionSource() }
+        LaunchedEffect(interactionSource) {
+            interactionSource.interactions.collect { interaction ->
+                if (interaction is PressInteraction.Release) {
+                    launcher.launch("*/*")
                 }
+            }
+        }
+
+        SuperDialog(
+            title = stringResource(R.string.settings_keystore_dialog_title),
+            show = showDialog,
+            onDismissRequest = {
+                showDialog.value = false
             },
-            dismissButton = {
-                TextButton(onClick = { expanded = false; showDialog = false }) {
-                    Text(stringResource(android.R.string.cancel))
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .scrollEndHaptic()
+                    .overScrollVertical()
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Error Message Handling
+                val wrongText = when {
+                    wrongAliasPassword -> stringResource(R.string.settings_keystore_wrong_alias_password)
+                    wrongAliasName -> stringResource(R.string.settings_keystore_wrong_alias)
+                    wrongPassword -> stringResource(R.string.settings_keystore_wrong_password)
+                    wrongKeystore -> stringResource(R.string.settings_keystore_wrong_keystore)
+                    else -> null
                 }
-            },
-            title = {
+
                 Text(
-                    modifier = Modifier.fillMaxWidth(),
-                    text = stringResource(R.string.settings_keystore_dialog_title),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.titleLarge
+                    modifier = Modifier.padding(bottom = 8.dp),
+                    text = wrongText ?: stringResource(R.string.settings_keystore_desc),
+                    color = if (wrongText != null) MiuixTheme.colorScheme.error else MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    style = MiuixTheme.textStyles.body2,
+                    textAlign = TextAlign.Center
                 )
-            },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+
+                TextField(
+                    value = path,
+                    onValueChange = { path = it },
+                    label = stringResource(R.string.settings_keystore_file),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                TextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = stringResource(R.string.settings_keystore_password),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                TextField(
+                    value = alias,
+                    onValueChange = { alias = it },
+                    label = stringResource(R.string.settings_keystore_alias),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                TextField(
+                    value = aliasPassword,
+                    onValueChange = { aliasPassword = it },
+                    label = stringResource(R.string.settings_keystore_alias_password),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    val interactionSource = remember { MutableInteractionSource() }
-                    LaunchedEffect(interactionSource) {
-                        interactionSource.interactions.collect { interaction ->
-                            if (interaction is PressInteraction.Release) {
-                                launcher.launch("*/*")
+                    TextButton(
+                        text = stringResource(android.R.string.cancel),
+                        onClick = { showDialog.value = false },
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(20.dp))
+                    TextButton(
+                        text = stringResource(android.R.string.ok),
+                        onClick = {
+                            wrongKeystore = false
+                            wrongPassword = false
+                            wrongAliasName = false
+                            wrongAliasPassword = false
+
+                            if (path.isEmpty()) {
+                                wrongKeystore = true
+                                return@TextButton
                             }
-                        }
-                    }
+                            val keyStore = KeyStore.getInstance(KeyStore.getDefaultType())
+                            try {
+                                MyKeyStore.tmpFile.inputStream().use { input ->
+                                    keyStore.load(input, password.toCharArray())
+                                }
+                            } catch (e: IOException) {
+                                wrongKeystore = true
+                                if (e.message == "KeyStore integrity check failed.") {
+                                    wrongPassword = true
+                                }
+                                return@TextButton
+                            }
+                            if (!keyStore.containsAlias(alias)) {
+                                wrongAliasName = true
+                                return@TextButton
+                            }
+                            try {
+                                keyStore.getKey(alias, aliasPassword.toCharArray())
+                            } catch (e: GeneralSecurityException) {
+                                wrongAliasPassword = true
+                                return@TextButton
+                            }
 
-                    // Error Message Handling
-                    val wrongText = when {
-                        wrongAliasPassword -> stringResource(R.string.settings_keystore_wrong_alias_password)
-                        wrongAliasName -> stringResource(R.string.settings_keystore_wrong_alias)
-                        wrongPassword -> stringResource(R.string.settings_keystore_wrong_password)
-                        wrongKeystore -> stringResource(R.string.settings_keystore_wrong_keystore)
-                        else -> null
-                    }
-
-                    Text(
-                        modifier = Modifier.padding(bottom = 8.dp),
-                        text = wrongText ?: stringResource(R.string.settings_keystore_desc),
-                        color = if (wrongText != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center
-                    )
-
-                    OutlinedTextField(
-                        value = path,
-                        onValueChange = { path = it },
-                        readOnly = true,
-                        label = { Text(stringResource(R.string.settings_keystore_file)) },
-                        placeholder = { Text(stringResource(R.string.settings_keystore_file)) },
-                        singleLine = true,
-                        isError = wrongKeystore,
-                        interactionSource = interactionSource,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = { password = it },
-                        label = { Text(stringResource(R.string.settings_keystore_password)) },
-                        singleLine = true,
-                        isError = wrongPassword,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = alias,
-                        onValueChange = { alias = it },
-                        label = { Text(stringResource(R.string.settings_keystore_alias)) },
-                        singleLine = true,
-                        isError = wrongAliasName,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = aliasPassword,
-                        onValueChange = { aliasPassword = it },
-                        label = { Text(stringResource(R.string.settings_keystore_alias_password)) },
-                        singleLine = true,
-                        isError = wrongAliasPassword,
-                        modifier = Modifier.fillMaxWidth()
+                            scope.launch { MyKeyStore.setCustom(password, alias, aliasPassword) }
+                            showDialog.value = false
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.textButtonColorsPrimary(),
                     )
                 }
             }
-        )
+        }
     }
 }
 
 @Composable
 private fun DetailPatchLogs() {
-    SettingsSwitch(
-        modifier = Modifier.clickable { Configs.detailPatchLogs = !Configs.detailPatchLogs },
+    SuperSwitch(
+        title = stringResource(R.string.settings_detail_patch_logs),
+        startAction = {
+            Icon(
+                Icons.Outlined.BugReport,
+                modifier = Modifier.padding(end = 6.dp),
+                contentDescription = null,
+                tint = MiuixTheme.colorScheme.onBackground
+            )
+        },
         checked = Configs.detailPatchLogs,
-        icon = Icons.Outlined.BugReport,
-        title = stringResource(R.string.settings_detail_patch_logs)
+        onCheckedChange = { Configs.detailPatchLogs = it }
     )
 }
 
@@ -280,10 +315,17 @@ private fun StorageDirectory() {
             scope.launch { snackbarHost.showSnackbar(errorText) }
         }
     }
-    SettingsItem(
+    SuperArrow(
         title = stringResource(R.string.settings_storage_directory),
-        desc = Configs.storageDirectory ?: "undefined",
-        icon = Icons.Outlined.Folder,
-        modifier = Modifier.clickable { launcher.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)) }
+        summary = Configs.storageDirectory ?: "undefined",
+        startAction = {
+            Icon(
+                Icons.Outlined.Folder,
+                modifier = Modifier.padding(end = 6.dp),
+                contentDescription = null,
+                tint = MiuixTheme.colorScheme.onBackground
+            )
+        },
+        onClick = { launcher.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)) }
     )
 }

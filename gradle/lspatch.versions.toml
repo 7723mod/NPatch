@@ -6,17 +6,21 @@ shizuku = "13.1.5"
 hiddenapi = "4.4.0"
 compose-bom = "2025.12.01"
 kotlin = "2.2.21"
-ksp = "2.3.2"
+ksp = "2.3.5"
 commons-io = "2.20.0"
 beust-jcommander = "1.82"
 google-gson = "2.13.1"
 core-ktx = "1.17.0"
+miuix = "0.8.5"
+haze = "1.7.2"
+navigation3 = "1.0.1"
 
 [plugins]
 google-devtools-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 rikka-tools-refine = { id = "dev.rikka.tools.refine", version.ref = "hiddenapi" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 
 [libraries]
 # Androidx Libraries
@@ -24,7 +28,9 @@ androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "core-ktx
 androidx-customview = "androidx.customview:customview:1.2.0"
 androidx-customview-poolingcontainer = "androidx.customview:customview-poolingcontainer:1.1.0"
 androidx-activity-compose = "androidx.activity:activity-compose:1.10.1"
-androidx-navigation-compose = "androidx.navigation:navigation-compose:2.9.3"
+#androidx-navigation-compose = "androidx.navigation:navigation-compose:2.9.3"
+androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3" }
+androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "navigation3" }
 androidx-lifecycle-viewmodel-compose = "androidx.lifecycle:lifecycle-viewmodel-compose:2.9.2"
 
 # Jetpack Compose Libraries
@@ -41,7 +47,7 @@ androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 
 # Accompanist Libraries
-google-accompanist-navigation-animation = { module = "com.google.accompanist:accompanist-navigation-animation", version.ref = "accompanist" }
+#google-accompanist-navigation-animation = { module = "com.google.accompanist:accompanist-navigation-animation", version.ref = "accompanist" }
 google-accompanist-pager = { module = "com.google.accompanist:accompanist-pager", version.ref = "accompanist" }
 google-accompanist-swiperefresh = { module = "com.google.accompanist:accompanist-swiperefresh", version.ref = "accompanist" }
 
@@ -52,8 +58,10 @@ rikka-refine = { module = "dev.rikka.tools.refine:runtime", version.ref = "hidde
 rikka-hidden-stub = { module = "dev.rikka.hidden:stub", version.ref = "hiddenapi" }
 
 # Other Third-Party Libraries
-raamcosta-compose-destinations = { module = "io.github.raamcosta.compose-destinations:core", version.ref = "compose-destinations" }
-raamcosta-compose-destinations-ksp = { module = "io.github.raamcosta.compose-destinations:ksp", version.ref = "compose-destinations" }
+#raamcosta-compose-destinations = { module = "io.github.raamcosta.compose-destinations:core", version.ref = "compose-destinations" }
+#raamcosta-compose-destinations-ksp = { module = "io.github.raamcosta.compose-destinations:ksp", version.ref = "compose-destinations" }
 commons-io = { module = "commons-io:commons-io", version.ref = "commons-io" }
 beust-jcommander = { module = "com.beust:jcommander", version.ref = "beust-jcommander" }
 google-gson = { module = "com.google.code.gson:gson", version.ref = "google-gson" }
+miuix-android = { module = "top.yukonga.miuix.kmp:miuix-android", version.ref = "miuix" }
+haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }

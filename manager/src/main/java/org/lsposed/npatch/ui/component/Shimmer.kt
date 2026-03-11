@@ -3,8 +3,6 @@ package org.lsposed.npatch.ui.component
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -12,12 +10,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private val ShimmerColorShades
     @Composable get() = listOf(
-        MaterialTheme.colorScheme.secondaryContainer.copy(0.9f),
-        MaterialTheme.colorScheme.secondaryContainer.copy(0.2f),
-        MaterialTheme.colorScheme.secondaryContainer.copy(0.9f)
+        MiuixTheme.colorScheme.secondaryContainer.copy(0.9f),
+        MiuixTheme.colorScheme.secondaryContainer.copy(0.2f),
+        MiuixTheme.colorScheme.secondaryContainer.copy(0.9f)
     )
 
 class ShimmerScope(val brush: Brush)
@@ -44,7 +43,7 @@ fun ShimmerAnimation(
         end = Offset(translateAnim, translateAnim)
     )
 
-    Surface(modifier.background(brush)) {
+    Box(modifier.background(brush)) {
         content(ShimmerScope(brush))
     }
 }

@@ -1,15 +1,15 @@
 package org.lsposed.npatch.ui.component.settings
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun SettingsSlot(
@@ -30,7 +30,7 @@ fun SettingsSlot(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
-            modifier = modifier.size(24.dp),
+            modifier = Modifier.size(24.dp),
             contentAlignment = Alignment.Center,
         ) {
             if (icon != null) {
@@ -42,12 +42,12 @@ fun SettingsSlot(
             }
         }
         Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
-            Text(text = title, style = MaterialTheme.typography.titleMedium)
+            Text(text = title, style = MiuixTheme.textStyles.headline2)
             Column {
                 if (desc != null) {
                     Text(
                         text = desc,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MiuixTheme.textStyles.body2,
                         modifier = Modifier
                             .alpha(0.75f)
                             .padding(top = 4.dp)

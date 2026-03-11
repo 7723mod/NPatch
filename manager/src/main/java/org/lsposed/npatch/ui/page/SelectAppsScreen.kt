@@ -13,17 +13,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Done
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.toLowerCase
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.accompanist.swiperefresh.SwipeRefresh
-import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
-import com.ramcosta.composedestinations.annotation.Destination
-import com.ramcosta.composedestinations.result.ResultBackNavigator
+import top.yukonga.miuix.kmp.basic.PullToRefresh
+import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
 import kotlinx.parcelize.Parcelize
 import org.lsposed.npatch.R
 import org.lsposed.npatch.ui.component.AppItem
@@ -31,6 +28,12 @@ import org.lsposed.npatch.ui.component.SearchAppBar
 import org.lsposed.npatch.ui.viewmodel.SelectAppsViewModel
 import nkbe.util.NPackageManager
 import nkbe.util.NPackageManager.AppInfo
+import top.yukonga.miuix.kmp.basic.FloatingActionButton
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.utils.overScrollVertical
+import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
 @Parcelize
 sealed class SelectAppsResult : Parcelable {
@@ -38,14 +41,12 @@ sealed class SelectAppsResult : Parcelable {
     data class MultipleApps(val selected: List<AppInfo>) : SelectAppsResult()
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Destination
 @Composable
 fun SelectAppsScreen(
-    navigator: ResultBackNavigator<SelectAppsResult>,
     multiSelect: Boolean,
-    initialSelected: ArrayList<String>?,
+    initialSelected: List<String>?,
 ) {
+    val navigator = LocalNavigator.current
     val viewModel = viewModel<SelectAppsViewModel>()
 
     var searchPackage by remember { mutableStateOf("") }
@@ -65,7 +66,7 @@ fun SelectAppsScreen(
     }
 
     BackHandler {
-        navigator.navigateBack()
+        navigator.pop()
     }
 
     Scaffold(
@@ -82,18 +83,20 @@ fun SelectAppsScreen(
                     viewModel.filterAppList(false, filter)
                 },
                 onBackClick = {
-                    navigator.navigateBack()
+                    navigator.pop()
                 }
             )
         },
         floatingActionButton = {
             if (multiSelect) MultiSelectFab {
-                navigator.navigateBack(SelectAppsResult.MultipleApps(viewModel.multiSelected))
+                navigator.setResultAndBack(SelectAppsResult.MultipleApps(viewModel.multiSelected))
             }
         }
     ) { innerPadding ->
-        SwipeRefresh(
-            state = rememberSwipeRefreshState(viewModel.isRefreshing),
+        val pullToRefreshState = rememberPullToRefreshState()
+        PullToRefresh(
+            isRefreshing = viewModel.isRefreshing,
+            pullToRefreshState = pullToRefreshState,
             onRefresh = { viewModel.filterAppList(true, filter) },
             modifier = Modifier
                 .padding(innerPadding)
@@ -101,7 +104,7 @@ fun SelectAppsScreen(
         ) {
             if (multiSelect) MultiSelect()
             else SingleSelect {
-                navigator.navigateBack(SelectAppsResult.SingleApp(it))
+                navigator.setResultAndBack(SelectAppsResult.SingleApp(it))
             }
         }
     }
@@ -111,15 +114,19 @@ fun SelectAppsScreen(
 private fun MultiSelectFab(onClick: () -> Unit) {
     FloatingActionButton(
         onClick = onClick,
-        content = { Icon(Icons.Outlined.Done, stringResource(R.string.add)) }
-    )
+    ) {
+        Icon(Icons.Outlined.Done, stringResource(R.string.add))
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SingleSelect(onSelect: (AppInfo) -> Unit) {
     val viewModel = viewModel<SelectAppsViewModel>()
-    LazyColumn {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().scrollEndHaptic().overScrollVertical(),
+        overscrollEffect = null
+    ) {
         items(
             items = viewModel.filteredList,
             key = { it.app.packageName }
@@ -140,7 +147,10 @@ private fun SingleSelect(onSelect: (AppInfo) -> Unit) {
 @Composable
 private fun MultiSelect() {
     val viewModel = viewModel<SelectAppsViewModel>()
-    LazyColumn {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().scrollEndHaptic().overScrollVertical(),
+        overscrollEffect = null
+    ) {
         items(
             items = viewModel.filteredList,
             key = { it.app.packageName }

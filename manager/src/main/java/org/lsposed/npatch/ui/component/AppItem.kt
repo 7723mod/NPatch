@@ -4,10 +4,6 @@ import android.graphics.drawable.GradientDrawable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForwardIos
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,6 +16,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import org.lsposed.npatch.ui.theme.LSPTheme
+import top.yukonga.miuix.kmp.basic.Checkbox
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun AppItem(
@@ -55,7 +55,7 @@ fun AppItem(
                 Text(
                     text = packageName,
                     fontFamily = FontFamily.Monospace,
-                    style = MaterialTheme.typography.bodySmall
+                    style = MiuixTheme.textStyles.body2
                 )
                 additionalContent?.invoke(this)
             }
@@ -79,7 +79,7 @@ private fun AppItemPreview() {
     LSPTheme {
         val shape = GradientDrawable()
         shape.shape = GradientDrawable.RECTANGLE
-        shape.setColor(MaterialTheme.colorScheme.primary.toArgb())
+        shape.setColor(MiuixTheme.colorScheme.primary.toArgb())
         AppItem(
             icon = shape.toBitmap().asImageBitmap(),
             label = "Sample App",

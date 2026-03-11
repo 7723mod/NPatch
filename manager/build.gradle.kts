@@ -102,12 +102,14 @@ dependencies {
     implementation(npatch.androidx.compose.ui.tooling.preview)
     implementation(npatch.androidx.core.ktx)
     implementation(npatch.androidx.lifecycle.viewmodel.compose)
-    implementation(npatch.androidx.navigation.compose)
+    //implementation(npatch.androidx.navigation.compose)
+    implementation(npatch.androidx.navigation3.runtime)
+    implementation(npatch.androidx.navigation3.ui)
     implementation(libs.androidx.preference)
     implementation(npatch.androidx.room.ktx)
     implementation(npatch.androidx.room.runtime)
 
-    implementation(npatch.google.accompanist.navigation.animation)
+    //implementation(npatch.google.accompanist.navigation.animation)
     implementation(npatch.google.accompanist.pager)
     implementation(npatch.google.accompanist.swiperefresh)
     implementation(libs.material)
@@ -115,14 +117,19 @@ dependencies {
     implementation(npatch.rikka.shizuku.api)
     implementation(npatch.rikka.shizuku.provider)
     implementation(npatch.rikka.refine)
-    implementation(npatch.raamcosta.compose.destinations)
+    //implementation(npatch.raamcosta.compose.destinations)
     implementation(libs.appiconloader)
     implementation(libs.hiddenapibypass)
+
+    // MiuiX & Haze
+    implementation(npatch.miuix.android)
+    implementation(npatch.haze)
+
 
     annotationProcessor(npatch.androidx.room.compiler)
     compileOnly(npatch.rikka.hidden.stub)
     ksp(npatch.androidx.room.compiler)
-    ksp(npatch.raamcosta.compose.destinations.ksp)
+    //ksp(npatch.raamcosta.compose.destinations.ksp)
 
     debugImplementation(npatch.androidx.compose.ui.tooling)
     debugImplementation(npatch.androidx.customview)

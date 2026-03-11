@@ -12,6 +12,7 @@ import android.content.pm.PackageInstaller
 import android.net.Uri
 import android.os.Build
 import android.util.Log
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -19,42 +20,36 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.ramcosta.composedestinations.annotation.Destination
-import com.ramcosta.composedestinations.navigation.DestinationsNavigator
-import com.ramcosta.composedestinations.result.NavResult
-import com.ramcosta.composedestinations.result.ResultRecipient
 import kotlinx.coroutines.launch
-import org.lsposed.npatch.lspApp
+import nkbe.util.NPackageManager
+import nkbe.util.NPackageManager.AppInfo
+import nkbe.util.ShizukuApi
 import org.lsposed.npatch.R
-import org.lsposed.npatch.ui.component.AnywhereDropdown
+import org.lsposed.npatch.lspApp
 import org.lsposed.npatch.ui.component.SelectionColumn
 import org.lsposed.npatch.ui.component.ShimmerAnimation
-import org.lsposed.npatch.ui.component.settings.SettingsCheckBox
 import org.lsposed.npatch.ui.component.settings.SettingsEditor
-import org.lsposed.npatch.ui.component.settings.SettingsItem
-import org.lsposed.npatch.ui.page.destinations.SelectAppsScreenDestination
 import org.lsposed.npatch.ui.util.InstallResultReceiver
 import org.lsposed.npatch.ui.util.LocalSnackbarHost
 import org.lsposed.npatch.ui.util.checkIsApkFixedByLSP
@@ -66,9 +61,27 @@ import org.lsposed.npatch.ui.util.uninstallApkByPackageName
 import org.lsposed.npatch.ui.viewmodel.NewPatchViewModel
 import org.lsposed.npatch.ui.viewmodel.NewPatchViewModel.PatchState
 import org.lsposed.npatch.ui.viewmodel.NewPatchViewModel.ViewAction
-import nkbe.util.NPackageManager
-import nkbe.util.NPackageManager.AppInfo
-import nkbe.util.ShizukuApi
+import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.FloatingActionButton
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.ScrollBehavior
+import top.yukonga.miuix.kmp.basic.SmallTitle
+import top.yukonga.miuix.kmp.basic.SnackbarResult
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.extra.SuperDialog
+import top.yukonga.miuix.kmp.extra.SuperDropdown
+import top.yukonga.miuix.kmp.extra.SuperSwitch
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.utils.overScrollVertical
+import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
 private const val TAG = "NewPatchPage"
 
@@ -76,22 +89,23 @@ const val ACTION_STORAGE = 0
 const val ACTION_APPLIST = 1
 const val ACTION_INTENT_INSTALL = 2
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Destination
 @Composable
 fun NewPatchScreen(
-    navigator: DestinationsNavigator,
-    resultRecipient: ResultRecipient<SelectAppsScreenDestination, SelectAppsResult>,
     id: Int,
-    data: Uri? = null
+    data: String? = null
 ) {
+    val navigator = LocalNavigator.current
     val viewModel = viewModel<NewPatchViewModel>()
     val snackbarHost = LocalSnackbarHost.current
+    val scrollBehavior = MiuixScrollBehavior()
+    val context = LocalContext.current
+    val activityScope = remember { (context as ComponentActivity).lifecycleScope }
     val scope = rememberCoroutineScope()
+    val lifecycleScope = LocalLifecycleOwner.current.lifecycleScope
     val errorUnknown = stringResource(R.string.error_unknown)
     val storageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { apks ->
         if (apks.isEmpty()) {
-            navigator.navigateUp()
+            navigator.pop()
             return@rememberLauncherForActivityResult
         }
         scope.launch {
@@ -101,12 +115,12 @@ fun NewPatchScreen(
                 }
                 .onFailure {
                     snackbarHost.showSnackbar(it.message ?: errorUnknown)
-                    navigator.navigateUp()
+                    navigator.pop()
                 }
         }
     }
 
-    var showSelectModuleDialog by remember { mutableStateOf(false) }
+    val showSelectModuleDialog = remember { mutableStateOf(false) }
     val noXposedModules = stringResource(R.string.patch_no_xposed_module)
     val storageModuleLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { apks ->
@@ -139,18 +153,27 @@ fun NewPatchScreen(
                     }
 
                     ACTION_APPLIST -> {
-                        navigator.navigate(SelectAppsScreenDestination(false, null))
+                        activityScope.launch {
+                            val result = navigator.navigateForResult<SelectAppsResult>(Route.SelectApps(false, null))
+                            if (result == null) {
+                                navigator.pop()
+                            } else {
+                                val singleApp = result as SelectAppsResult.SingleApp
+                                viewModel.dispatch(ViewAction.ConfigurePatch(singleApp.selected))
+                            }
+                        }
                         viewModel.dispatch(ViewAction.DoneInit)
                     }
 
                     ACTION_INTENT_INSTALL -> {
-                        data?.let { uri ->
+                        data?.let { dataStr ->
+                            val uri = dataStr.toUri()
                             scope.launch {
                                 NPackageManager.getAppInfoFromApks(listOf(uri)).onSuccess {
                                     viewModel.dispatch(ViewAction.ConfigurePatch(it.first()))
                                 }.onFailure {
                                     snackbarHost.showSnackbar(it.message ?: errorUnknown)
-                                    navigator.navigateUp()
+                                    navigator.pop()
                                 }
                             }
                         }
@@ -159,25 +182,16 @@ fun NewPatchScreen(
             }
         }
         PatchState.SELECTING -> {
-            resultRecipient.onNavResult {
-                Log.d(TAG, "onNavResult: $it")
-                when (it) {
-                    is NavResult.Canceled -> navigator.navigateUp()
-                    is NavResult.Value -> {
-                        val result = it.value as SelectAppsResult.SingleApp
-                        viewModel.dispatch(ViewAction.ConfigurePatch(result.selected))
-                    }
-                }
-            }
+            // 等待 SelectApps 的结果（由 APPLIST 分支的 navigateForResult 处理）
         }
         else -> {
             Scaffold(
                 topBar = {
                     when (viewModel.patchState) {
-                        PatchState.CONFIGURING -> ConfiguringTopBar { navigator.navigateUp() }
+                        PatchState.CONFIGURING -> ConfiguringTopBar(scrollBehavior) { navigator.pop() }
                         PatchState.PATCHING,
                         PatchState.FINISHED,
-                        PatchState.ERROR -> CenterAlignedTopAppBar(title = { Text(viewModel.patchApp.app.packageName) })
+                        PatchState.ERROR -> TopAppBar(title = viewModel.patchApp.app.packageName, scrollBehavior = scrollBehavior)
                         else -> Unit
                     }
                 },
@@ -188,80 +202,70 @@ fun NewPatchScreen(
                 }
             ) { innerPadding ->
                 if (viewModel.patchState == PatchState.CONFIGURING) {
-                    PatchOptionsBody(Modifier.padding(innerPadding)) {
-                        showSelectModuleDialog = true
-                    }
-                    resultRecipient.onNavResult {
-                        if (it is NavResult.Value) {
-                            val result = it.value as SelectAppsResult.MultipleApps
-                            viewModel.embeddedModules = result.selected
-                        }
+                    PatchOptionsBody(
+                        Modifier
+                            .padding(innerPadding)
+                            .nestedScroll(scrollBehavior.nestedScrollConnection)
+                    ) {
+                        showSelectModuleDialog.value = true
                     }
                 } else {
                     DoPatchBody(Modifier.padding(innerPadding), navigator)
                 }
             }
 
-            if (showSelectModuleDialog) {
-                AlertDialog(onDismissRequest = { showSelectModuleDialog = false },
-                    confirmButton = {},
-                    dismissButton = {
-                        TextButton(content = { Text(stringResource(android.R.string.cancel)) },
-                            onClick = { showSelectModuleDialog = false })
-                    },
-                    title = {
-                        Text(
+            if (showSelectModuleDialog.value) {
+                SuperDialog(
+                    title = stringResource(R.string.patch_embed_modules),
+                    show = showSelectModuleDialog,
+                    onDismissRequest = { showSelectModuleDialog.value = false },
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(
+                            text = stringResource(R.string.patch_from_storage),
                             modifier = Modifier.fillMaxWidth(),
-                            text = stringResource(R.string.patch_embed_modules),
-                            textAlign = TextAlign.Center
+                            onClick = {
+                                storageModuleLauncher.launch(arrayOf("application/vnd.android.package-archive"))
+                                showSelectModuleDialog.value = false
+                            },
                         )
-                    },
-                    text = {
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            TextButton(modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.secondary),
-                                onClick = {
-                                    storageModuleLauncher.launch(arrayOf("application/vnd.android.package-archive"))
-                                    showSelectModuleDialog = false
-                                }) {
-                                Text(
-                                    modifier = Modifier.padding(vertical = 8.dp),
-                                    text = stringResource(R.string.patch_from_storage),
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                            }
-                            TextButton(modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.secondary),
-                                onClick = {
-                                    navigator.navigate(
-                                        SelectAppsScreenDestination(true,
-                                            viewModel.embeddedModules.mapTo(ArrayList()) { it.app.packageName })
+                        TextButton(
+                            text = stringResource(R.string.patch_from_applist),
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                lifecycleScope.launch {
+                                    val result = navigator.navigateForResult<SelectAppsResult>(
+                                        Route.SelectApps(true, viewModel.embeddedModules.map { it.app.packageName })
                                     )
-                                    showSelectModuleDialog = false
-                                }) {
-                                Text(
-                                    modifier = Modifier.padding(vertical = 8.dp),
-                                    text = stringResource(R.string.patch_from_applist),
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                            }
-                        }
-                    })
+                                    if (result is SelectAppsResult.MultipleApps) {
+                                        viewModel.embeddedModules = result.selected
+                                    }
+                                }
+                                showSelectModuleDialog.value = false
+                            },
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        TextButton(
+                            text = stringResource(android.R.string.cancel),
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { showSelectModuleDialog.value = false },
+                        )
+                    }
+                }
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ConfiguringTopBar(onBackClick: () -> Unit) {
+private fun ConfiguringTopBar(scrollBehavior: ScrollBehavior, onBackClick: () -> Unit) {
     TopAppBar(
-        title = { Text(stringResource(R.string.screen_new_patch)) },
+        title = stringResource(R.string.screen_new_patch),
+        scrollBehavior = scrollBehavior,
         navigationIcon = {
-            IconButton(
-                onClick = onBackClick,
-                content = { Icon(Icons.Outlined.ArrowBack, null) }
-            )
+            IconButton(onClick = onBackClick) {
+                Icon(Icons.Outlined.ArrowBack, null)
+            }
         }
     )
 }
@@ -269,11 +273,18 @@ private fun ConfiguringTopBar(onBackClick: () -> Unit) {
 @Composable
 private fun ConfiguringFab() {
     val viewModel = viewModel<NewPatchViewModel>()
-    ExtendedFloatingActionButton(
-        text = { Text(stringResource(R.string.patch_start)) },
-        icon = { Icon(Icons.Outlined.AutoFixHigh, null) },
+    FloatingActionButton(
         onClick = { viewModel.dispatch(ViewAction.SubmitPatch) }
-    )
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(horizontal = 16.dp)
+        ) {
+            Icon(Icons.Outlined.AutoFixHigh, null)
+            Text(stringResource(R.string.patch_start))
+        }
+    }
 }
 
 @Composable
@@ -290,121 +301,153 @@ private fun sigBypassLvStr(level: Int) = when (level) {
 private fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
     val viewModel = viewModel<NewPatchViewModel>()
 
-    Column(modifier.verticalScroll(rememberScrollState())) {
-        Text(
-            text = viewModel.patchApp.label,
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(horizontal = 24.dp)
-        )
-        Text(
-            text = viewModel.patchApp.app.packageName,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.padding(horizontal = 24.dp)
-        )
-        Text(
-            text = stringResource(R.string.patch_mode),
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier
-                .align(Alignment.CenterHorizontally)
-                .padding(top = 24.dp, bottom = 12.dp)
-        )
-        SelectionColumn(Modifier.padding(horizontal = 24.dp)) {
-            SelectionItem(
-                selected = viewModel.useManager,
-                onClick = { viewModel.useManager = true },
-                icon = Icons.Outlined.Api,
-                title = stringResource(R.string.patch_local),
-                desc = stringResource(R.string.patch_local_desc)
-            )
-            SelectionItem(
-                selected = !viewModel.useManager,
-                onClick = { viewModel.useManager = false },
-                icon = Icons.Outlined.WorkOutline,
-                title = stringResource(R.string.patch_integrated),
-                desc = stringResource(R.string.patch_integrated_desc),
-                extraContent = {
-                    TextButton(
-                        onClick = onAddEmbed,
-                        content = { Text(text = stringResource(R.string.patch_embed_modules), style = MaterialTheme.typography.bodyLarge) }
-                    )
-                }
-            )
-        }
-        SettingsEditor(Modifier.padding(top = 6.dp),
-            stringResource(R.string.patch_new_package),
-            viewModel.newPackageName,
-            onValueChange = {
-                viewModel.newPackageName = it
-            },
-        )
-        SettingsCheckBox(
-            modifier = Modifier
-                .padding(top = 6.dp)
-                .clickable { viewModel.debuggable = !viewModel.debuggable },
-            checked = viewModel.debuggable,
-            icon = Icons.Outlined.BugReport,
-            title = stringResource(R.string.patch_debuggable)
-        )
-        SettingsCheckBox(
-            modifier = Modifier.clickable { viewModel.overrideVersionCode = !viewModel.overrideVersionCode },
-            checked = viewModel.overrideVersionCode,
-            icon = Icons.Outlined.Layers,
-            title = stringResource(R.string.patch_override_version_code),
-            desc = stringResource(R.string.patch_override_version_code_desc)
-        )
-        SettingsCheckBox(
-            modifier = Modifier.clickable { viewModel.injectDex = !viewModel.injectDex },
-            checked = viewModel.injectDex,
-            icon = Icons.Outlined.Code,
-            title = stringResource(R.string.patch_inject_dex),
-            desc = stringResource(R.string.patch_inject_dex_desc)
-        )
-        SettingsCheckBox(
-            modifier = Modifier.clickable { viewModel.injectProvider = !viewModel.injectProvider },
-            checked = viewModel.injectProvider,
-            icon = Icons.Outlined.AddCard,
-            title = stringResource(R.string.patch_inject_mt_provider),
-            desc = stringResource(R.string.patch_inject_mt_provider_desc)
-        )
-        SettingsCheckBox(
-            modifier = Modifier.clickable { viewModel.useMicroG = !viewModel.useMicroG },
-            checked = viewModel.useMicroG,
-            icon = Icons.Outlined.CloudSync,
-            title = stringResource(R.string.patch_use_microg),
-            desc = stringResource(R.string.patch_use_microg_desc)
-        )
-        SettingsCheckBox(
-            modifier = Modifier.clickable { viewModel.outputLog = !viewModel.outputLog },
-            checked = viewModel.outputLog,
-            icon = Icons.Outlined.AddCard,
-            title = stringResource(R.string.patch_output_log_to_media),
-            desc = stringResource(R.string.patch_output_log_to_media_desc)
-        )
-        var bypassExpanded by remember { mutableStateOf(false) }
-        AnywhereDropdown(
-            expanded = bypassExpanded,
-            onDismissRequest = { bypassExpanded = false },
-            onClick = { bypassExpanded = true },
-            surface = {
-                SettingsItem(
-                    icon = Icons.Outlined.RemoveModerator,
-                    title = stringResource(R.string.patch_sigbypass),
-                    desc = sigBypassLvStr(viewModel.sigBypassLevel)
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize()
+            .scrollEndHaptic()
+            .overScrollVertical(),
+        contentPadding = PaddingValues(bottom = 84.dp) // 给底部的 FAB 留出间距
+    ) {
+        item {
+            SmallTitle(text = "App Info")
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp)
+                    .padding(bottom = 12.dp)
+            ) {
+                BasicComponent(
+                    title = viewModel.patchApp.label,
+                    summary = viewModel.patchApp.app.packageName,
+                    startAction = {
+                        Icon(
+                            imageVector = Icons.Outlined.Android,
+                            contentDescription = "App Icon",
+                            tint = MiuixTheme.colorScheme.onBackground
+                        )
+                    }
                 )
             }
-        ) {
-            repeat(5) {
-                DropdownMenuItem(
-                    text = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(selected = viewModel.sigBypassLevel == it, onClick = { viewModel.sigBypassLevel = it })
-                            Text(sigBypassLvStr(it))
+        }
+
+        item {
+            SmallTitle(text = stringResource(R.string.patch_mode))
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp)
+                    .padding(bottom = 12.dp)
+            ) {
+                SelectionColumn {
+                    SelectionItem(
+                        selected = viewModel.useManager,
+                        onClick = { viewModel.useManager = true },
+                        icon = Icons.Outlined.Api,
+                        title = stringResource(R.string.patch_local),
+                        desc = stringResource(R.string.patch_local_desc)
+                    )
+                    SelectionItem(
+                        selected = !viewModel.useManager,
+                        onClick = { viewModel.useManager = false },
+                        icon = Icons.Outlined.WorkOutline,
+                        title = stringResource(R.string.patch_integrated),
+                        desc = stringResource(R.string.patch_integrated_desc),
+                        extraContent = {
+                            TextButton(
+                                text = stringResource(R.string.patch_embed_modules),
+                                onClick = onAddEmbed,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
                         }
+                    )
+                }
+            }
+        }
+
+        item {
+            SmallTitle(text = "高级配置")
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp)
+                    .padding(bottom = 12.dp)
+            ) {
+                SettingsEditor(
+                    Modifier.padding(top = 12.dp, bottom = 6.dp),
+                    stringResource(R.string.patch_new_package),
+                    viewModel.newPackageName,
+                    onValueChange = { viewModel.newPackageName = it },
+                )
+                SuperSwitch(
+                    title = stringResource(R.string.patch_debuggable),
+                    startAction = {
+                        Icon(
+                            imageVector = Icons.Outlined.BugReport,
+                            contentDescription = null,
+                            tint = MiuixTheme.colorScheme.onBackground
+                        )
                     },
-                    onClick = {
-                        viewModel.sigBypassLevel = it
-                        bypassExpanded = false
-                    }
+                    checked = viewModel.debuggable,
+                    onCheckedChange = { viewModel.debuggable = it }
+                )
+                SuperSwitch(
+                    title = stringResource(R.string.patch_override_version_code),
+                    summary = stringResource(R.string.patch_override_version_code_desc),
+                    startAction = {
+                        Icon(
+                            imageVector = Icons.Outlined.Layers,
+                            contentDescription = null,
+                            tint = MiuixTheme.colorScheme.onBackground
+                        )
+                    },
+                    checked = viewModel.overrideVersionCode,
+                    onCheckedChange = { viewModel.overrideVersionCode = it }
+                )
+                SuperSwitch(
+                    title = stringResource(R.string.patch_inject_dex),
+                    summary = stringResource(R.string.patch_inject_dex_desc),
+                    startAction = {
+                        Icon(
+                            imageVector = Icons.Outlined.Code,
+                            contentDescription = null,
+                            tint = MiuixTheme.colorScheme.onBackground
+                        )
+                    },
+                    checked = viewModel.injectDex,
+                    onCheckedChange = { viewModel.injectDex = it }
+                )
+                SuperSwitch(
+                    title = stringResource(R.string.patch_inject_mt_provider),
+                    summary = stringResource(R.string.patch_inject_mt_provider_desc),
+                    startAction = {
+                        Icon(
+                            imageVector = Icons.Outlined.AddCard,
+                            contentDescription = null,
+                            tint = MiuixTheme.colorScheme.onBackground
+                        )
+                    },
+                    checked = viewModel.injectProvider,
+                    onCheckedChange = { viewModel.injectProvider = it }
+                )
+                SuperSwitch(
+                    title = stringResource(R.string.patch_output_log_to_media),
+                    summary = stringResource(R.string.patch_output_log_to_media_desc),
+                    startAction = {
+                        Icon(
+                            imageVector = Icons.Outlined.SdStorage,
+                            contentDescription = null,
+                            tint = MiuixTheme.colorScheme.onBackground
+                        )
+                    },
+                    checked = viewModel.outputLog,
+                    onCheckedChange = { viewModel.outputLog = it }
+                )
+                val sigBypassLevels = (0..3).map { sigBypassLvStr(it) }
+                SuperDropdown(
+                    title = stringResource(R.string.patch_sigbypass),
+                    items = sigBypassLevels,
+                    selectedIndex = viewModel.sigBypassLevel,
+                    onSelectedIndexChange = { viewModel.sigBypassLevel = it }
                 )
             }
         }
@@ -413,7 +456,7 @@ private fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
-private fun DoPatchBody(modifier: Modifier, navigator: DestinationsNavigator) {
+private fun DoPatchBody(modifier: Modifier, navigator: Navigator) {
     val viewModel = viewModel<NewPatchViewModel>()
     val snackbarHost = LocalSnackbarHost.current
     val scope = rememberCoroutineScope()
@@ -432,7 +475,7 @@ private fun DoPatchBody(modifier: Modifier, navigator: DestinationsNavigator) {
                     if (action == Intent.ACTION_PACKAGE_ADDED || action == Intent.ACTION_PACKAGE_REPLACED) {
                         scope.launch {
                             snackbarHost.showSnackbar(context.getString(R.string.patch_install_successfully))
-                            navigator.navigateUp()
+                            navigator.pop()
                         }
                     }
                 }
@@ -456,7 +499,7 @@ private fun DoPatchBody(modifier: Modifier, navigator: DestinationsNavigator) {
     BoxWithConstraints(modifier.padding(start = 24.dp, end = 24.dp, bottom = 24.dp)) {
         val shellBoxMaxHeight =
             if (viewModel.patchState == PatchState.PATCHING) maxHeight
-            else maxHeight - ButtonDefaults.MinHeight - 12.dp
+            else maxHeight - 48.dp - 12.dp
         Column(
             Modifier
                 .fillMaxSize()
@@ -464,21 +507,24 @@ private fun DoPatchBody(modifier: Modifier, navigator: DestinationsNavigator) {
                 .animateContentSize(spring(stiffness = Spring.StiffnessLow))
         ) {
             ShimmerAnimation(enabled = viewModel.patchState == PatchState.PATCHING) {
-                ProvideTextStyle(MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)) {
+                ProvideTextStyle(MiuixTheme.textStyles.footnote1.copy(fontFamily = FontFamily.Monospace)) {
                     val scrollState = rememberLazyListState()
                     LazyColumn(
                         state = scrollState,
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(max = shellBoxMaxHeight)
-                            .clip(RoundedCornerShape(32.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant) // Replaced 'brush' with a theme color
-                            .padding(horizontal = 24.dp, vertical = 18.dp)
+                            .background(MiuixTheme.colorScheme.surfaceVariant, RoundedCornerShape(20.dp))
+                            .clip(RoundedCornerShape(20.dp))
+                            .scrollEndHaptic()
+                            .overScrollVertical()
+                            .padding(horizontal = 24.dp, vertical = 24.dp),
+                        overscrollEffect = null
                     ) {
                         items(viewModel.logs) {
                             when (it.first) {
                                 Log.DEBUG, Log.INFO -> Text(text = it.second)
-                                Log.ERROR -> Text(text = it.second, color = MaterialTheme.colorScheme.error)
+                                Log.ERROR -> Text(text = it.second, color = MiuixTheme.colorScheme.error)
                             }
                         }
                     }
@@ -494,7 +540,6 @@ private fun DoPatchBody(modifier: Modifier, navigator: DestinationsNavigator) {
             when (viewModel.patchState) {
                 PatchState.PATCHING -> BackHandler {}
                 PatchState.FINISHED -> {
-                    // val installSuccessfully = stringResource(R.string.patch_install_successfully) // 移交给 BroadcastReceiver 处理
                     val installFailed = stringResource(R.string.patch_install_failed)
                     val copyError = stringResource(R.string.copy_error)
                     var installation by remember { mutableStateOf<NewPatchViewModel.InstallMethod?>(null) }
@@ -520,37 +565,39 @@ private fun DoPatchBody(modifier: Modifier, navigator: DestinationsNavigator) {
                         null -> {}
                     }
                     Row(Modifier.padding(top = 12.dp)) {
-                        Button(
+                        TextButton(
+                            text = stringResource(R.string.patch_return),
                             modifier = Modifier.weight(1f),
-                            onClick = { navigator.navigateUp() },
-                            content = { Text(stringResource(R.string.patch_return)) }
+                            onClick = { navigator.pop() },
                         )
                         Spacer(Modifier.weight(0.2f))
-                        Button(
+                        TextButton(
+                            text = stringResource(R.string.install),
                             modifier = Modifier.weight(1f),
                             onClick = {
                                 installation = if (!ShizukuApi.isPermissionGranted) NewPatchViewModel.InstallMethod.SYSTEM else NewPatchViewModel.InstallMethod.SHIZUKU
                                 Log.d(TAG, "Installation method: $installation")
                             },
-                            content = { Text(stringResource(R.string.install)) }
+                            colors = ButtonDefaults.textButtonColorsPrimary(),
                         )
                     }
                 }
                 PatchState.ERROR -> {
                     Row(Modifier.padding(top = 12.dp)) {
-                        Button(
+                        TextButton(
+                            text = stringResource(R.string.patch_return),
                             modifier = Modifier.weight(1f),
-                            onClick = { navigator.navigateUp() },
-                            content = { Text(stringResource(R.string.patch_return)) }
+                            onClick = { navigator.pop() },
                         )
                         Spacer(Modifier.weight(0.2f))
-                        Button(
+                        TextButton(
+                            text = stringResource(R.string.copy_error),
                             modifier = Modifier.weight(1f),
                             onClick = {
                                 val cm = lspApp.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                 cm.setPrimaryClip(ClipData.newPlainText("NPatch", viewModel.logs.joinToString(separator = "\n") { it.second }))
                             },
-                            content = { Text(stringResource(R.string.copy_error)) }
+                            colors = ButtonDefaults.textButtonColorsPrimary(),
                         )
                     }
                 }
@@ -565,29 +612,35 @@ private fun UninstallConfirmationDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(
-                onClick = onConfirm,
-                content = { Text(stringResource(android.R.string.ok)) }
-            )
-        },
-        dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                content = { Text(stringResource(android.R.string.cancel)) }
-            )
-        },
-        title = {
+    val show = remember { mutableStateOf(true) }
+    SuperDialog(
+        title = stringResource(R.string.uninstall),
+        show = show,
+        onDismissRequest = { show.value = false; onDismiss() },
+    ) {
+        Column {
             Text(
-                modifier = Modifier.fillMaxWidth(),
-                text = stringResource(R.string.uninstall),
-                textAlign = TextAlign.Center
+                text = stringResource(R.string.patch_uninstall_text),
+                modifier = Modifier.padding(bottom = 16.dp),
             )
-        },
-        text = { Text(stringResource(R.string.patch_uninstall_text)) }
-    )
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                TextButton(
+                    text = stringResource(android.R.string.cancel),
+                    onClick = { show.value = false; onDismiss() },
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(Modifier.width(20.dp))
+                TextButton(
+                    text = stringResource(android.R.string.ok),
+                    onClick = { show.value = false; onConfirm() },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -623,7 +676,7 @@ private fun InstallDialog(patchApp: AppInfo, onFinish: (Int, String?) -> Unit) {
                     installing = 0
                     Log.i(TAG, "Uninstallation end: $status, $message")
                     if (status == PackageInstaller.STATUS_SUCCESS) {
-                        uninstallFirst = false // This will trigger the LaunchedEffect to install
+                        uninstallFirst = false
                     } else {
                         onFinish(status, message)
                     }
@@ -633,27 +686,20 @@ private fun InstallDialog(patchApp: AppInfo, onFinish: (Int, String?) -> Unit) {
     }
 
     if (installing != 0) {
-        AlertDialog(
+        val showInstalling = remember { mutableStateOf(true) }
+        SuperDialog(
+            title = stringResource(if (installing == 1) R.string.installing else R.string.uninstalling),
+            show = showInstalling,
             onDismissRequest = {},
-            confirmButton = {},
-            title = {
-                Text(
-                    modifier = Modifier.fillMaxWidth(),
-                    text = stringResource(if (installing == 1) R.string.installing else R.string.uninstalling),
-                    fontFamily = FontFamily.Serif,
-                    textAlign = TextAlign.Center
-                )
-            },
-            text = {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CircularProgressIndicator(modifier = Modifier.padding(16.dp))
-                }
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CircularProgressIndicator(modifier = Modifier.padding(16.dp).size(48.dp))
             }
-        )
+        }
     }
 }
 

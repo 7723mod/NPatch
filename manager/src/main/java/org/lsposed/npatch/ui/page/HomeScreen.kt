@@ -7,58 +7,59 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Warning
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.ramcosta.composedestinations.annotation.Destination
-import com.ramcosta.composedestinations.annotation.RootNavGraph
-import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.coroutines.launch
+import nkbe.util.ShizukuApi
 import org.lsposed.npatch.R
 import org.lsposed.npatch.share.LSPConfig
-import org.lsposed.npatch.ui.component.CenterTopBar
-import org.lsposed.npatch.ui.page.destinations.ManageScreenDestination
-import org.lsposed.npatch.ui.page.destinations.NewPatchScreenDestination
-import org.lsposed.npatch.ui.util.HtmlText
 import org.lsposed.npatch.ui.util.LocalSnackbarHost
-import nkbe.util.ShizukuApi
 import rikka.shizuku.Shizuku
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.SmallTitle
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.extra.SuperArrow
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.utils.PressFeedbackType
+import top.yukonga.miuix.kmp.utils.overScrollVertical
+import top.yukonga.miuix.kmp.utils.scrollEndHaptic
+import androidx.core.net.toUri
 
-@OptIn(ExperimentalMaterial3Api::class)
-@RootNavGraph(start = true)
-@Destination
 @Composable
-fun HomeScreen(navigator: DestinationsNavigator) {
+fun HomeScreen(navigator: Navigator) {
+    val scrollBehavior = MiuixScrollBehavior()
     var isIntentLaunched by rememberSaveable { mutableStateOf(false) }
     val activity = LocalContext.current as Activity
     val intent = activity.intent
+
     LaunchedEffect(Unit) {
         if (!isIntentLaunched && intent.action == Intent.ACTION_VIEW && intent.hasCategory(Intent.CATEGORY_DEFAULT) && intent.type == "application/vnd.android.package-archive") {
             isIntentLaunched = true
             val uri = intent.data
             if (uri != null) {
-                navigator.navigate(ManageScreenDestination)
                 navigator.navigate(
-                    NewPatchScreenDestination(
+                    Route.NewPatch(
                         id = ACTION_INTENT_INSTALL,
-                        data = uri
+                        data = uri.toString()
                     )
                 )
             }
@@ -66,20 +67,39 @@ fun HomeScreen(navigator: DestinationsNavigator) {
     }
 
     Scaffold(
-        topBar = { CenterTopBar(stringResource(R.string.app_name)) }
+        topBar = {
+            TopAppBar(
+                title = stringResource(R.string.app_name),
+                scrollBehavior = scrollBehavior
+            )
+        },
+        popupHost = {}
     ) { innerPadding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
-                .padding(innerPadding)
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .scrollEndHaptic()
+                .overScrollVertical()
+                .nestedScroll(scrollBehavior.nestedScrollConnection),
+            contentPadding = PaddingValues(
+                top = innerPadding.calculateTopPadding() + 12.dp,
+                bottom = innerPadding.calculateBottomPadding() + 24.dp
+            ),
+            overscrollEffect = null
         ) {
-            ShizukuCard()
-            InfoCard()
-            SupportCard()
-            Spacer(Modifier.height(16.dp))
+            item {
+                ShizukuCard()
+            }
+
+            item {
+                SmallTitle(text = stringResource(R.string.home_device_info))
+                InfoCard()
+            }
+
+            item {
+                SmallTitle(text = stringResource(R.string.home_support))
+                SupportCard()
+            }
         }
     }
 }
@@ -99,51 +119,46 @@ private fun ShizukuCard() {
         }
     }
 
-    val containerColor = if (ShizukuApi.isPermissionGranted) {
-        MaterialTheme.colorScheme.secondaryContainer
-    } else {
-        MaterialTheme.colorScheme.errorContainer
-    }
+    val isGranted = ShizukuApi.isPermissionGranted
 
-    val contentColor = if (ShizukuApi.isPermissionGranted) {
-        MaterialTheme.colorScheme.onSecondaryContainer
-    } else {
-        MaterialTheme.colorScheme.onErrorContainer
-    }
+    val containerColor = if (isGranted) MiuixTheme.colorScheme.primaryContainer else MiuixTheme.colorScheme.errorContainer
+    val contentColor = if (isGranted) MiuixTheme.colorScheme.onPrimaryContainer else MiuixTheme.colorScheme.onErrorContainer
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        modifier = Modifier.clip(CardDefaults.shape)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp)
+            .padding(bottom = 12.dp),
+        colors = CardDefaults.defaultColors(color = containerColor),
+        onClick = {
+            if (ShizukuApi.isBinderAvailable && !isGranted) {
+                Shizuku.requestPermission(114514)
+            }
+        },
+        showIndication = true,
+        pressFeedbackType = PressFeedbackType.Tilt,
+        insideMargin = PaddingValues(20.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable {
-                    if (ShizukuApi.isBinderAvailable && !ShizukuApi.isPermissionGranted) {
-                        Shizuku.requestPermission(114514)
-                    }
-                }
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                imageVector = if (ShizukuApi.isPermissionGranted) Icons.Outlined.CheckCircle else Icons.Outlined.Warning,
+                imageVector = if (isGranted) Icons.Outlined.CheckCircle else Icons.Outlined.Warning,
                 contentDescription = null,
                 tint = contentColor,
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(48.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column {
                 Text(
-                    text = stringResource(if (ShizukuApi.isPermissionGranted) R.string.shizuku_available else R.string.shizuku_unavailable),
-                    style = MaterialTheme.typography.titleMedium,
+                    text = stringResource(if (isGranted) R.string.shizuku_available else R.string.shizuku_unavailable),
+                    style = MiuixTheme.textStyles.title2,
                     fontWeight = FontWeight.Bold,
                     color = contentColor
                 )
                 Text(
-                    text = if (ShizukuApi.isPermissionGranted) "API ${Shizuku.getVersion()}" else stringResource(R.string.home_shizuku_warning),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = contentColor.copy(alpha = 0.8f)
+                    text = if (isGranted) "API ${Shizuku.getVersion()}" else stringResource(R.string.home_shizuku_warning),
+                    style = MiuixTheme.textStyles.body2,
+                    color = contentColor.copy(alpha = 0.8f),
+                    modifier = Modifier.padding(top = 2.dp)
                 )
             }
         }
@@ -181,97 +196,70 @@ private fun InfoCard() {
 
     val copySuccessMessage = stringResource(R.string.home_info_copied)
 
-    ElevatedCard {
-        Column(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.home_device_info),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                IconButton(onClick = {
-                    val contentString = infoList.joinToString("\n") { "${it.first}: ${it.second}" }
-                    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    cm.setPrimaryClip(ClipData.newPlainText("NPatch Info", contentString))
-                    scope.launch { snackbarHost.showSnackbar(copySuccessMessage) }
-                }) {
-                    Icon(Icons.Outlined.ContentCopy, contentDescription = "Copy")
-                }
-            }
-
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-            Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                infoList.forEach { (label, value) ->
-                    InfoRow(label, value)
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp)
+            .padding(bottom = 12.dp),
+        onClick = {
+            val contentString = infoList.joinToString("\n") { "${it.first}: ${it.second}" }
+            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            cm.setPrimaryClip(ClipData.newPlainText("NPatch Info", contentString))
+            scope.launch { snackbarHost.showSnackbar(copySuccessMessage) }
+        },
+        showIndication = true,
+        pressFeedbackType = PressFeedbackType.Sink // Miuix 原生下沉点击动效
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+            infoList.forEachIndexed { index, (label, value) ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = label,
+                        style = MiuixTheme.textStyles.body2,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                    )
+                    Text(
+                        text = value,
+                        style = MiuixTheme.textStyles.body2,
+                        fontWeight = FontWeight.Medium,
+                        color = MiuixTheme.colorScheme.onSurface
+                    )
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun InfoRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
     }
 }
 
 @Composable
 private fun SupportCard() {
-    ElevatedCard {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.home_support),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
+    val context = LocalContext.current
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp)
+            .padding(bottom = 12.dp),
+    ) {
+        // 使用原生的 SuperArrow 替代原有的 HtmlText 丑陋连接体验
+        SuperArrow(
+            title = "GitHub",
+            summary = stringResource(R.string.home_view_source_code, "GitHub", ""), // 兼容你原有的文本，可适当更改
+            onClick = {
+                val intent = Intent(Intent.ACTION_VIEW, "https://github.com/7723mod/NPatch".toUri())
+                context.startActivity(intent)
             }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = stringResource(R.string.home_description),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(12.dp))
-            HtmlText(
-                stringResource(
-                    R.string.home_view_source_code,
-                    "<b><a href=\"https://github.com/7723mod/NPatch\">GitHub</a></b>",
-                    "<b><a href=\"https://t.me/NPatch\">Telegram</a></b>"
-                )
-            )
-        }
+        )
+        SuperArrow(
+            title = "Telegram",
+            summary = "加入我们的讨论群",
+            onClick = {
+                val intent = Intent(Intent.ACTION_VIEW, "https://t.me/NPatch".toUri())
+                context.startActivity(intent)
+            }
+        )
     }
 }

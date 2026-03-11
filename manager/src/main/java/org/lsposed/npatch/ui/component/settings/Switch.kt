@@ -5,11 +5,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Api
-import androidx.compose.material3.Switch
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
+import top.yukonga.miuix.kmp.basic.Switch
 
 @Composable
 fun SettingsSwitch(
