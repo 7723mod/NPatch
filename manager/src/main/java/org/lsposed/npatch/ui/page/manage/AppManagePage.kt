@@ -35,7 +35,6 @@ import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
 import org.lsposed.npatch.R
 import org.lsposed.npatch.BuildConfig
@@ -212,7 +211,7 @@ fun AppManageBody(
                             packageName = appInfo.app.packageName,
                             summaryRow = {
                                 val patchText = if (patchConfig.useManager) stringResource(R.string.patch_local) else stringResource(R.string.patch_integrated)
-                                val patchColor = MiuixTheme.colorScheme.secondary
+                                val patchColor = MiuixTheme.colorScheme.primary
                                 val versionText = if (isRolling) stringResource(R.string.manage_rolling) else patchConfig.lspConfig.VERSION_CODE.toString()
 
                                 Text(
