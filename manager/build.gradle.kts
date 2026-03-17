@@ -124,6 +124,7 @@ dependencies {
     // MiuiX & Haze
     implementation(npatch.miuix.android)
     implementation(npatch.haze)
+    implementation("top.yukonga.miuix.kmp:miuix-icons:0.8.7")
 
 
     annotationProcessor(npatch.androidx.room.compiler)

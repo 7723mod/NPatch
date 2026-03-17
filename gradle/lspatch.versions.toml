@@ -10,7 +10,7 @@ commons-io = "2.20.0"
 beust-jcommander = "1.82"
 google-gson = "2.13.1"
 core-ktx = "1.17.0"
-miuix = "0.8.5"
+miuix = "0.8.7"
 haze = "1.7.2"
 navigation3 = "1.0.1"
 
