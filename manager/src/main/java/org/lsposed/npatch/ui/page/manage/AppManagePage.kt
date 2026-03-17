@@ -10,8 +10,7 @@ import android.provider.Settings
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,26 +18,24 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardCapslock
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
 import org.lsposed.npatch.R
 import org.lsposed.npatch.BuildConfig
@@ -57,12 +54,10 @@ import org.lsposed.npatch.ui.page.Route
 import org.lsposed.npatch.ui.page.SelectAppsResult
 import org.lsposed.npatch.ui.util.LocalSnackbarHost
 import org.lsposed.npatch.ui.viewmodel.manage.AppManageViewModel
-import org.lsposed.npatch.ui.viewmodel.manage.ModuleManageViewModel
 import org.lsposed.npatch.ui.viewstate.ProcessingState
 import nkbe.util.NPackageManager
 import nkbe.util.ShizukuApi
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
-import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.DropdownDefaults
 import top.yukonga.miuix.kmp.basic.DropdownImpl
 import top.yukonga.miuix.kmp.basic.FloatingActionButton
@@ -92,6 +87,7 @@ fun AppManageBody(
     val snackbarHost = LocalSnackbarHost.current
     val scope = rememberCoroutineScope()
     val pullToRefreshState = rememberPullToRefreshState()
+    val hapticFeedback = LocalHapticFeedback.current
 
     var scopeApp by rememberSaveable { mutableStateOf("") }
     val uninstallSuccessfully = stringResource(R.string.manage_uninstall_successfully)
@@ -104,7 +100,6 @@ fun AppManageBody(
         }
     }
 
-    // Miuix 风格的处理中弹窗
     val isProcessing = viewModel.updateLoaderState is ProcessingState.Processing || viewModel.optimizeState is ProcessingState.Processing
     if (isProcessing) {
         val showLoading = remember { mutableStateOf(true) }
@@ -124,7 +119,7 @@ fun AppManageBody(
 
     when (viewModel.updateLoaderState) {
         is ProcessingState.Idle -> Unit
-        is ProcessingState.Processing -> Unit // 上面统一处理了
+        is ProcessingState.Processing -> Unit
         is ProcessingState.Done -> {
             val it = viewModel.updateLoaderState as ProcessingState.Done
             val updateSuccessfully = stringResource(R.string.manage_update_loader_successfully)
@@ -165,34 +160,36 @@ fun AppManageBody(
         pullToRefreshState = pullToRefreshState,
         modifier = Modifier.fillMaxSize()
     ) {
-        if (viewModel.appList.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    if (NPackageManager.appList.isEmpty()) {
-                        InfiniteProgressIndicator()
-                        Spacer(Modifier.height(16.dp))
-                        Text(
-                            text = stringResource(R.string.manage_loading),
-                            style = MiuixTheme.textStyles.body1,
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary
-                        )
-                    } else {
-                        Text(
-                            text = stringResource(R.string.manage_no_apps),
-                            style = MiuixTheme.textStyles.body1,
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary
-                        )
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .scrollEndHaptic()
+                .overScrollVertical(),
+            overscrollEffect = null
+        ) {
+            if (viewModel.appList.isEmpty()) {
+                item {
+                    Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            if (NPackageManager.appList.isEmpty()) {
+                                InfiniteProgressIndicator()
+                                Spacer(Modifier.height(16.dp))
+                                Text(
+                                    text = stringResource(R.string.manage_loading),
+                                    style = MiuixTheme.textStyles.body1,
+                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                                )
+                            } else {
+                                Text(
+                                    text = stringResource(R.string.manage_no_apps),
+                                    style = MiuixTheme.textStyles.body1,
+                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                                )
+                            }
+                        }
                     }
                 }
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .scrollEndHaptic()
-                    .overScrollVertical(),
-                overscrollEffect = null
-            ) {
+            } else {
                 items(
                     items = viewModel.appList,
                     key = { it.first.app.packageName }
@@ -201,43 +198,57 @@ fun AppManageBody(
                     val canUpdateLoader = !isRolling && (patchConfig.lspConfig.VERSION_CODE < LSPConfig.instance.VERSION_CODE || patchConfig.managerPackageName != BuildConfig.APPLICATION_ID)
 
                     val showDropdown = remember { mutableStateOf(false) }
-                    val hapticFeedback = LocalHapticFeedback.current
 
                     Box(modifier = Modifier.fillMaxWidth()) {
                         AppItem(
-                            modifier = Modifier.clickable {
+                            icon = {
+                                Image(
+                                    bitmap = NPackageManager.getIcon(appInfo),
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp))
+                                )
+                            },
+                            label = appInfo.label,
+                            packageName = appInfo.app.packageName,
+                            summaryRow = {
+                                val patchText = if (patchConfig.useManager) stringResource(R.string.patch_local) else stringResource(R.string.patch_integrated)
+                                val patchColor = MiuixTheme.colorScheme.secondary
+                                val versionText = if (isRolling) stringResource(R.string.manage_rolling) else patchConfig.lspConfig.VERSION_CODE.toString()
+
+                                Text(
+                                    text = "$patchText  $versionText",
+                                    color = patchColor,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontFamily = FontFamily.Serif
+                                )
+
+                                if (canUpdateLoader) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    with(LocalDensity.current) {
+                                        val size = 16.sp * 1.2
+                                        Icon(
+                                            imageVector = Icons.Filled.KeyboardCapslock,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(size.toDp()),
+                                            tint = patchColor
+                                        )
+                                    }
+                                }
+                            },
+                            onClick = {
                                 showDropdown.value = true
                                 hapticFeedback.performHapticFeedback(HapticFeedbackType.ContextClick)
                             },
-                            icon = NPackageManager.getIcon(appInfo),
-                            label = appInfo.label,
-                            packageName = appInfo.app.packageName,
-                            additionalContent = {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    val patchText = if (patchConfig.useManager) stringResource(R.string.patch_local) else stringResource(R.string.patch_integrated)
-                                    val patchColor = MiuixTheme.colorScheme.secondary
-                                    val versionText = if (isRolling) stringResource(R.string.manage_rolling) else patchConfig.lspConfig.VERSION_CODE.toString()
-
-                                    Text(
-                                        text = "$patchText  $versionText",
-                                        color = patchColor,
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontFamily = FontFamily.Serif,
-                                        style = MiuixTheme.textStyles.footnote1
-                                    )
-                                    if (canUpdateLoader) {
-                                        with(LocalDensity.current) {
-                                            val size = MiuixTheme.textStyles.footnote1.fontSize * 1.2
-                                            Icon(Icons.Filled.KeyboardCapslock, null, Modifier.size(size.toDp()))
-                                        }
-                                    }
-                                }
+                            onLongPress = {
+                                showDropdown.value = true
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.ContextClick)
                             }
                         )
 
                         SuperListPopup(
                             show = showDropdown,
-                            alignment = PopupPositionProvider.Align.End, // 自动右对齐
+                            alignment = PopupPositionProvider.Align.End,
                             onDismissRequest = { showDropdown.value = false }
                         ) {
                             val actions = mutableListOf<Pair<String, () -> Unit>>()
