@@ -21,6 +21,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
 import org.lsposed.npatch.R
 import org.lsposed.npatch.ui.component.AppItem
 import org.lsposed.npatch.ui.viewmodel.manage.ModuleManageViewModel
@@ -40,26 +42,41 @@ import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
 @Composable
-fun ModuleManageBody() {
+fun ModuleManageBody(
+    searchQuery: String = "",
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    hazeState: HazeState? = null
+) {
     val context = LocalContext.current
     val viewModel = viewModel<ModuleManageViewModel>()
     val pullToRefreshState = rememberPullToRefreshState()
     val hapticFeedback = LocalHapticFeedback.current
 
+    val filteredList = remember(viewModel.appList, searchQuery) {
+        if (searchQuery.isEmpty()) viewModel.appList
+        else viewModel.appList.filter {
+            it.first.label.contains(searchQuery, true) ||
+                    it.first.app.packageName.contains(searchQuery, true)
+        }
+    }
+
     PullToRefresh(
         isRefreshing = viewModel.isRefreshing,
         onRefresh = { viewModel.refresh() },
         pullToRefreshState = pullToRefreshState,
+        contentPadding = contentPadding,
         modifier = Modifier.fillMaxSize()
     ) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .scrollEndHaptic()
-                .overScrollVertical(),
+                .overScrollVertical()
+                .then(if (hazeState != null) Modifier.hazeSource(state = hazeState) else Modifier),
+            contentPadding = contentPadding,
             overscrollEffect = null
         ) {
-            if (viewModel.appList.isEmpty()) {
+            if (filteredList.isEmpty()) {
                 item {
                     Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -73,7 +90,7 @@ fun ModuleManageBody() {
                                 )
                             } else {
                                 Text(
-                                    text = stringResource(R.string.manage_no_modules),
+                                    text = if (searchQuery.isNotEmpty()) "暂无搜索结果" else stringResource(R.string.manage_no_modules),
                                     style = MiuixTheme.textStyles.body1,
                                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary
                                 )
@@ -83,7 +100,7 @@ fun ModuleManageBody() {
                 }
             } else {
                 items(
-                    items = viewModel.appList,
+                    items = filteredList,
                     key = { it.first.app.packageName }
                 ) { item ->
                     val showDropdown = remember { mutableStateOf(false) }

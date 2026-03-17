@@ -35,6 +35,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.viewmodel.compose.viewModel
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.launch
 import org.lsposed.npatch.R
 import org.lsposed.npatch.BuildConfig
@@ -81,12 +83,23 @@ private const val TAG = "AppManagePage"
 @Composable
 fun AppManageBody(
     navigator: Navigator,
+    searchQuery: String = "",
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    hazeState: HazeState? = null
 ) {
     val viewModel = viewModel<AppManageViewModel>()
     val snackbarHost = LocalSnackbarHost.current
     val scope = rememberCoroutineScope()
     val pullToRefreshState = rememberPullToRefreshState()
     val hapticFeedback = LocalHapticFeedback.current
+
+    val filteredList = remember(viewModel.appList, searchQuery) {
+        if (searchQuery.isEmpty()) viewModel.appList
+        else viewModel.appList.filter {
+            it.first.label.contains(searchQuery, true) ||
+                    it.first.app.packageName.contains(searchQuery, true)
+        }
+    }
 
     var scopeApp by rememberSaveable { mutableStateOf("") }
     val uninstallSuccessfully = stringResource(R.string.manage_uninstall_successfully)
@@ -157,16 +170,19 @@ fun AppManageBody(
         isRefreshing = viewModel.isRefreshing,
         onRefresh = { viewModel.dispatch(AppManageViewModel.ViewAction.Refresh) },
         pullToRefreshState = pullToRefreshState,
+        contentPadding = contentPadding,
         modifier = Modifier.fillMaxSize()
     ) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .scrollEndHaptic()
-                .overScrollVertical(),
+                .overScrollVertical()
+                .then(if (hazeState != null) Modifier.hazeSource(state = hazeState) else Modifier),
+            contentPadding = contentPadding,
             overscrollEffect = null
         ) {
-            if (viewModel.appList.isEmpty()) {
+            if (filteredList.isEmpty()) {
                 item {
                     Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -180,7 +196,7 @@ fun AppManageBody(
                                 )
                             } else {
                                 Text(
-                                    text = stringResource(R.string.manage_no_apps),
+                                    text = if (searchQuery.isNotEmpty()) "暂无搜索结果" else stringResource(R.string.manage_no_apps),
                                     style = MiuixTheme.textStyles.body1,
                                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary
                                 )
@@ -190,7 +206,7 @@ fun AppManageBody(
                 }
             } else {
                 items(
-                    items = viewModel.appList,
+                    items = filteredList,
                     key = { it.first.app.packageName }
                 ) { (appInfo, patchConfig) ->
                     val isRolling = patchConfig.useManager && patchConfig.lspConfig.VERSION_CODE >= Constants.MIN_ROLLING_VERSION_CODE
