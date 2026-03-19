@@ -23,7 +23,9 @@ fun Jar.configure(variant: String) {
         attributes("Main-Class" to "org.lsposed.patch.NPatch")
     }
     dependsOn(configurations.runtimeClasspath)
-    from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
+    from(configurations.runtimeClasspath.map { configuration ->
+        configuration.map { if (it.isDirectory) it else zipTree(it) }
+    })
 
     into("assets") {
         from("src/main/assets")

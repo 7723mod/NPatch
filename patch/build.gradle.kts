@@ -19,7 +19,7 @@ java {
 dependencies {
     implementation(projects.apkzlib)
     implementation(projects.share.java)
-    implementation(projects.external.axml)
+    implementation("vector:axml")
 
     implementation(npatch.commons.io)
     implementation(npatch.beust.jcommander)

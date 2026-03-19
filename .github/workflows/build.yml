@@ -43,18 +43,6 @@ jobs:
           echo ${{ secrets.KEY_STORE }} | base64 --decode > key.jks
         fi
 
-    - name: 檢出 libxposed/api
-      uses: actions/checkout@main
-      with:
-        repository: libxposed/api
-        path: libxposed/api
-
-    - name: 檢出 libxposed/service
-      uses: actions/checkout@main
-      with:
-        repository: libxposed/service
-        path: libxposed/service
-
     - name: 設定 Java
       uses: actions/setup-java@v5
       with:
@@ -81,34 +69,8 @@ jobs:
       shell: bash
       run: rm -rf "$ANDROID_HOME/cmake"
 
-    - name: 設定構建環境
-      run: |
-        # for libxposed/api build
-        echo 'org.gradle.jvmargs=-Xmx2048m' >> libxposed/api/gradle.properties
-
-        # for main project build
-        {
-          echo 'org.gradle.parallel=true'
-          echo 'org.gradle.jvmargs=-Xmx2048m'
-          echo 'android.native.buildOutput=verbose'
-        } >> gradle.properties
-
-        # for libxposed build
-        echo 'org.gradle.jvmargs=-Xmx2048m' >> libxposed/api/gradle.properties
-        echo 'org.gradle.jvmargs=-Xmx2048m' >> libxposed/service/gradle.properties
-
     - name: 授予 gradlew 執行權限
       run: chmod +x gradlew
-
-    - name: 使用 Gradle 構建依賴項
-      working-directory: libxposed
-      run: |
-        cd api
-        echo 'org.gradle.jvmargs=-Xmx2048m' >> gradle.properties
-        ./gradlew :api:publishApiPublicationToMavenLocal
-        cd ../service
-        echo 'org.gradle.jvmargs=-Xmx2048m' >> gradle.properties
-        ./gradlew :interface:publishInterfacePublicationToMavenLocal
 
     - name: 設定 commit id
       run: echo "commit=$(echo ${{ github.sha }} | cut -c-7)" > $GITHUB_ENV
