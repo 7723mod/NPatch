@@ -30,6 +30,7 @@ import org.lsposed.npatch.ui.component.SearchPager
 import org.lsposed.npatch.ui.component.SearchStatus
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.TabRow
 import top.yukonga.miuix.kmp.basic.TabRowDefaults
@@ -89,8 +90,8 @@ fun ManageScreen(navigator: Navigator) {
                     ) { page ->
                         val contentPadding = PaddingValues(top = dynamicTopPadding, bottom = 0.dp)
                         when (page) {
-                            0 -> AppManageBody(navigator, searchStatus.searchText, contentPadding, hazeState)
-                            1 -> ModuleManageBody(searchStatus.searchText, contentPadding, hazeState)
+                            0 -> AppManageBody(navigator, searchStatus.searchText, contentPadding, scrollBehavior,hazeState)
+                            1 -> ModuleManageBody(searchStatus.searchText, contentPadding, scrollBehavior, hazeState)
                         }
                     }
                 }
@@ -124,8 +125,8 @@ fun ManageScreen(navigator: Navigator) {
                     bottom = innerPadding.calculateBottomPadding()
                 )
                 when (page) {
-                    0 -> AppManageBody(navigator, searchStatus.searchText, contentPadding, hazeState)
-                    1 -> ModuleManageBody(searchStatus.searchText, contentPadding, hazeState)
+                    0 -> AppManageBody(navigator, searchStatus.searchText, contentPadding, scrollBehavior, hazeState)
+                    1 -> ModuleManageBody(searchStatus.searchText, contentPadding, scrollBehavior, hazeState)
                 }
             }
         }

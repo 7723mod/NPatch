@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -67,6 +68,7 @@ import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.PullToRefresh
+import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.SnackbarResult
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
@@ -85,7 +87,8 @@ fun AppManageBody(
     navigator: Navigator,
     searchQuery: String = "",
     contentPadding: PaddingValues = PaddingValues(0.dp),
-    hazeState: HazeState? = null
+    scrollBehavior: ScrollBehavior,
+    hazeState: HazeState
 ) {
     val viewModel = viewModel<AppManageViewModel>()
     val snackbarHost = LocalSnackbarHost.current
@@ -176,9 +179,10 @@ fun AppManageBody(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .scrollEndHaptic()
                 .overScrollVertical()
-                .then(if (hazeState != null) Modifier.hazeSource(state = hazeState) else Modifier),
+                .hazeSource(state = hazeState),
             contentPadding = contentPadding,
             overscrollEffect = null
         ) {

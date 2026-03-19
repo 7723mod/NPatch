@@ -112,4 +112,47 @@
     <string name="miui_uninstall_title">💩卸💩载💩金💩凡💩</string>
     <string name="miui_uninstall_content">金凡祭天，法力无边\n所以這就是那個魔改到連使用者列表都無法訪問的系統嗎?
     \n\n(我們專門為小米手機桌面解除安裝添加了提示，提升使用者體驗)</string>
+
+    <string name="sort_by_name">Application name</string>
+    <string name="sort_by_package_name">Package name</string>
+    <string name="sort_by_install_time">Install time</string>
+    <string name="sort_by_update_time">Update time</string>
+    <string name="refresh_pulling">Pull to refresh</string>
+    <string name="refresh_release">Release to refresh</string>
+    <string name="refresh_refresh">Refreshing</string>
+    <string name="refresh_complete">Refresh complete</string>
+    <string name="module_repo">Repository</string>
+    <string name="module_repo_up_to_date">All modules up to date</string>
+    <string name="module_repo_published_time">Published at %s</string>
+    <string name="module_repo_updated_time">Updated at %s</string>
+    <plurals name="module_repo_upgradable">
+        <item quantity="one">%d module upgradable</item>
+        <item quantity="other">%d modules upgradable</item>
+    </plurals>
+    <string name="sort_upgradable_first">Upgradable first</string>
+    <string name="list_empty">Nothing here</string>
+    <string name="need_update">Need to update</string>
+    <string name="installed">Installed</string>
+    <string name="menu_open_in_browser">Open in browser</string>
+    <string name="download_latest_version">Download latest version</string>
+    <string name="module_readme">Readme</string>
+    <string name="module_releases">Releases</string>
+    <string name="module_information">Info</string>
+    <string name="unknown_author">Unknown</string>
+    <string name="unknown_version">Unknown</string>
+    <string name="unknown_asset">Unknown Asset</string>
+    <string name="module_app_info">App info</string>
+    <string name="nav_back">Back</string>
+    <string name="module_information_homepage">Homepage</string>
+    <string name="module_information_source_url">Source code</string>
+    <string name="module_information_collaborators">Collaborators</string>
+    <string name="module_release_view_assets">Assets</string>
+    <string name="module_release_load_more">Show older versions</string>
+    <string name="module_release_no_more">No more release</string>
+    <string name="repo_load_failed">Failed to load module repo: %s</string>
+    <plurals name="module_release_assets_download_count">
+        <item quantity="one">%d download</item>
+        <item quantity="other">%d downloads</item>
+    </plurals>
+    <string name="download_asset">Download</string>
 </resources>

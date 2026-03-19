@@ -22,6 +22,7 @@ import org.lsposed.npatch.ui.page.LocalNavigator
 import org.lsposed.npatch.ui.page.MainScreen
 import org.lsposed.npatch.ui.page.Navigator
 import org.lsposed.npatch.ui.page.NewPatchScreen
+import org.lsposed.npatch.ui.page.RepositoryDetailScreen
 import org.lsposed.npatch.ui.page.Route
 import org.lsposed.npatch.ui.page.SelectAppsScreen
 import org.lsposed.npatch.ui.theme.LSPTheme
@@ -94,6 +95,13 @@ class MainActivity : ComponentActivity() {
                                 SelectAppsScreen(
                                     multiSelect = route.multiSelect,
                                     initialSelected = route.initialSelected
+                                )
+                            }
+
+                            entry<Route.RepoDetail> { route ->
+                                RepositoryDetailScreen(
+                                    packageName = route.packageName,
+                                    onBack = { navigator.pop() }
                                 )
                             }
                         }

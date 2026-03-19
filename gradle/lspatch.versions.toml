@@ -13,6 +13,7 @@ core-ktx = "1.17.0"
 miuix = "0.8.7"
 haze = "1.7.2"
 navigation3 = "1.0.1"
+webkit = "1.14.0"
 
 [plugins]
 google-devtools-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
@@ -22,6 +23,7 @@ compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 
 [libraries]
+androidx-webkit = { group = "androidx.webkit", name = "webkit", version.ref = "webkit" }
 # Androidx Libraries
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "core-ktx" }
 androidx-customview = "androidx.customview:customview:1.2.0"

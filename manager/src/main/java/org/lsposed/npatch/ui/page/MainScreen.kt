@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
+import org.lsposed.manager.ui.compose.repository.RepositoryScreen
 import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -45,7 +46,7 @@ fun MainScreen(navigator: Navigator) {
             when (MainTab.entries[page]) {
                 MainTab.Home -> HomeScreen(navigator)
                 MainTab.Manage -> ManageScreen(navigator)
-                MainTab.Repo -> RepoScreen()
+                MainTab.Repo -> RepositoryScreen(navigator)
                 MainTab.Settings -> SettingsScreen()
             }
         }

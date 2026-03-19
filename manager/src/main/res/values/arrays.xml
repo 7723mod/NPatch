@@ -1,0 +1,7 @@
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string-array name="update_channel_values" translatable="false">
+        <item>CHANNEL_STABLE</item>
+        <item>CHANNEL_BETA</item>
+        <item>CHANNEL_NIGHTLY</item>
+    </string-array>
+</resources>

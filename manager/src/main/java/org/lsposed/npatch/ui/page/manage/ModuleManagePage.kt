@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
@@ -33,6 +34,7 @@ import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.PullToRefresh
+import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.Surface
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
@@ -45,7 +47,8 @@ import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 fun ModuleManageBody(
     searchQuery: String = "",
     contentPadding: PaddingValues = PaddingValues(0.dp),
-    hazeState: HazeState? = null
+    scrollBehavior: ScrollBehavior,
+    hazeState: HazeState
 ) {
     val context = LocalContext.current
     val viewModel = viewModel<ModuleManageViewModel>()
@@ -70,9 +73,10 @@ fun ModuleManageBody(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .scrollEndHaptic()
                 .overScrollVertical()
-                .then(if (hazeState != null) Modifier.hazeSource(state = hazeState) else Modifier),
+                .hazeSource(state = hazeState),
             contentPadding = contentPadding,
             overscrollEffect = null
         ) {

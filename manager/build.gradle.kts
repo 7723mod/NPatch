@@ -108,6 +108,7 @@ dependencies {
     implementation(libs.androidx.preference)
     implementation(npatch.androidx.room.ktx)
     implementation(npatch.androidx.room.runtime)
+    implementation("com.squareup.okhttp3:okhttp:5.3.2")
 
     //implementation(npatch.google.accompanist.navigation.animation)
     implementation(npatch.google.accompanist.pager)
@@ -125,6 +126,7 @@ dependencies {
     implementation(npatch.miuix.android)
     implementation(npatch.haze)
     implementation("top.yukonga.miuix.kmp:miuix-icons:0.8.7")
+    implementation(npatch.androidx.webkit)
 
 
     annotationProcessor(npatch.androidx.room.compiler)
