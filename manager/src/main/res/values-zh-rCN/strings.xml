@@ -15,6 +15,7 @@
     <string name="screen_logs">日志</string>
     <string name="off">关闭</string>
     <string name="error_unknown">未知错误</string>
+
     <!-- Home Screen -->
     <string name="home_shizuku_warning">部分功能不可用</string>
     <string name="home_api_version">API 版本</string>
@@ -29,6 +30,7 @@
     <string name="home_support">支持</string>
     <string name="home_description">NPatch 是一款免费且迭代于 LSPatch 的，基于 LSPosed 核心的免 Root 的 Xposed 框架。</string>
     <string name="home_view_source_code"><![CDATA[查看源代码 %1$s]]></string>
+
     <!-- Manage Screen -->
     <string name="screen_manage">管理</string>
     <string name="manage_loading">加载中</string>
@@ -46,6 +48,7 @@
     <string name="manage_module_settings">模块设置</string>
     <string name="manage_app_info">应用信息</string>
     <string name="manage_check_manager_package_name">该应用由 %1$s 管理\n在本管理器中修改作用域 %2$s 不会生效\n重新修补以解决</string>
+
     <!-- New Patch Screen -->
     <string name="screen_new_patch">新建修补</string>
     <string name="patch_select_dir_title">选择存储目录</string>
@@ -83,8 +86,10 @@
     <string name="patch_install_successfully">安装成功</string>
     <string name="patch_install_failed">安装失败</string>
     <string name="patch_no_xposed_module">未找到 Xposed 模块</string>
+
     <!-- Select Apps Screen -->
     <string name="screen_select_apps">选择应用程序</string>
+
     <!-- Settings Screen -->
     <string name="screen_settings">设置</string>
     <string name="settings_keystore">签名密钥库</string>
@@ -102,4 +107,48 @@
     <string name="settings_keystore_wrong_alias_password">别名密码错误</string>
     <string name="settings_detail_patch_logs">详细修补日志</string>
     <string name="settings_storage_directory">变更存储目录</string>
+
+    <!-- Modules Repo-->
+    <string name="sort_by_name">应用程序名称</string>
+    <string name="sort_by_package_name">包名</string>
+    <string name="sort_by_install_time">安装时间</string>
+    <string name="sort_by_update_time">更新时间</string>
+    <string name="refresh_pulling">下拉刷新</string>
+    <string name="refresh_release">松开刷新</string>
+    <string name="refresh_refresh">刷新中</string>
+    <string name="refresh_complete">刷新完成</string>
+    <string name="module_repo">模块仓库</string>
+    <string name="module_repo_up_to_date">所有模块均为最新版</string>
+    <string name="module_repo_published_time">发布于 %s</string>
+    <string name="module_repo_updated_time">更新于 %s</string>
+    <plurals name="module_repo_upgradable">
+        <item quantity="one">%d 个模块可更新</item>
+        <item quantity="other">%d 个模块可更新</item>
+    </plurals>
+    <string name="sort_upgradable_first">可更新优先</string>
+    <string name="list_empty">这里空空如也</string>
+    <string name="need_update">需要更新</string>
+    <string name="installed">已安装</string>
+    <string name="menu_open_in_browser">在浏览器中打开</string>
+    <string name="download_latest_version">下载最新版本</string>
+    <string name="module_readme">自述文件</string>
+    <string name="module_releases">版本发布</string>
+    <string name="module_information">信息</string>
+    <string name="unknown_author">未知</string>
+    <string name="unknown_version">未知</string>
+    <string name="unknown_asset">未知资源</string>
+    <string name="module_app_info">应用信息</string>
+    <string name="nav_back">返回</string>
+    <string name="module_information_homepage">主页</string>
+    <string name="module_information_source_url">源代码</string>
+    <string name="module_information_collaborators">协作者</string>
+    <string name="module_release_view_assets">资源</string>
+    <string name="module_release_load_more">显示更早版本</string>
+    <string name="module_release_no_more">没有更多版本</string>
+    <string name="repo_load_failed">无法加载模块仓库：%s</string>
+    <plurals name="module_release_assets_download_count">
+        <item quantity="one">%d 次下载</item>
+        <item quantity="other">%d 次下载</item>
+    </plurals>
+    <string name="download_asset">下载</string>
 </resources>

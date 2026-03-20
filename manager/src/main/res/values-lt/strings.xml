@@ -86,4 +86,48 @@
     <string name="settings_keystore_wrong_alias">Neteisingas pseudonimas</string>
     <string name="settings_keystore_wrong_alias_password">Neteisingas slapyvardžio slaptažodis</string>
     <string name="settings_detail_patch_logs">Išsamūs pataisų žurnalai</string>
+
+    <!-- Modules Repo-->
+    <string name="sort_by_name">Nome applicazione</string>
+    <string name="sort_by_package_name">Nome pacchetto</string>
+    <string name="sort_by_install_time">Data di installazione</string>
+    <string name="sort_by_update_time">Data di aggiornamento</string>
+    <string name="refresh_pulling">Trascina per aggiornare</string>
+    <string name="refresh_release">Rilascia per aggiornare</string>
+    <string name="refresh_refresh">Aggiornamento in corso</string>
+    <string name="refresh_complete">Aggiornamento completato</string>
+    <string name="module_repo">Repository</string>
+    <string name="module_repo_up_to_date">Tutti i moduli sono aggiornati</string>
+    <string name="module_repo_published_time">Pubblicato il %s</string>
+    <string name="module_repo_updated_time">Aggiornato il %s</string>
+    <plurals name="module_repo_upgradable">
+        <item quantity="one">%d modulo aggiornabile</item>
+        <item quantity="other">%d moduli aggiornabili</item>
+    </plurals>
+    <string name="sort_upgradable_first">Aggiornabili per primi</string>
+    <string name="list_empty">Nessun elemento</string>
+    <string name="need_update">Da aggiornare</string>
+    <string name="installed">Installato</string>
+    <string name="menu_open_in_browser">Apri nel browser</string>
+    <string name="download_latest_version">Scarica l\'ultima versione</string>
+    <string name="module_readme">Leggimi</string>
+    <string name="module_releases">Rilasci</string>
+    <string name="module_information">Informazioni</string>
+    <string name="unknown_author">Sconosciuto</string>
+    <string name="unknown_version">Sconosciuta</string>
+    <string name="unknown_asset">Risorsa sconosciuta</string>
+    <string name="module_app_info">Informazioni app</string>
+    <string name="nav_back">Indietro</string>
+    <string name="module_information_homepage">Homepage</string>
+    <string name="module_information_source_url">Codice sorgente</string>
+    <string name="module_information_collaborators">Collaboratori</string>
+    <string name="module_release_view_assets">Risorse</string>
+    <string name="module_release_load_more">Mostra versioni precedenti</string>
+    <string name="module_release_no_more">Nessun altro rilascio</string>
+    <string name="repo_load_failed">Impossibile caricare il repository dei moduli: %s</string>
+    <plurals name="module_release_assets_download_count">
+        <item quantity="one">%d download</item>
+        <item quantity="other">%d download</item>
+    </plurals>
+    <string name="download_asset">Scarica</string>
 </resources>
