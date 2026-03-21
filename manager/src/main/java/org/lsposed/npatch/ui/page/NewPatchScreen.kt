@@ -9,7 +9,6 @@ import android.content.Context.RECEIVER_NOT_EXPORTED
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageInstaller
-import android.net.Uri
 import android.os.Build
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -103,6 +102,16 @@ fun NewPatchScreen(
     val scope = rememberCoroutineScope()
     val lifecycleScope = LocalLifecycleOwner.current.lifecycleScope
     val errorUnknown = stringResource(R.string.error_unknown)
+
+    DisposableEffect(Unit) {
+        onDispose {
+            if (viewModel.patchState != PatchState.PATCHING && viewModel.patchState != PatchState.FINISHED) {
+                NPackageManager.cleanTmpApkDir()
+                Log.d(TAG, "Tmp Apk Directory cleaned on dispose.")
+            }
+        }
+    }
+
     val storageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { apks ->
         if (apks.isEmpty()) {
             navigator.pop()
@@ -120,7 +129,7 @@ fun NewPatchScreen(
         }
     }
 
-    val showSelectModuleDialog = remember { mutableStateOf(false) }
+    var showSelectModuleDialog by remember { mutableStateOf(false) }
     val noXposedModules = stringResource(R.string.patch_no_xposed_module)
     val storageModuleLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { apks ->
@@ -207,18 +216,18 @@ fun NewPatchScreen(
                             .padding(innerPadding)
                             .nestedScroll(scrollBehavior.nestedScrollConnection)
                     ) {
-                        showSelectModuleDialog.value = true
+                        showSelectModuleDialog = true
                     }
                 } else {
                     DoPatchBody(Modifier.padding(innerPadding), navigator)
                 }
             }
 
-            if (showSelectModuleDialog.value) {
+            if (showSelectModuleDialog) {
                 SuperDialog(
                     title = stringResource(R.string.patch_embed_modules),
-                    show = showSelectModuleDialog,
-                    onDismissRequest = { showSelectModuleDialog.value = false },
+                    show = remember { mutableStateOf(true) }, // 避免內部修改直接關閉失效
+                    onDismissRequest = { showSelectModuleDialog = false },
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         TextButton(
@@ -226,7 +235,7 @@ fun NewPatchScreen(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
                                 storageModuleLauncher.launch(arrayOf("application/vnd.android.package-archive"))
-                                showSelectModuleDialog.value = false
+                                showSelectModuleDialog = false
                             },
                         )
                         TextButton(
@@ -235,20 +244,20 @@ fun NewPatchScreen(
                             onClick = {
                                 lifecycleScope.launch {
                                     val result = navigator.navigateForResult<SelectAppsResult>(
-                                        Route.SelectApps(true, viewModel.embeddedModules.map { it.app.packageName })
+                                        Route.SelectApps(true, viewModel.embeddedModules.mapTo(ArrayList()) { it.app.packageName })
                                     )
                                     if (result is SelectAppsResult.MultipleApps) {
                                         viewModel.embeddedModules = result.selected
                                     }
                                 }
-                                showSelectModuleDialog.value = false
+                                showSelectModuleDialog = false
                             },
                         )
                         Spacer(Modifier.height(4.dp))
                         TextButton(
                             text = stringResource(android.R.string.cancel),
                             modifier = Modifier.fillMaxWidth(),
-                            onClick = { showSelectModuleDialog.value = false },
+                            onClick = { showSelectModuleDialog = false },
                         )
                     }
                 }
@@ -365,7 +374,7 @@ private fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
         }
 
         item {
-            SmallTitle(text = "高级配置")
+            SmallTitle(text = "高級配置")
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -430,6 +439,19 @@ private fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
                     onCheckedChange = { viewModel.injectProvider = it }
                 )
                 SuperSwitch(
+                    title = stringResource(R.string.patch_use_microg),
+                    summary = stringResource(R.string.patch_use_microg_desc),
+                    startAction = {
+                        Icon(
+                            imageVector = Icons.Outlined.SdStorage,
+                            contentDescription = null,
+                            tint = MiuixTheme.colorScheme.onBackground
+                        )
+                    },
+                    checked = viewModel.useMicroG,
+                    onCheckedChange = { viewModel.useMicroG = it }
+                )
+                SuperSwitch(
                     title = stringResource(R.string.patch_output_log_to_media),
                     summary = stringResource(R.string.patch_output_log_to_media_desc),
                     startAction = {
@@ -442,7 +464,7 @@ private fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
                     checked = viewModel.outputLog,
                     onCheckedChange = { viewModel.outputLog = it }
                 )
-                val sigBypassLevels = (0..3).map { sigBypassLvStr(it) }
+                val sigBypassLevels = (0..4).map { sigBypassLvStr(it) }
                 SuperDropdown(
                     title = stringResource(R.string.patch_sigbypass),
                     items = sigBypassLevels,
