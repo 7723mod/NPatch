@@ -198,9 +198,11 @@ private fun KeyStore() {
 
                 TextField(
                     value = path,
-                    onValueChange = { path = it },
+                    onValueChange = {},
                     label = stringResource(R.string.settings_keystore_file),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    readOnly = true,
+                    interactionSource = interactionSource
                 )
                 TextField(
                     value = password,
