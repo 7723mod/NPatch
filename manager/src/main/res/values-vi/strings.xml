@@ -11,7 +11,6 @@
     <string name="shizuku_available">Có dịch vụ Shizuku</string>
     <string name="shizuku_unavailable">Dịch vụ Shizuku không được kết nối</string>
     <string name="screen_repo">Repo</string>
-    <string name="screen_logs">Nhật ký</string>
     <string name="off">Tắt</string>
     <string name="error_unknown">Lỗi không rõ</string>
     <!-- Home Screen -->

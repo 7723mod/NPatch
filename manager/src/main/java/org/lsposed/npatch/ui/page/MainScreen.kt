@@ -7,6 +7,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
 import org.lsposed.manager.ui.compose.repository.RepositoryScreen
@@ -17,21 +18,24 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MainScreen(navigator: Navigator) {
-    val pagerState = rememberPagerState(pageCount = { MainTab.entries.size })
+    val tabs = MainTab.entries
+    val pagerState = rememberPagerState(pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
+
     Scaffold(
         bottomBar = {
             NavigationBar {
-                MainTab.entries.forEachIndexed { index, tab ->
+                tabs.forEachIndexed { index, tab ->
+                    val isSelected = pagerState.currentPage == index
                     NavigationBarItem(
-                        selected = pagerState.currentPage == index,
+                        selected = isSelected,
                         onClick = {
                             scope.launch {
                                 pagerState.animateScrollToPage(index)
                             }
                         },
-                        icon = if (pagerState.currentPage == index) tab.selectedIcon else tab.unselectedIcon,
-                        label = tab.label
+                        icon = if (isSelected) tab.selectedIcon else tab.unselectedIcon,
+                        label = stringResource(tab.labelRes)
                     )
                 }
             }
@@ -40,10 +44,10 @@ fun MainScreen(navigator: Navigator) {
         HorizontalPager(
             state = pagerState,
             modifier = Modifier
-                .padding(bottom = padding.calculateBottomPadding())
-                .fillMaxSize()
+                .padding(padding)
+                .fillMaxSize(),
         ) { page ->
-            when (MainTab.entries[page]) {
+            when (tabs[page]) {
                 MainTab.Home -> HomeScreen(navigator)
                 MainTab.Manage -> ManageScreen(navigator)
                 MainTab.Repo -> RepositoryScreen(navigator)

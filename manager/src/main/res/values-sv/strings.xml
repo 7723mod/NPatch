@@ -11,7 +11,6 @@
     <string name="shizuku_available">Shizuku-tjänsten är tillgänglig</string>
     <string name="shizuku_unavailable">Shizuku-tjänsten är inte ansluten</string>
     <string name="screen_repo">Repo</string>
-    <string name="screen_logs">Loggar</string>
     <string name="off">Av</string>
     <string name="error_unknown">Okänt fel</string>
     <!-- Home Screen -->

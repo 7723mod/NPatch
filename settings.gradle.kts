@@ -28,7 +28,7 @@ dependencyResolutionManagement {
             from(files("core/gradle/libs.versions.toml"))
         }
         create("npatch") {
-            from(files("gradle/lspatch.versions.toml"))
+            from(files("gradle/npatch.versions.toml"))
         }
     }
 }

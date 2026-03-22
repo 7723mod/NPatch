@@ -11,7 +11,6 @@
     <string name="shizuku_available">Galimas Shizuku servisas</string>
     <string name="shizuku_unavailable">„Shizuku“ paslauga neprijungta</string>
     <string name="screen_repo">Repo</string>
-    <string name="screen_logs">Žurnalai</string>
     <string name="off">Išjungta</string>
     <string name="error_unknown">Nežinoma klaida</string>
     <!-- Home Screen -->

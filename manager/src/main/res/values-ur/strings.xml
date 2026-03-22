@@ -11,7 +11,7 @@
     <string name="shizuku_available">شیزوکو سروس دستیاب ہے۔</string>
     <string name="shizuku_unavailable">شیزوکو سروس منسلک نہیں ہے۔</string>
     <string name="screen_repo">ریپو</string>
-    <string name="screen_logs">نوشتہ جات</string>
+
     <string name="off">بند</string>
     <string name="error_unknown">نامعلوم خامی</string>
     <!-- Home Screen -->

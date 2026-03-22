@@ -11,7 +11,7 @@
     <string name="shizuku_available">Shizku සේවාව ඇත</string>
     <string name="shizuku_unavailable">Shizku සේවාව සම්බන්ධ නොවේ</string>
     <string name="screen_repo">රෙපෝ</string>
-    <string name="screen_logs">සටහන්</string>
+
     <string name="off">අක්රියයි</string>
     <string name="error_unknown">නොදන්නා දෝෂයකි</string>
     <!-- Home Screen -->

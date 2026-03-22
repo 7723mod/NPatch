@@ -11,7 +11,7 @@
     <string name="shizuku_available">Shizukuが有効です</string>
     <string name="shizuku_unavailable">Shizukuが有効化されていません</string>
     <string name="screen_repo">リポジトリ</string>
-    <string name="screen_logs">ログ</string>
+
     <string name="off">オフ</string>
     <string name="error_unknown">不明なエラー</string>
     <!-- Home Screen -->

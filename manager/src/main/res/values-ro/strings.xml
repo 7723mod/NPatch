@@ -11,7 +11,6 @@
     <string name="shizuku_available">Serviciu Shizuku disponibil</string>
     <string name="shizuku_unavailable">Serviciul Shizuku nu este conectat</string>
     <string name="screen_repo">Repo</string>
-    <string name="screen_logs">Bușteni</string>
     <string name="off">Off</string>
     <string name="error_unknown">Eroare necunoscută</string>
     <!-- Home Screen -->

@@ -12,7 +12,7 @@
     <string name="shizuku_unavailable">Shizuku 服务未连接</string>
     <string name="screen_home">主页</string>
     <string name="screen_repo">仓库</string>
-    <string name="screen_logs">日志</string>
+
     <string name="off">关闭</string>
     <string name="error_unknown">未知错误</string>
 

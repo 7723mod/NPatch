@@ -11,7 +11,7 @@
     <string name="shizuku_available">Shizuku 服务可用</string>
     <string name="shizuku_unavailable">Shizuku 服务未连接</string>
     <string name="screen_repo">倉庫</string>
-    <string name="screen_logs">日誌</string>
+
     <string name="off">關閉</string>
     <string name="error_unknown">未知錯誤</string>
     <!-- Home Screen -->

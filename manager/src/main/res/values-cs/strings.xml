@@ -11,7 +11,6 @@
     <string name="shizuku_available">K dispozici služba Shizuku</string>
     <string name="shizuku_unavailable">Služba Shizuku není připojena</string>
     <string name="screen_repo">Repo</string>
-    <string name="screen_logs">Protokoly</string>
     <string name="off">Vypnuto</string>
     <string name="error_unknown">Neznámá chyba</string>
     <!-- Home Screen -->

@@ -11,7 +11,7 @@
     <string name="shizuku_available">שירות שיזוקו זמין</string>
     <string name="shizuku_unavailable">שירות Shizuku לא מחובר</string>
     <string name="screen_repo">ריפו</string>
-    <string name="screen_logs">יומנים</string>
+
     <string name="off">כבוי</string>
     <string name="error_unknown">שגיאה לא ידועה</string>
     <!-- Home Screen -->

@@ -11,7 +11,7 @@
     <string name="shizuku_available">Служба Shizuku доступна</string>
     <string name="shizuku_unavailable">Служба Shizuku не подключена</string>
     <string name="screen_repo">Репозиторий</string>
-    <string name="screen_logs">Журналы</string>
+
     <string name="off">Выкл.</string>
     <string name="error_unknown">Неизвестная ошибка</string>
     <!-- Home Screen -->

@@ -11,7 +11,7 @@
     <string name="shizuku_available">سرویس Shizuku در دسترس‌ است</string>
     <string name="shizuku_unavailable">سرویس Shizuku متصل نیست</string>
     <string name="screen_repo">مخزن</string>
-    <string name="screen_logs">گزارش ها</string>
+
     <string name="off">خاموش</string>
     <string name="error_unknown"></string>
     <!-- Home Screen -->

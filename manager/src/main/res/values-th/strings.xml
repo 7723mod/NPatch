@@ -11,7 +11,6 @@
     <string name="shizuku_available">ชิซึกุ มีบริการ</string>
     <string name="shizuku_unavailable">ไม่ได้เชื่อมต่อบริการ Shizuku</string>
     <string name="screen_repo">Repo</string>
-    <string name="screen_logs">บันทึก</string>
     <string name="off">ปิด</string>
     <string name="error_unknown">Unknown error</string>
     <!-- Home Screen -->
