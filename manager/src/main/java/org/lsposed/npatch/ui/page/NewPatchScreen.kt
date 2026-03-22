@@ -61,6 +61,7 @@ import org.lsposed.npatch.ui.viewmodel.NewPatchViewModel
 import org.lsposed.npatch.ui.viewmodel.NewPatchViewModel.PatchState
 import org.lsposed.npatch.ui.viewmodel.NewPatchViewModel.ViewAction
 import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
@@ -252,41 +253,43 @@ fun NewPatchScreen(
         }
     }
 
-    SuperDialog(
-        title = stringResource(R.string.patch_embed_modules),
-        show = showSelectModuleDialog,
-        onDismissRequest = closeSelectModuleDialog,
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(
-                text = stringResource(R.string.patch_from_storage),
-                modifier = Modifier.fillMaxWidth(),
-                onClick = {
-                    storageModuleLauncher.launch(arrayOf("application/vnd.android.package-archive"))
-                    closeSelectModuleDialog()
-                },
-            )
-            TextButton(
-                text = stringResource(R.string.patch_from_applist),
-                modifier = Modifier.fillMaxWidth(),
-                onClick = {
-                    lifecycleScope.launch {
-                        val result = navigator.navigateForResult<SelectAppsResult>(
-                            Route.SelectApps(true, viewModel.embeddedModules.mapTo(ArrayList()) { it.app.packageName })
-                        )
-                        if (result is SelectAppsResult.MultipleApps) {
-                            viewModel.embeddedModules = result.selected
+    if (showSelectModuleDialog.value) {
+        SuperDialog(
+            title = stringResource(R.string.patch_embed_modules),
+            show = showSelectModuleDialog,
+            onDismissRequest = closeSelectModuleDialog,
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(
+                    text = stringResource(R.string.patch_from_storage),
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        storageModuleLauncher.launch(arrayOf("application/vnd.android.package-archive"))
+                        closeSelectModuleDialog()
+                    },
+                )
+                TextButton(
+                    text = stringResource(R.string.patch_from_applist),
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        lifecycleScope.launch {
+                            val result = navigator.navigateForResult<SelectAppsResult>(
+                                Route.SelectApps(true, viewModel.embeddedModules.mapTo(ArrayList()) { it.app.packageName })
+                            )
+                            if (result is SelectAppsResult.MultipleApps) {
+                                viewModel.embeddedModules = result.selected
+                            }
                         }
-                    }
-                    closeSelectModuleDialog()
-                },
-            )
-            Spacer(Modifier.height(4.dp))
-            TextButton(
-                text = stringResource(android.R.string.cancel),
-                modifier = Modifier.fillMaxWidth(),
-                onClick = closeSelectModuleDialog,
-            )
+                        closeSelectModuleDialog()
+                    },
+                )
+                Spacer(Modifier.height(4.dp))
+                TextButton(
+                    text = stringResource(android.R.string.cancel),
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = closeSelectModuleDialog,
+                )
+            }
         }
     }
 }
@@ -383,20 +386,25 @@ private fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
                     SelectionItem(
                         selected = !viewModel.useManager,
                         onClick = {
-                            if (!viewModel.useManager) {
-                                onAddEmbed()
-                            } else {
+                            if (viewModel.useManager) {
                                 viewModel.useManager = false
+                            } else {
+                                onAddEmbed()
                             }
                         },
                         icon = Icons.Outlined.WorkOutline,
                         title = stringResource(R.string.patch_integrated),
                         desc = stringResource(R.string.patch_integrated_desc),
                         extraContent = {
-                            TextButton(
-                                text = stringResource(R.string.patch_embed_modules),
-                                onClick = onAddEmbed,
-                                modifier = Modifier.padding(top = 4.dp)
+                            val embedText = if (viewModel.embeddedModules.isNotEmpty()) {
+                                stringResource(R.string.patch_embed_modules) + " (${viewModel.embeddedModules.size})"
+                            } else {
+                                stringResource(R.string.patch_embed_modules)
+                            }
+                            Text(
+                                text = embedText,
+                                color = MiuixTheme.colorScheme.primary,
+                                modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
                             )
                         }
                     )

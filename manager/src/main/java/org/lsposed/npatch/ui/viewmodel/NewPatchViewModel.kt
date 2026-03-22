@@ -48,7 +48,7 @@ class NewPatchViewModel : ViewModel() {
     var injectProvider by mutableStateOf(false)
     var useMicroG by mutableStateOf(false)
     var outputLog by mutableStateOf(true)
-    var embeddedModules = emptyList<AppInfo>()
+    var embeddedModules by mutableStateOf<List<AppInfo>>(emptyList())
 
     lateinit var patchApp: AppInfo
         private set
