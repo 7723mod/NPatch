@@ -46,8 +46,8 @@ class NewPatchViewModel : ViewModel() {
     var sigBypassLevel by mutableStateOf(2)
     var injectDex by mutableStateOf(false)
     var injectProvider by mutableStateOf(false)
-    var outputLog by mutableStateOf(true)
     var useMicroG by mutableStateOf(false)
+    var outputLog by mutableStateOf(true)
     var embeddedModules = emptyList<AppInfo>()
 
     lateinit var patchApp: AppInfo
@@ -86,6 +86,20 @@ class NewPatchViewModel : ViewModel() {
         }
     }
 
+    fun reset() {
+        patchState = PatchState.INIT
+        useManager = true
+        newPackageName = ""
+        debuggable = false
+        overrideVersionCode = false
+        sigBypassLevel = 2
+        injectDex = false
+        injectProvider = false
+        useMicroG = false
+        outputLog = true
+        embeddedModules = emptyList()
+        logs.clear()
+    }
     private fun doneInit() {
         patchState = PatchState.SELECTING
     }

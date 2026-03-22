@@ -31,7 +31,7 @@ object SelectionColumnScope {
             modifier = modifier
                 .fillMaxWidth()
                 .heightIn(min = 64.dp)
-                .clip(RoundedCornerShape(4.dp))
+                .clip(RoundedCornerShape(12.dp))
                 .background(
                     animateColorAsState(
                         if (selected) MiuixTheme.colorScheme.primaryContainer
@@ -80,10 +80,10 @@ object SelectionColumnScope {
 @Composable
 fun SelectionColumn(
     modifier: Modifier = Modifier,
-    content: @Composable() (SelectionColumnScope.() -> Unit)
+    content: @Composable (SelectionColumnScope.() -> Unit)
 ) {
     Column(
-        modifier = modifier.clip(RoundedCornerShape(16.dp)),
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(2.dp),
         content = { SelectionColumnScope.content() }
     )
