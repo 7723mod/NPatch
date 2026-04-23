@@ -7,6 +7,15 @@ plugins {
 android {
     defaultConfig {
         multiDexEnabled = false
+
+        externalNativeBuild {
+            cmake {
+                arguments += "-DCORE_ROOT=${File(rootDir.absolutePath, "core/native") }"
+                arguments += "-DEXTERNAL_ROOT=${File(rootDir.absolutePath, "core/external") }"
+                arguments += "-DVERSION_CODE=${rootProject.extra["verCode"]}"
+                arguments += "-DVERSION_NAME=${rootProject.extra["verName"]}"
+            }
+        }
     }
 
     buildFeatures {
@@ -24,7 +33,6 @@ android {
         cmake {
             path("src/main/jni/CMakeLists.txt")
             version = "3.31.6"
-            arguments += "-DCORE_ROOT=${File(rootDir.absolutePath, "core/native") }"
         }
     }
 
@@ -49,7 +57,6 @@ androidComponents.onVariants { variant ->
     val copySoTask = tasks.register<Copy>("copySo$variantCapped") {
         dependsOn("assemble$variantCapped")
         dependsOn("strip${variantCapped}DebugSymbols")
-        val libDir = variant.name + "/strip${variantCapped}DebugSymbols"
         from(
             fileTree(
                 "dir" to layout.buildDirectory.dir("intermediates/stripped_native_libs/${variant.name}/strip${variantCapped}DebugSymbols/out/lib"),
@@ -74,6 +81,7 @@ dependencies {
     implementation("vector:core")
     implementation("vector:bridge")
     implementation("vector:daemon-service")
+    implementation("vector:legacy")
     implementation(projects.share.android)
     implementation(projects.share.java)
 

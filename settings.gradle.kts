@@ -49,6 +49,7 @@ includeBuild("core") {
     dependencySubstitution {
         substitute(module("vector:axml")).using(project(":external:axml"))
         substitute(module("vector:bridge")).using(project(":hiddenapi:bridge"))
+        substitute(module("vector:legacy")).using(project(":legacy"))
         substitute(module("vector:core")).using(project(":xposed"))
         substitute(module("vector:daemon-service")).using(project(":services:daemon-service"))
         substitute(module("vector:stubs")).using(project(":hiddenapi:stubs"))
