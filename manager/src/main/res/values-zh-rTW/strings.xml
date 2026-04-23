@@ -40,6 +40,7 @@
     <string name="manage_update_loader_successfully">更新成功</string>
     <string name="manage_update_loader_failed">更新失敗</string>
     <string name="manage_module_scope">模組作用域</string>
+    <string name="manage_module_scope_updated">模組作用域已更新</string>
     <string name="manage_optimize">最佳化</string>
     <string name="manage_optimize_successfully">最佳化成功</string>
     <string name="manage_optimize_failed">最佳化失敗</string>
@@ -86,7 +87,7 @@
     <string name="patch_uninstall_text">由於簽名不同，安裝前需要先解除安裝原程式。\n確保您已備份好個人資料。</string>
     <string name="patch_install_successfully">安裝成功</string>
     <string name="patch_install_failed">安裝失敗</string>
-    <string name="patch_no_xposed_module">未找到 Xpose 模組</string>
+    <string name="patch_no_xposed_module">未找到 Xposed 模組</string>
 
     <!-- Select Apps Screen -->
     <string name="screen_select_apps">選取應用程式</string>

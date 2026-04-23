@@ -40,6 +40,7 @@
     <string name="manage_update_loader_successfully">更新成功</string>
     <string name="manage_update_loader_failed">更新失败</string>
     <string name="manage_module_scope">模块作用域</string>
+    <string name="manage_module_scope_updated">模块作用域已更新</string>
     <string name="manage_optimize">优化</string>
     <string name="manage_optimize_successfully">优化成功</string>
     <string name="manage_optimize_failed">优化失败</string>

@@ -8,6 +8,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -35,10 +36,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.lsposed.npatch.R
 import org.lsposed.npatch.BuildConfig
 import org.lsposed.npatch.config.ConfigManager
@@ -54,7 +58,6 @@ import org.lsposed.npatch.ui.page.ACTION_STORAGE
 import org.lsposed.npatch.ui.page.Navigator
 import org.lsposed.npatch.ui.page.Route
 import org.lsposed.npatch.ui.page.SelectAppsResult
-import org.lsposed.npatch.ui.util.LocalSnackbarHost
 import org.lsposed.npatch.ui.viewmodel.manage.AppManageViewModel
 import org.lsposed.npatch.ui.viewstate.ProcessingState
 import nkbe.util.NPackageManager
@@ -69,7 +72,6 @@ import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
-import top.yukonga.miuix.kmp.basic.SnackbarResult
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
@@ -91,7 +93,7 @@ fun AppManageBody(
     hazeState: HazeState
 ) {
     val viewModel = viewModel<AppManageViewModel>()
-    val snackbarHost = LocalSnackbarHost.current
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val pullToRefreshState = rememberPullToRefreshState()
     val hapticFeedback = LocalHapticFeedback.current
@@ -109,7 +111,7 @@ fun AppManageBody(
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             scope.launch {
-                snackbarHost.showSnackbar(uninstallSuccessfully)
+                Toast.makeText(context, uninstallSuccessfully, Toast.LENGTH_SHORT).show()
                 viewModel.dispatch(AppManageViewModel.ViewAction.Refresh)
             }
         }
@@ -139,16 +141,11 @@ fun AppManageBody(
             val it = viewModel.updateLoaderState as ProcessingState.Done
             val updateSuccessfully = stringResource(R.string.manage_update_loader_successfully)
             val updateFailed = stringResource(R.string.manage_update_loader_failed)
-            val copyError = stringResource(R.string.copy_error)
             LaunchedEffect(Unit) {
                 it.result.onSuccess {
-                    snackbarHost.showSnackbar(updateSuccessfully)
+                    Toast.makeText(context, updateSuccessfully, Toast.LENGTH_SHORT).show()
                 }.onFailure {
-                    val result = snackbarHost.showSnackbar(updateFailed, copyError)
-                    if (result == SnackbarResult.ActionPerformed) {
-                        val cm = lspApp.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        cm.setPrimaryClip(ClipData.newPlainText("NPatch", it.toString()))
-                    }
+                    Toast.makeText(context, updateFailed, Toast.LENGTH_SHORT).show()
                 }
                 viewModel.dispatch(AppManageViewModel.ViewAction.ClearUpdateLoaderResult)
             }
@@ -163,7 +160,7 @@ fun AppManageBody(
             val optimizeSucceed = stringResource(R.string.manage_optimize_successfully)
             val optimizeFailed = stringResource(R.string.manage_optimize_failed)
             LaunchedEffect(Unit) {
-                snackbarHost.showSnackbar(if (it.result) optimizeSucceed else optimizeFailed)
+                Toast.makeText(context, if (it.result) optimizeSucceed else optimizeFailed, Toast.LENGTH_SHORT).show()
                 viewModel.dispatch(AppManageViewModel.ViewAction.ClearOptimizeResult)
             }
         }
@@ -217,6 +214,8 @@ fun AppManageBody(
                     val canUpdateLoader = !isRolling && (patchConfig.lspConfig.VERSION_CODE < LSPConfig.instance.VERSION_CODE || patchConfig.managerPackageName != BuildConfig.APPLICATION_ID)
 
                     val showDropdown = remember { mutableStateOf(false) }
+
+                    val scopeUpdatedText = stringResource(R.string.manage_module_scope_updated)
 
                     Box(modifier = Modifier.fillMaxWidth()) {
                         AppItem(
@@ -279,9 +278,13 @@ fun AppManageBody(
                             }
                             if (patchConfig.useManager) {
                                 actions.add(stringResource(R.string.manage_module_scope) to {
-                                    scope.launch {
+                                    viewModel.viewModelScope.launch {
                                         scopeApp = appInfo.app.packageName
-                                        val activated = ConfigManager.getModulesForApp(scopeApp).map { it.pkgName }.toSet()
+
+                                        val activated = withContext(Dispatchers.IO) {
+                                            ConfigManager.getModulesForApp(scopeApp).map { it.pkgName }.toSet()
+                                        }
+
                                         val initialSelected = NPackageManager.appList.mapNotNull {
                                             if (activated.contains(it.app.packageName)) it.app.packageName else null
                                         }
@@ -289,13 +292,16 @@ fun AppManageBody(
                                             Route.SelectApps(true, initialSelected)
                                         )
                                         if (result is SelectAppsResult.MultipleApps) {
-                                            ConfigManager.getModulesForApp(scopeApp).forEach {
-                                                ConfigManager.deactivateModule(scopeApp, it)
+                                            withContext(Dispatchers.IO) {
+                                                ConfigManager.getModulesForApp(scopeApp).forEach {
+                                                    ConfigManager.deactivateModule(scopeApp, it)
+                                                }
+                                                result.selected.forEach {
+                                                    Log.d(TAG, "Activate ${it.app.packageName} for $scopeApp")
+                                                    ConfigManager.activateModule(scopeApp, Module(it.app.packageName, it.app.sourceDir))
+                                                }
                                             }
-                                            result.selected.forEach {
-                                                Log.d(TAG, "Activate ${it.app.packageName} for $scopeApp")
-                                                ConfigManager.activateModule(scopeApp, Module(it.app.packageName, it.app.sourceDir))
-                                            }
+                                            Toast.makeText(context, scopeUpdatedText, Toast.LENGTH_SHORT).show()
                                         }
                                     }
                                 })
@@ -304,7 +310,7 @@ fun AppManageBody(
                             actions.add(stringResource(R.string.manage_optimize) to {
                                 scope.launch {
                                     if (!ShizukuApi.isPermissionGranted) {
-                                        snackbarHost.showSnackbar(shizukuUnavailable)
+                                        Toast.makeText(context, shizukuUnavailable, Toast.LENGTH_SHORT).show()
                                     } else {
                                         viewModel.dispatch(AppManageViewModel.ViewAction.PerformOptimize(appInfo))
                                     }
@@ -345,7 +351,6 @@ fun AppManageBody(
 @Composable
 fun AppManageFab(navigator: Navigator) {
     val context = LocalContext.current
-    val snackbarHost = LocalSnackbarHost.current
     val scope = rememberCoroutineScope()
     val shouldSelectDirectory = remember { mutableStateOf(false) }
     val showNewPatchDialog = remember { mutableStateOf(false) }
@@ -362,7 +367,7 @@ fun AppManageFab(navigator: Navigator) {
             showNewPatchDialog.value = true
         } catch (e: Exception) {
             Log.e(TAG, "Error when requesting saving directory", e)
-            scope.launch { snackbarHost.showSnackbar(errorText) }
+            Toast.makeText(context, errorText, Toast.LENGTH_SHORT).show()
         }
     }
 

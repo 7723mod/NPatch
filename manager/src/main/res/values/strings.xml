@@ -38,6 +38,7 @@
     <string name="manage_update_loader_successfully">Update successfully</string>
     <string name="manage_update_loader_failed">Update failed</string>
     <string name="manage_module_scope">Module scope</string>
+    <string name="manage_module_scope_updated">Module scope has been updated</string>
     <string name="manage_optimize">Optimize</string>
     <string name="manage_optimize_successfully">Optimize successfully</string>
     <string name="manage_optimize_failed">Optimize failed</string>
