@@ -1,4 +1,4 @@
-package org.lsposed.patch.util;
+package org.lsposed.npatch.patch.util;
 
 import java.io.InputStream;
 import java.io.IOException;

@@ -1,4 +1,4 @@
-package org.lsposed.patch;
+package org.lsposed.npatch.patch;
 
 import static org.lsposed.npatch.share.Constants.CONFIG_ASSET_PATH;
 import static org.lsposed.npatch.share.Constants.EMBEDDED_MODULES_ASSET_PATH;
@@ -26,10 +26,10 @@ import org.apache.commons.io.FilenameUtils;
 import org.lsposed.npatch.share.Constants;
 import org.lsposed.npatch.share.LSPConfig;
 import org.lsposed.npatch.share.PatchConfig;
-import org.lsposed.patch.util.ApkSignatureHelper;
-import org.lsposed.patch.util.JavaLogger;
-import org.lsposed.patch.util.Logger;
-import org.lsposed.patch.util.ManifestParser;
+import org.lsposed.npatch.patch.util.ApkSignatureHelper;
+import org.lsposed.npatch.patch.util.JavaLogger;
+import org.lsposed.npatch.patch.util.Logger;
+import org.lsposed.npatch.patch.util.ManifestParser;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

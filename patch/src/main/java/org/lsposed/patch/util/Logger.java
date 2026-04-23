@@ -1,4 +1,4 @@
-package org.lsposed.patch.util;
+package org.lsposed.npatch.patch.util;
 
 public abstract class Logger {
 
