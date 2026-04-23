@@ -8,8 +8,8 @@ import org.lsposed.npatch.config.Configs
 import org.lsposed.npatch.config.MyKeyStore
 import org.lsposed.npatch.share.Constants
 import org.lsposed.npatch.share.PatchConfig
-import org.lsposed.patch.NPatch
-import org.lsposed.patch.util.Logger
+import org.lsposed.npatch.patch.NPatch
+import org.lsposed.npatch.patch.util.Logger
 import java.io.File
 import java.io.IOException
 

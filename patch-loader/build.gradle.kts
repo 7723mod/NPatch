@@ -24,6 +24,7 @@ android {
         cmake {
             path("src/main/jni/CMakeLists.txt")
             version = "3.31.6"
+            arguments += "-DCORE_ROOT=${File(rootDir.absolutePath, "core/native") }"
         }
     }
 

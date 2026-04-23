@@ -12,7 +12,7 @@ import org.lsposed.npatch.Patcher
 import org.lsposed.npatch.share.PatchConfig
 import nkbe.util.NPackageManager
 import nkbe.util.NPackageManager.AppInfo
-import org.lsposed.patch.util.Logger
+import org.lsposed.npatch.patch.util.Logger
 
 class NewPatchViewModel : ViewModel() {
 

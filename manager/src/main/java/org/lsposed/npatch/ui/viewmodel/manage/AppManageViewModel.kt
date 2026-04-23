@@ -26,7 +26,7 @@ import org.lsposed.npatch.ui.viewstate.ProcessingState
 import nkbe.util.NPackageManager
 import nkbe.util.NPackageManager.AppInfo
 import nkbe.util.ShizukuApi
-import org.lsposed.patch.util.Logger
+import org.lsposed.npatch.patch.util.Logger
 import java.io.FileNotFoundException
 import java.util.zip.ZipFile
 
