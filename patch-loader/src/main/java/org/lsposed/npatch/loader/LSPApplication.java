@@ -19,9 +19,9 @@ import com.google.gson.Gson;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.lsposed.lspd.core.Startup;
 import org.lsposed.lspd.models.Module;
 import org.lsposed.lspd.service.ILSPApplicationService;
+import org.matrix.vector.Startup;
 import org.lsposed.npatch.loader.util.XLog;
 import org.lsposed.npatch.service.IntegrApplicationService;
 import org.lsposed.npatch.service.NeoLocalApplicationService;
@@ -130,7 +130,7 @@ public class LSPApplication {
 
         disableProfile(context);
         Startup.initXposed(false, ActivityThread.currentProcessName(), context.getApplicationInfo().dataDir, service);
-        Startup.bootstrapXposed();
+        Startup.bootstrapXposed(false);
 
         // WARN: Since it uses `XResource`, the following class should not be initialized
         // before forkPostCommon is invoke. Otherwise, you will get failure of XResources
