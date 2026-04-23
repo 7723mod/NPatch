@@ -1,9 +1,11 @@
 #include "bypass_svc.h"
-#include "logging.h"
+#include "common/logging.h"
 #include "native_util.h"
+#include "core/native_api.h"
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <sys/prctl.h>
+#include <sys/stat.h>
 #include <signal.h>
 #include <ucontext.h>
 #include <pthread.h>

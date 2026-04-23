@@ -25,16 +25,46 @@
 
 #include "art/runtime/jit/profile_saver.h"
 #include "art/runtime/oat_file_manager.h"
-#include "elf_util.h"
+#include "native_util.h"
 #include "jni/bypass_sig.h"
 #include "jni/bypass_svc.h"
-#include "native_util.h"
-#include "symbol_cache.h"
+#include "elf/symbol_cache.h"
 #include "utils/jni_helper.hpp"
+
+#include <fcntl.h>
+#include <linux/memfd.h>
+#include <sys/syscall.h>
+#include <unistd.h>
 
 using namespace lsplant;
 
 namespace lspd {
+
+    static int CreateDexMemFd(const void* data, size_t size) {
+#if defined(__linux__)
+        const int fd = syscall(__NR_memfd_create, "npatch_dex", MFD_CLOEXEC);
+        if (fd < 0) {
+            return -1;
+        }
+        if (ftruncate(fd, static_cast<off_t>(size)) != 0) {
+            close(fd);
+            return -1;
+        }
+        if (size > 0 && write(fd, data, size) != static_cast<ssize_t>(size)) {
+            close(fd);
+            return -1;
+        }
+        if (lseek(fd, 0, SEEK_SET) < 0) {
+            close(fd);
+            return -1;
+        }
+        return fd;
+#else
+        (void)data;
+        (void)size;
+        return -1;
+#endif
+    }
 
     void PatchLoader::LoadDex(JNIEnv* env, Context::PreloadedDex&& dex) {
         auto class_activity_thread = JNI_FindClass(env, "android/app/ActivityThread");
@@ -113,7 +143,17 @@ namespace lspd {
             return;
         }
 
-        auto dex = PreloadedDex{env->GetByteArrayElements(array.get(), nullptr), static_cast<size_t>(JNI_GetArrayLength(env, array.get()))};
+        auto* dex_bytes = env->GetByteArrayElements(array.get(), nullptr);
+        const auto dex_size = static_cast<size_t>(JNI_GetArrayLength(env, array.get()));
+        const int dex_fd = CreateDexMemFd(dex_bytes, dex_size);
+        env->ReleaseByteArrayElements(array.get(), dex_bytes, JNI_ABORT);
+        if (dex_fd < 0) {
+            LOGE("Failed to create dex memfd.");
+            return;
+        }
+
+        PreloadedDex dex(dex_fd, dex_size);
+        close(dex_fd);
 
         InitArtHooker(env, initInfo);
         LoadDex(env, std::move(dex));

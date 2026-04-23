@@ -2,6 +2,9 @@ project(npatch)
 cmake_minimum_required(VERSION 3.31.1)
 
 set(CMAKE_CXX_STANDARD 23)
+add_compile_definitions(
+        VERSION_CODE=${VERSION_CODE}
+        VERSION_NAME=\"${VERSION_NAME}\")
 add_subdirectory(${CORE_ROOT} core)
 
 aux_source_directory(src SRC_LIST)
@@ -14,8 +17,15 @@ add_library(${PROJECT_NAME} SHARED ${SRC_LIST})
 
 target_include_directories(${PROJECT_NAME} PUBLIC include)
 target_include_directories(${PROJECT_NAME} PRIVATE src)
+target_include_directories(${PROJECT_NAME} PRIVATE ${CORE_ROOT}/include)
+target_include_directories(${PROJECT_NAME} PRIVATE ${EXTERNAL_ROOT}/fmt/include)
+target_include_directories(${PROJECT_NAME} PRIVATE ${EXTERNAL_ROOT}/dobby/include)
+target_include_directories(${PROJECT_NAME} PRIVATE ${EXTERNAL_ROOT}/lsplant/lsplant/src/main/jni/include)
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+        VERSION_CODE=${VERSION_CODE}
+        VERSION_NAME=\"${VERSION_NAME}\")
 
-target_link_libraries(${PROJECT_NAME} core log)
+target_link_libraries(${PROJECT_NAME} native log)
 
 if (DEFINED DEBUG_SYMBOLS_PATH)
     set(DEBUG_SYMBOLS_PATH ${DEBUG_SYMBOLS_PATH}/${API})
