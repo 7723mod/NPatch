@@ -54,6 +54,7 @@ fun NewPatchScreen(
     val lifecycleScope = LocalLifecycleOwner.current.lifecycleScope
     val errorUnknown = stringResource(R.string.error_unknown)
     val showSelectModuleDialog = remember { mutableStateOf(false) }
+    var initHandled by remember { mutableStateOf(false) }
     var lastDialogCloseTime by remember { mutableLongStateOf(0L) }
 
     val closeSelectModuleDialog = {
@@ -77,6 +78,7 @@ fun NewPatchScreen(
     // 從儲存空間選取 APK
     val storageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { apks ->
         if (apks.isEmpty()) {
+            viewModel.reset()
             navigator.pop()
             return@rememberLauncherForActivityResult
         }
@@ -117,7 +119,8 @@ fun NewPatchScreen(
     // 處理頁面打開的初始化邏輯
     Log.d(TAG, "PatchState: ${viewModel.patchState}")
     LaunchedEffect(viewModel.patchState) {
-        if (viewModel.patchState == PatchState.INIT) {
+        if (!initHandled && viewModel.patchState == PatchState.INIT) {
+            initHandled = true
             NPackageManager.cleanTmpApkDir()
             when (id) {
                 ACTION_STORAGE -> {
@@ -150,6 +153,7 @@ fun NewPatchScreen(
                             }
                         }
                     }
+                    viewModel.dispatch(ViewAction.DoneInit)
                 }
             }
         }
@@ -159,6 +163,7 @@ fun NewPatchScreen(
     BackHandler(enabled = true) {
         if (viewModel.patchState != PatchState.PATCHING) {
             viewModel.reset()
+            initHandled = false
             navigator.pop()
         }
     }
@@ -169,6 +174,7 @@ fun NewPatchScreen(
             when (viewModel.patchState) {
                 PatchState.CONFIGURING -> ConfiguringTopBar(scrollBehavior) {
                     viewModel.reset()
+                    initHandled = false
                     navigator.pop()
                 }
                 // 只有当包名匹配，且动作是 添加 或 替换 时才认为是安装成功
