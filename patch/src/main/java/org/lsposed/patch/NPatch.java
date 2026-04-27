@@ -433,6 +433,10 @@ public class NPatch {
 
         String targetPackage = (newPackage != null && !newPackage.isEmpty()) ? newPackage : originPackage;
 
+        if (overrideVersionCode) {
+            property.addManifestAttribute(new AttributeItem(NodeValue.Manifest.VERSION_CODE, 1));
+        }
+
         if (minSdkVersion > 0)
             property.addUsesSdkAttribute(new AttributeItem(NodeValue.UsesSDK.MIN_SDK_VERSION, minSdkVersion));
         else
