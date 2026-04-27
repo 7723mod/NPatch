@@ -17,6 +17,7 @@ class AppBroadcastReceiver : BroadcastReceiver() {
         private val actions = setOf(
             Intent.ACTION_PACKAGE_ADDED,
             Intent.ACTION_PACKAGE_REMOVED,
+            Intent.ACTION_PACKAGE_FULLY_REMOVED,
             Intent.ACTION_PACKAGE_REPLACED
         )
 
@@ -30,7 +31,7 @@ class AppBroadcastReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action in actions) {
+        if (intent.action in actions || intent.action == Intent.ACTION_UID_REMOVED) {
             lspApp.globalScope.launch {
                 Log.i(TAG, "Received intent: $intent")
                 NPackageManager.fetchAppList()
