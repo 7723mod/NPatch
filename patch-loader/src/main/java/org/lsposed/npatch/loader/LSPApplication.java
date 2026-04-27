@@ -68,6 +68,20 @@ public class LSPApplication {
 
     private static PatchConfig config;
 
+    private static void logInfo(String msg) {
+        Log.i(TAG, msg);
+        if (config != null && config.outputLog) {
+            XposedBridge.log(TAG + ": " + msg);
+        }
+    }
+
+    private static void logWarn(String msg) {
+        Log.w(TAG, msg);
+        if (config != null && config.outputLog) {
+            XposedBridge.log(TAG + " [W]: " + msg);
+        }
+    }
+
     public static boolean isIsolated() {
         return (Process.myUid() % PER_USER_RANGE) >= FIRST_APP_ZYGOTE_ISOLATED_UID;
     }
@@ -93,7 +107,7 @@ public class LSPApplication {
             return;
         }
 
-        Log.d(TAG, "Initialize service client");
+        logInfo("Initialize service client");
         ILSPApplicationService service = null;
 
         if (config.useManager) {
@@ -111,19 +125,19 @@ public class LSPApplication {
                 }
                 SharedPreferences shared = context.getSharedPreferences("npatch", Context.MODE_PRIVATE);
                 shared.edit().putString("modules", moduleArr.toString()).apply();
-                Log.i(TAG, "Success update module scope from Manager");
+                logInfo("Success update module scope from Manager");
             } catch (Throwable e) {
-                Log.w(TAG, "Failed to connect to manager: " + e.getMessage());
+                logWarn("Failed to connect to manager: " + e.getMessage());
                 service = null;
             }
         }
 
         if (service == null) {
             if (hasEmbeddedModules(context)) {
-                Log.i(TAG, "Using Integrated Service (Embedded Modules Found)");
+                logInfo("Using Integrated Service (Embedded Modules Found)");
                 service = new IntegrApplicationService(context);
             } else {
-                Log.i(TAG, "Using NeoLocal Service (Cached Config)");
+                logInfo("Using NeoLocal Service (Cached Config)");
                 service = new NeoLocalApplicationService(context);
             }
         }
@@ -138,19 +152,19 @@ public class LSPApplication {
         if (config.outputLog) {
             XposedBridge.setLogPrinter(new XposedLogPrinter(0, "NPatch"));
         }
-        Log.i(TAG, "Load modules");
+        logInfo("Load modules");
         LSPLoader.initModules(appLoadedApk);
-        Log.i(TAG, "Modules initialized");
+        logInfo("Modules initialized");
 
         switchAllClassLoader();
         SigBypass.doSigBypass(context, config.sigBypassLevel);
 
         if (config.useMicroG) {
-            Log.i(TAG, "Activating MicroG redirect via NPatch");
+            logInfo("Activating MicroG redirect via NPatch");
             GmsRedirector.activate(context, config.originalSignature);
         }
 
-        Log.i(TAG, "NPatch bootstrap completed");
+        logInfo("NPatch bootstrap completed");
     }
 
     private static Context createLoadedApkWithContext() {
@@ -168,9 +182,9 @@ public class LSPApplication {
                 BufferedReader streamReader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
                 config = GSON.fromJson(streamReader, PatchConfig.class);
             } catch (IOException e) {
-                Log.e(TAG, "Failed to load config file", e);
-                return null;
+                throw new RuntimeException(e);
             }
+            logInfo("Loaded patch config for " + config.newPackage + ", useManager=" + config.useManager + ", outputLog=" + config.outputLog);
             Log.i(TAG, "Use manager: " + config.useManager);
             Log.i(TAG, "Signature bypass level: " + config.sigBypassLevel);
 
