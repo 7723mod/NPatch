@@ -8,10 +8,12 @@
 -assumenosideeffects public class kotlin.coroutines.jvm.internal.DebugMetadataKt {
    private static ** getDebugMetadataAnnotation(...) return null;
 }
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
 -keep class com.beust.jcommander.** { *; }
 -keep interface com.beust.jcommander.** { *; }
--keepclassmembers class org.lsposed.patch.NPatch {
-    @com.beust.jcommander.Parameter *;
+-keep class org.lsposed.npatch.patch.NPatch { *; }
+-keepclassmembers class org.lsposed.npatch.patch.NPatch {
+    @com.beust.jcommander.Parameter <fields>;
 }
 
 -keepclassmembers class org.lsposed.npatch.database.dao.** { *; }
