@@ -25,6 +25,18 @@ android {
         noCompress.add(".so")
     }
 
+    packaging {
+        jniLibs {
+            excludes += "lib/*/libandroidx.graphics.path.so"
+        }
+        resources {
+            excludes += "kotlin/**"
+            excludes += "META-INF/androidx*"
+            excludes += "META-INF/androidx/**"
+            excludes += "DebugProbesKt.bin"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true      // 启用 R8/ProGuard 进行代码压缩、优化和混淆。
