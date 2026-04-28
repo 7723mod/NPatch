@@ -94,6 +94,8 @@
 
     <!-- Settings Screen -->
     <string name="screen_settings">設定</string>
+    <string name="settings_language">語言</string>
+    <string name="settings_language_system">跟隨系統</string>
     <string name="settings_keystore">簽名金鑰庫</string>
     <string name="settings_keystore_default">內建</string>
     <string name="settings_keystore_custom">自訂</string>

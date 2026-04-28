@@ -1,6 +1,7 @@
 package org.lsposed.npatch.ui.activity
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -18,6 +19,7 @@ import androidx.core.app.ActivityCompat
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
+import org.lsposed.npatch.LSPApplication
 import org.lsposed.npatch.ui.page.LocalNavigator
 import org.lsposed.npatch.ui.page.MainScreen
 import org.lsposed.npatch.ui.page.Navigator
@@ -30,6 +32,12 @@ import org.lsposed.npatch.ui.util.LocalSnackbarHost
 import top.yukonga.miuix.kmp.basic.SnackbarHostState
 
 class MainActivity : ComponentActivity() {
+
+    override fun attachBaseContext(newBase: Context) {
+        val prefs = newBase.getSharedPreferences("settings", Context.MODE_PRIVATE)
+        val language = prefs.getString("language", "") ?: ""
+        super.attachBaseContext(LSPApplication.applyLocale(newBase, language))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

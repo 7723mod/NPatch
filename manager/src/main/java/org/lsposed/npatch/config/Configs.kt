@@ -12,6 +12,11 @@ object Configs {
     private const val PREFS_KEYSTORE_ALIAS_PASSWORD = "keystore_alias_password"
     private const val PREFS_STORAGE_DIRECTORY = "storage_directory"
     private const val PREFS_DETAIL_PATCH_LOGS = "detail_patch_logs"
+    private const val PREFS_LANGUAGE = "language"
+
+    var language by delegateStateOf(lspApp.prefs.getString(PREFS_LANGUAGE, "")!!) {
+        lspApp.prefs.edit().putString(PREFS_LANGUAGE, it).apply()
+    }
 
     var keyStorePassword by delegateStateOf(lspApp.prefs.getString(PREFS_KEYSTORE_PASSWORD, "123456")!!) {
         lspApp.prefs.edit().putString(PREFS_KEYSTORE_PASSWORD, it).apply()

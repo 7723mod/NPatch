@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Ballot
 import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material.icons.outlined.Language
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -35,6 +36,7 @@ import kotlinx.coroutines.launch
 import org.lsposed.npatch.R
 import org.lsposed.npatch.config.Configs
 import org.lsposed.npatch.config.MyKeyStore
+import org.lsposed.npatch.ui.activity.MainActivity
 
 import org.lsposed.npatch.ui.util.LocalSnackbarHost
 import top.yukonga.miuix.kmp.basic.BasicComponent
@@ -90,6 +92,7 @@ fun SettingsScreen() {
                     .padding(top = 12.dp)
                     .fillMaxWidth(),
             ) {
+                Language()
                 KeyStore()
                 DetailPatchLogs()
                 StorageDirectory()
@@ -97,6 +100,90 @@ fun SettingsScreen() {
             Spacer(Modifier.height(24.dp))
         }
     }
+}
+
+private val LANGUAGE_ENTRIES = listOf(
+    "" to "settings_language_system",
+    "en" to "English",
+    "zh-CN" to "中文 (简体)",
+    "zh-TW" to "中文 (繁體)",
+    "zh-HK" to "中文 (香港)",
+    "ja" to "日本語",
+    "ko" to "한국어",
+    "fr" to "Français",
+    "de" to "Deutsch",
+    "es" to "Español",
+    "it" to "Italiano",
+    "pt" to "Português",
+    "pt-BR" to "Português (Brasil)",
+    "ru" to "Русский",
+    "ar" to "العربية",
+    "tr" to "Türkçe",
+    "nl" to "Nederlands",
+    "pl" to "Polski",
+    "uk" to "Українська",
+    "vi" to "Tiếng Việt",
+    "th" to "ภาษาไทย",
+    "hi" to "हिन्दी",
+    "af" to "Afrikaans",
+    "bg" to "Български",
+    "bn" to "বাংলা",
+    "ca" to "Català",
+    "cs" to "Čeština",
+    "da" to "Dansk",
+    "el" to "Ελληνικά",
+    "et" to "Eesti",
+    "fa" to "فارسی",
+    "fi" to "Suomi",
+    "hr" to "Hrvatski",
+    "hu" to "Magyar",
+    "in" to "Bahasa Indonesia",
+    "iw" to "עברית",
+    "ku" to "Kurdî",
+    "lt" to "Lietuvių",
+    "no" to "Norsk",
+    "ro" to "Română",
+    "si" to "සිංහල",
+    "sk" to "Slovenčina",
+    "sv" to "Svenska",
+    "ur" to "اردو",
+)
+
+@Composable
+private fun Language() {
+    val context = LocalContext.current
+    val systemLabel = stringResource(R.string.settings_language_system)
+    val languageLabels = remember(systemLabel) {
+        LANGUAGE_ENTRIES.map { (_, label) -> if (label == "settings_language_system") systemLabel else label }
+    }
+    var selectedIndex by remember {
+        mutableStateOf(
+            LANGUAGE_ENTRIES.indexOfFirst { it.first == Configs.language }.takeIf { it >= 0 } ?: 0
+        )
+    }
+    SuperDropdown(
+        title = stringResource(R.string.settings_language),
+        items = languageLabels,
+        selectedIndex = selectedIndex,
+        onSelectedIndexChange = { index ->
+            selectedIndex = index
+            val tag = LANGUAGE_ENTRIES[index].first
+            Configs.language = tag
+            val intent = Intent(context, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+            (context as? Activity)?.finish()
+        },
+        startAction = {
+            Icon(
+                Icons.Outlined.Language,
+                modifier = Modifier.padding(end = 6.dp),
+                contentDescription = null,
+                tint = MiuixTheme.colorScheme.onBackground
+            )
+        }
+    )
 }
 
 @Composable

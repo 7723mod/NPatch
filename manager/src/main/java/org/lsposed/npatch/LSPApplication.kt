@@ -4,7 +4,11 @@ import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.content.res.Configuration
+import android.os.Build
+import android.os.LocaleList
 import android.os.Process
+import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -24,6 +28,12 @@ class LSPApplication : Application() {
     var targetApkFiles: ArrayList<File>? = null
     val globalScope = CoroutineScope(Dispatchers.Default)
 
+
+    override fun attachBaseContext(base: Context) {
+        val prefs = base.getSharedPreferences("settings", Context.MODE_PRIVATE)
+        val language = prefs.getString("language", "") ?: ""
+        super.attachBaseContext(applyLocale(base, language))
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -68,5 +78,21 @@ class LSPApplication : Application() {
 
     private fun killApp() {
         Process.killProcess(Process.myPid())
+    }
+
+    companion object {
+        fun applyLocale(context: Context, languageTag: String): Context {
+            if (languageTag.isEmpty()) return context
+            val locale = Locale.forLanguageTag(languageTag)
+            Locale.setDefault(locale)
+            val config = Configuration(context.resources.configuration)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                config.setLocales(LocaleList(locale))
+            } else {
+                @Suppress("DEPRECATION")
+                config.locale = locale
+            }
+            return context.createConfigurationContext(config)
+        }
     }
 }
