@@ -87,4 +87,6 @@
     <string name="settings_detail_patch_logs">Detail patch logs</string>
     <string name="patch_inject_dex">Inject lader dex</string>
     <string name="patch_inject_dex_desc">Voor toepassingen met geïsoleerde diensten, zoals de render motoren van browsers, schakel deze optie in om ervoor te zorgen dat ze goed werken.</string>
+    <string name="patch_output_log_to_media">Log uitvoer naar Media-map</string>
+    <string name="patch_output_log_to_media_desc">Voer de Xposed-logboeken en framework-opstartlogboeken uit naar de Media-map.</string>
 </resources>

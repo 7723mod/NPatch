@@ -88,4 +88,6 @@
     <string name="settings_detail_patch_logs">詳細なパッチログ</string>
     <string name="patch_inject_dex">注入ローダーデックス</string>
     <string name="patch_inject_dex_desc">ブラウザのレンダリングエンジンなど、分離されたサービスを持つアプリケーションの場合は、このオプションをオンにして正常に動作するようにしてください。</string>
+    <string name="patch_output_log_to_media">Mediaディレクトリにログを出力</string>
+    <string name="patch_output_log_to_media_desc">Xposedログとフレームワーク起動ログをMediaディレクトリに出力します。</string>
 </resources>
