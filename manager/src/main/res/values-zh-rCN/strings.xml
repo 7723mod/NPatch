@@ -57,7 +57,7 @@
     <string name="patch_select_dir_error">设置存储目录时出错</string>
     <string name="patch_from_storage">从存储目录中选择 (多个) apk</string>
     <string name="patch_from_applist">选择已安装的应用程序</string>
-    <string name="patch_mode">修补模式</string>
+    <string name="patch_mode">打包模式</string>
     <string name="patch_local">本地模式</string>
     <string name="patch_local_desc">为未嵌入模块的应用程序打补丁。\nXposed 范围可动态更改，无需重新打补丁。\n此模式下的应用程式只能在本地设备上与 NPatch 管理器搭配使用。</string>
     <string name="patch_integrated">集成模式</string>

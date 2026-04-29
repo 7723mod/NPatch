@@ -1,18 +1,19 @@
 package org.lsposed.npatch.ui.page.newpatch
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AddCard
 import androidx.compose.material.icons.outlined.Api
-import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.AutoFixHigh
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CloudSync
@@ -23,6 +24,7 @@ import androidx.compose.material.icons.outlined.WorkOutline
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -39,7 +41,6 @@ import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.extra.SuperDropdown
 import top.yukonga.miuix.kmp.extra.SuperSwitch
@@ -52,7 +53,7 @@ fun ConfiguringTopBar(scrollBehavior: ScrollBehavior, onBackClick: () -> Unit) {
         scrollBehavior = scrollBehavior,
         navigationIcon = {
             IconButton(onClick = onBackClick) {
-                Icon(Icons.Outlined.ArrowBack, null)
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
             }
         }
     )
@@ -88,6 +89,8 @@ fun sigBypassLvStr(level: Int) = when (level) {
 @Composable
 fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
     val viewModel = viewModel<NewPatchViewModel>()
+    val cardShape = RoundedCornerShape(24.dp)
+    val itemShape = RoundedCornerShape(16.dp)
 
     Column(
         modifier = modifier
@@ -100,8 +103,9 @@ fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp)
-                .padding(bottom = 6.dp)
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 8.dp)
+                .clip(cardShape)
         ) {
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
                 Text(
@@ -120,11 +124,13 @@ fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp)
-                .padding(bottom = 12.dp)
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 16.dp)
+                .clip(cardShape)
         ) {
-            SelectionColumn(Modifier.padding(12.dp)) {
+            SelectionColumn(Modifier.padding(8.dp)) {
                 SelectionItem(
+                    modifier = Modifier.clip(itemShape),
                     selected = viewModel.useManager,
                     onClick = { viewModel.useManager = true },
                     icon = Icons.Outlined.Api,
@@ -132,6 +138,7 @@ fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
                     desc = stringResource(R.string.patch_local_desc)
                 )
                 SelectionItem(
+                    modifier = Modifier.clip(itemShape),
                     selected = !viewModel.useManager,
                     onClick = {
                         if (viewModel.useManager) {
@@ -154,7 +161,9 @@ fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
                             color = MiuixTheme.colorScheme.primary,
                             modifier = Modifier
                                 .padding(top = 4.dp, bottom = 4.dp)
+                                .clip(RoundedCornerShape(8.dp))
                                 .clickable { onAddEmbed() }
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
                         )
                     }
                 )
@@ -166,99 +175,102 @@ fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp)
-                .padding(bottom = 12.dp)
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 16.dp)
+                .clip(cardShape)
         ) {
-            SettingsEditor(
-                Modifier,
-                stringResource(R.string.patch_new_package),
-                viewModel.newPackageName,
-                onValueChange = { viewModel.newPackageName = it },
-            )
-            SuperSwitch(
-                title = stringResource(R.string.patch_debuggable),
-                startAction = {
-                    Icon(
-                        imageVector = Icons.Outlined.BugReport,
-                        contentDescription = null,
-                        tint = MiuixTheme.colorScheme.onBackground
-                    )
-                },
-                checked = viewModel.debuggable,
-                onCheckedChange = { viewModel.debuggable = it }
-            )
-            SuperSwitch(
-                title = stringResource(R.string.patch_override_version_code),
-                summary = stringResource(R.string.patch_override_version_code_desc),
-                startAction = {
-                    Icon(
-                        imageVector = Icons.Outlined.Layers,
-                        contentDescription = null,
-                        tint = MiuixTheme.colorScheme.onBackground
-                    )
-                },
-                checked = viewModel.overrideVersionCode,
-                onCheckedChange = { viewModel.overrideVersionCode = it }
-            )
-            SuperSwitch(
-                title = stringResource(R.string.patch_inject_dex),
-                summary = stringResource(R.string.patch_inject_dex_desc),
-                startAction = {
-                    Icon(
-                        imageVector = Icons.Outlined.Code,
-                        contentDescription = null,
-                        tint = MiuixTheme.colorScheme.onBackground
-                    )
-                },
-                checked = viewModel.injectDex,
-                onCheckedChange = { viewModel.injectDex = it }
-            )
-            SuperSwitch(
-                title = stringResource(R.string.patch_inject_mt_provider),
-                summary = stringResource(R.string.patch_inject_mt_provider_desc),
-                startAction = {
-                    Icon(
-                        imageVector = Icons.Outlined.AddCard,
-                        contentDescription = null,
-                        tint = MiuixTheme.colorScheme.onBackground
-                    )
-                },
-                checked = viewModel.injectProvider,
-                onCheckedChange = { viewModel.injectProvider = it }
-            )
-            SuperSwitch(
-                title = stringResource(R.string.patch_use_microg),
-                summary = stringResource(R.string.patch_use_microg_desc),
-                startAction = {
-                    Icon(
-                        imageVector = Icons.Outlined.CloudSync,
-                        contentDescription = null,
-                        tint = MiuixTheme.colorScheme.onBackground
-                    )
-                },
-                checked = viewModel.useMicroG,
-                onCheckedChange = { viewModel.useMicroG = it }
-            )
-            SuperSwitch(
-                title = stringResource(R.string.patch_output_log_to_media),
-                summary = stringResource(R.string.patch_output_log_to_media_desc),
-                startAction = {
-                    Icon(
-                        imageVector = Icons.Outlined.Output,
-                        contentDescription = null,
-                        tint = MiuixTheme.colorScheme.onBackground
-                    )
-                },
-                checked = viewModel.outputLog,
-                onCheckedChange = { viewModel.outputLog = it }
-            )
-            val sigBypassLevels = (0..4).map { sigBypassLvStr(it) }
-            SuperDropdown(
-                title = stringResource(R.string.patch_sigbypass),
-                items = sigBypassLevels,
-                selectedIndex = viewModel.sigBypassLevel,
-                onSelectedIndexChange = { viewModel.sigBypassLevel = it }
-            )
+            Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                SettingsEditor(
+                    Modifier.padding(horizontal = 8.dp),
+                    stringResource(R.string.patch_new_package),
+                    viewModel.newPackageName,
+                    onValueChange = { viewModel.newPackageName = it },
+                )
+                SuperSwitch(
+                    title = stringResource(R.string.patch_debuggable),
+                    startAction = {
+                        Icon(
+                            imageVector = Icons.Outlined.BugReport,
+                            contentDescription = null,
+                            tint = MiuixTheme.colorScheme.onBackground
+                        )
+                    },
+                    checked = viewModel.debuggable,
+                    onCheckedChange = { viewModel.debuggable = it }
+                )
+                SuperSwitch(
+                    title = stringResource(R.string.patch_override_version_code),
+                    summary = stringResource(R.string.patch_override_version_code_desc),
+                    startAction = {
+                        Icon(
+                            imageVector = Icons.Outlined.Layers,
+                            contentDescription = null,
+                            tint = MiuixTheme.colorScheme.onBackground
+                        )
+                    },
+                    checked = viewModel.overrideVersionCode,
+                    onCheckedChange = { viewModel.overrideVersionCode = it }
+                )
+                SuperSwitch(
+                    title = stringResource(R.string.patch_inject_dex),
+                    summary = stringResource(R.string.patch_inject_dex_desc),
+                    startAction = {
+                        Icon(
+                            imageVector = Icons.Outlined.Code,
+                            contentDescription = null,
+                            tint = MiuixTheme.colorScheme.onBackground
+                        )
+                    },
+                    checked = viewModel.injectDex,
+                    onCheckedChange = { viewModel.injectDex = it }
+                )
+                SuperSwitch(
+                    title = stringResource(R.string.patch_inject_mt_provider),
+                    summary = stringResource(R.string.patch_inject_mt_provider_desc),
+                    startAction = {
+                        Icon(
+                            imageVector = Icons.Outlined.AddCard,
+                            contentDescription = null,
+                            tint = MiuixTheme.colorScheme.onBackground
+                        )
+                    },
+                    checked = viewModel.injectProvider,
+                    onCheckedChange = { viewModel.injectProvider = it }
+                )
+                SuperSwitch(
+                    title = stringResource(R.string.patch_use_microg),
+                    summary = stringResource(R.string.patch_use_microg_desc),
+                    startAction = {
+                        Icon(
+                            imageVector = Icons.Outlined.CloudSync,
+                            contentDescription = null,
+                            tint = MiuixTheme.colorScheme.onBackground
+                        )
+                    },
+                    checked = viewModel.useMicroG,
+                    onCheckedChange = { viewModel.useMicroG = it }
+                )
+                SuperSwitch(
+                    title = stringResource(R.string.patch_output_log_to_media),
+                    summary = stringResource(R.string.patch_output_log_to_media_desc),
+                    startAction = {
+                        Icon(
+                            imageVector = Icons.Outlined.Output,
+                            contentDescription = null,
+                            tint = MiuixTheme.colorScheme.onBackground
+                        )
+                    },
+                    checked = viewModel.outputLog,
+                    onCheckedChange = { viewModel.outputLog = it }
+                )
+                val sigBypassLevels = (0..4).map { sigBypassLvStr(it) }
+                SuperDropdown(
+                    title = stringResource(R.string.patch_sigbypass),
+                    items = sigBypassLevels,
+                    selectedIndex = viewModel.sigBypassLevel,
+                    onSelectedIndexChange = { viewModel.sigBypassLevel = it }
+                )
+            }
         }
     }
 }
