@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import top.yukonga.miuix.kmp.basic.Icon
@@ -27,31 +28,32 @@ object SelectionColumnScope {
         desc: String? = null,
         extraContent: (@Composable ColumnScope.() -> Unit)? = null
     ) {
+        val backgroundColor = animateColorAsState(
+            targetValue = if (selected) MiuixTheme.colorScheme.primary.copy(alpha = 0.1f)
+            else Color.Transparent,
+            label = "SelectionItemBg"
+        ).value
+
         Row(
             modifier = modifier
                 .fillMaxWidth()
-                .heightIn(min = 64.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(
-                    animateColorAsState(
-                        if (selected) MiuixTheme.colorScheme.primaryContainer
-                        else MiuixTheme.colorScheme.surfaceVariant
-                    ).value
-                )
-                .clickable { onClick() }
-                .padding(16.dp),
+                .heightIn(min = 72.dp)
+                .background(backgroundColor)
+                .clickable { onClick() } 
+                .padding(horizontal = 20.dp, vertical = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(24.dp),
+                tint = if (selected) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurface
             )
-            Column {
+            Column(Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = MiuixTheme.textStyles.headline2
+                    style = MiuixTheme.textStyles.title3
                 )
                 if (desc != null || extraContent != null) {
                     AnimatedVisibility(
@@ -63,8 +65,9 @@ object SelectionColumnScope {
                             if (desc != null) {
                                 Text(
                                     text = desc,
-                                    modifier = Modifier.padding(top = 8.dp),
-                                    style = MiuixTheme.textStyles.body1
+                                    modifier = Modifier.padding(top = 4.dp),
+                                    style = MiuixTheme.textStyles.body2,
+                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary
                                 )
                             }
                             extraContent?.invoke(this)
@@ -83,8 +86,8 @@ fun SelectionColumn(
     content: @Composable (SelectionColumnScope.() -> Unit)
 ) {
     Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
         content = { SelectionColumnScope.content() }
     )
 }

@@ -13,7 +13,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
@@ -27,6 +26,7 @@ import org.lsposed.npatch.ui.util.LocalSnackbarHost
 import org.lsposed.npatch.ui.viewmodel.NewPatchViewModel
 import org.lsposed.npatch.ui.viewmodel.NewPatchViewModel.PatchState
 import org.lsposed.npatch.ui.viewmodel.NewPatchViewModel.ViewAction
+import org.lsposed.npatch.ui.page.SelectAppsResult
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.TextButton
@@ -49,18 +49,10 @@ fun NewPatchScreen(
     val snackbarHost = LocalSnackbarHost.current
     val scrollBehavior = MiuixScrollBehavior()
     val context = LocalContext.current
-    val activityScope = remember { (context as ComponentActivity).lifecycleScope }
+    val activityScope = (context as ComponentActivity).lifecycleScope
     val scope = rememberCoroutineScope()
-    val lifecycleScope = LocalLifecycleOwner.current.lifecycleScope
     val errorUnknown = stringResource(R.string.error_unknown)
     val showSelectModuleDialog = remember { mutableStateOf(false) }
-    var initHandled by remember { mutableStateOf(false) }
-    var lastDialogCloseTime by remember { mutableLongStateOf(0L) }
-
-    val closeSelectModuleDialog = {
-        showSelectModuleDialog.value = false
-        lastDialogCloseTime = android.os.SystemClock.elapsedRealtime()
-    }
 
     // 頁面離開時清理暫存
     DisposableEffect(Unit) {
@@ -116,54 +108,54 @@ fun NewPatchScreen(
             }
         }
 
-    // 處理頁面打開的初始化邏輯
     Log.d(TAG, "PatchState: ${viewModel.patchState}")
-    LaunchedEffect(viewModel.patchState) {
-        if (!initHandled && viewModel.patchState == PatchState.INIT) {
-            initHandled = true
-            NPackageManager.cleanTmpApkDir()
-            when (id) {
-                ACTION_STORAGE -> {
-                    storageLauncher.launch(arrayOf("application/vnd.android.package-archive"))
-                    viewModel.dispatch(ViewAction.DoneInit)
-                }
-                ACTION_APPLIST -> {
-                    activityScope.launch {
-                        val result = navigator.navigateForResult<SelectAppsResult>(Route.SelectApps(false, null))
-                        if (result == null) {
-                            viewModel.reset()
-                            navigator.pop()
-                        } else {
-                            val singleApp = result as SelectAppsResult.SingleApp
-                            viewModel.dispatch(ViewAction.ConfigurePatch(singleApp.selected))
-                        }
+    when (viewModel.patchState) {
+        PatchState.INIT -> {
+            LaunchedEffect(Unit) {
+                NPackageManager.cleanTmpApkDir()
+                when (id) {
+                    ACTION_STORAGE -> {
+                        storageLauncher.launch(arrayOf("application/vnd.android.package-archive"))
+                        viewModel.dispatch(ViewAction.DoneInit)
                     }
-                    viewModel.dispatch(ViewAction.DoneInit)
-                }
-                ACTION_INTENT_INSTALL -> {
-                    data?.let { dataStr ->
-                        val uri = dataStr.toUri()
-                        scope.launch {
-                            NPackageManager.getAppInfoFromApks(listOf(uri)).onSuccess {
-                                viewModel.dispatch(ViewAction.ConfigurePatch(it.first()))
-                            }.onFailure {
-                                snackbarHost.showSnackbar(it.message ?: errorUnknown)
+                    ACTION_APPLIST -> {
+                        activityScope.launch {
+                            val result = navigator.navigateForResult<SelectAppsResult>(Route.SelectApps(false, null))
+                            if (result == null) {
                                 viewModel.reset()
                                 navigator.pop()
+                            } else {
+                                val singleApp = result as SelectAppsResult.SingleApp
+                                viewModel.dispatch(ViewAction.ConfigurePatch(singleApp.selected))
                             }
                         }
+                        viewModel.dispatch(ViewAction.DoneInit)
                     }
-                    viewModel.dispatch(ViewAction.DoneInit)
+                    ACTION_INTENT_INSTALL -> {
+                        data?.let { dataStr ->
+                            val uri = dataStr.toUri()
+                            scope.launch {
+                                NPackageManager.getAppInfoFromApks(listOf(uri)).onSuccess {
+                                    viewModel.dispatch(ViewAction.ConfigurePatch(it.first()))
+                                }.onFailure {
+                                    snackbarHost.showSnackbar(it.message ?: errorUnknown)
+                                    viewModel.reset()
+                                    navigator.pop()
+                                }
+                            }
+                        }
+                        viewModel.dispatch(ViewAction.DoneInit)
+                    }
                 }
             }
         }
+        else -> Unit
     }
 
     // 返回鍵攔截
     BackHandler(enabled = true) {
         if (viewModel.patchState != PatchState.PATCHING) {
             viewModel.reset()
-            initHandled = false
             navigator.pop()
         }
     }
@@ -174,7 +166,6 @@ fun NewPatchScreen(
             when (viewModel.patchState) {
                 PatchState.CONFIGURING -> ConfiguringTopBar(scrollBehavior) {
                     viewModel.reset()
-                    initHandled = false
                     navigator.pop()
                 }
                 // 只有当包名匹配，且动作是 添加 或 替换 时才认为是安装成功
@@ -196,9 +187,8 @@ fun NewPatchScreen(
                     PatchOptionsBody(
                         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
                         onAddEmbed = {
-                            if (android.os.SystemClock.elapsedRealtime() - lastDialogCloseTime > 300) {
-                                showSelectModuleDialog.value = true
-                            }
+                            Log.d(TAG, "onAddEmbed clicked! showSelectModuleDialog was ${showSelectModuleDialog.value}")
+                            showSelectModuleDialog.value = true
                         }
                     )
                 }
@@ -209,47 +199,48 @@ fun NewPatchScreen(
                 }
                 else -> {}
             }
-        }
-    }
 
-    // 選擇模組的對話框
-    if (showSelectModuleDialog.value) {
-        SuperDialog(
-            title = stringResource(R.string.patch_embed_modules),
-            show = showSelectModuleDialog,
-            onDismissRequest = closeSelectModuleDialog,
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(
-                    text = stringResource(R.string.patch_from_storage),
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = {
-                        storageModuleLauncher.launch(arrayOf("application/vnd.android.package-archive"))
-                        closeSelectModuleDialog()
-                    },
-                )
-                TextButton(
-                    text = stringResource(R.string.patch_from_applist),
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = {
-                        lifecycleScope.launch {
-                            val result = navigator.navigateForResult<SelectAppsResult>(
-                                Route.SelectApps(true, viewModel.embeddedModules.mapTo(ArrayList()) { it.app.packageName })
-                            )
-                            if (result is SelectAppsResult.MultipleApps) {
-                                viewModel.embeddedModules = result.selected
-                            }
-                        }
-                        closeSelectModuleDialog()
-                    },
-                )
-                Spacer(Modifier.height(4.dp))
-                TextButton(
-                    text = stringResource(android.R.string.cancel),
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = closeSelectModuleDialog,
-                )
+            if (showSelectModuleDialog.value) {
+                Log.d(TAG, "Entering SuperDialog composition")
+                SuperDialog(
+                    title = stringResource(R.string.patch_embed_modules),
+                    show = showSelectModuleDialog,
+                    onDismissRequest = { showSelectModuleDialog.value = false },
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(
+                            text = stringResource(R.string.patch_from_storage),
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                showSelectModuleDialog.value = false
+                                storageModuleLauncher.launch(arrayOf("application/vnd.android.package-archive"))
+                            },
+                        )
+                        TextButton(
+                            text = stringResource(R.string.patch_from_applist),
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                showSelectModuleDialog.value = false
+                                activityScope.launch {
+                                    val result = navigator.navigateForResult<SelectAppsResult>(
+                                        Route.SelectApps(true, viewModel.embeddedModules.mapTo(ArrayList()) { it.app.packageName })
+                                    )
+                                    if (result is SelectAppsResult.MultipleApps) {
+                                        viewModel.embeddedModules = result.selected
+                                    }
+                                }
+                            },
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        TextButton(
+                            text = stringResource(android.R.string.cancel),
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { showSelectModuleDialog.value = false },
+                        )
+                    }
+                }
             }
         }
     }
+
 }
