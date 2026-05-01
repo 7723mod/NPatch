@@ -121,10 +121,16 @@
     <string name="settings_custom_background_image">自定義背景圖片</string>
     <string name="settings_clear">清除</string>
     <string name="settings_builtin_theme_color">內建主題色</string>
-    <string name="settings_color_default_blue">預設藍</string>
-    <string name="settings_color_fresh_green">清新綠</string>
+    <string name="settings_color_default_blue">冷淡蓝</string>
+    <string name="settings_color_fresh_green">清爽綠</string>
     <string name="settings_color_elegant_purple">優雅紫</string>
     <string name="settings_color_vibrant_orange">活力橘</string>
+    <string name="settings_color_cyan">天青色</string>
+    <string name="settings_color_mint_green">薄荷綠</string>
+    <string name="settings_color_pink">柔粉紅</string>
+    <string name="settings_color_deep_pink">桃紅色</string>
+    <string name="settings_color_ice_blue">冰藍色</string>
+    <string name="settings_color_rose">薔薇紅</string>
 
     <!-- Modules Repo-->
     <string name="sort_by_name">應用程式名稱</string>

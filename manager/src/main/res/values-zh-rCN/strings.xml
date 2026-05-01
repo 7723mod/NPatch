@@ -120,11 +120,17 @@
     <string name="settings_monet_dynamic_color_summary">跟随系统壁纸颜色 (Android 12+)</string>
     <string name="settings_custom_background_image">自定义背景图片</string>
     <string name="settings_clear">清除</string>
-    <string name="settings_builtin_theme_color">内置主题色</string>
-    <string name="settings_color_default_blue">默认蓝</string>
+    <string name="settings_builtin_theme_color">内置主題色</string>
+    <string name="settings_color_default_blue">冷淡蓝</string>
     <string name="settings_color_fresh_green">清新绿</string>
     <string name="settings_color_elegant_purple">优雅紫</string>
-    <string name="settings_color_vibrant_orange">活力橙</string>
+    <string name="settings_color_vibrant_orange">活力橘</string>
+    <string name="settings_color_cyan">天青色</string>
+    <string name="settings_color_mint_green">薄荷绿</string>
+    <string name="settings_color_pink">柔粉红</string>
+    <string name="settings_color_deep_pink">桃红色</string>
+    <string name="settings_color_ice_blue">冰蓝色</string>
+    <string name="settings_color_rose">蔷薇红</string>
 
     <!-- Modules Repo-->
     <string name="sort_by_name">应用程序名称</string>

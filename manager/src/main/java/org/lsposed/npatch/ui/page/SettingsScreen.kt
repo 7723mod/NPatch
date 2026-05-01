@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.*
@@ -40,6 +41,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.edit
 import kotlinx.coroutines.launch
@@ -125,6 +127,7 @@ private fun AppearanceSettings() {
     val scope = rememberCoroutineScope()
     val themeState by ThemeConfig.getThemeFlow(context).collectAsState(initial = Triple("", false, 0xFF007AFF.toInt()))
     val (bgImageUri, useMonet, customColor) = themeState
+    val scrollState = rememberScrollState()
 
     val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let {
@@ -198,6 +201,7 @@ private fun AppearanceSettings() {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .horizontalScroll(scrollState)
                     .padding(horizontal = 20.dp, vertical = 12.dp)
                     .padding(bottom = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -206,28 +210,48 @@ private fun AppearanceSettings() {
                     0xFF007AFF to stringResource(R.string.settings_color_default_blue),
                     0xFF34C759 to stringResource(R.string.settings_color_fresh_green),
                     0xFFAF52DE to stringResource(R.string.settings_color_elegant_purple),
-                    0xFFFF9500 to stringResource(R.string.settings_color_vibrant_orange)
+                    0xFFFF9500 to stringResource(R.string.settings_color_vibrant_orange),
+                    0xFF00BCD4 to stringResource(R.string.settings_color_cyan),
+                    0xFF81C784 to stringResource(R.string.settings_color_mint_green),
+                    0xFFF06292 to stringResource(R.string.settings_color_pink),
+                    0xFFD81B60 to stringResource(R.string.settings_color_deep_pink),
+                    0xFF64B5F6 to stringResource(R.string.settings_color_ice_blue),
+                    0xFFE91E63 to stringResource(R.string.settings_color_rose)
                 )
 
-                colorPalettes.forEach { (colorHex, _) ->
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
-                            .background(Color(colorHex.toInt()))
-                            .clickable {
-                                scope.launch { context.dataStore.edit { it[ThemeConfig.CUSTOM_COLOR] = colorHex.toInt() } }
-                            },
-                        contentAlignment = Alignment.Center
+                colorPalettes.forEach { (colorHex, colorName) ->
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.width(60.dp)
                     ) {
-                        if (customColor == colorHex.toInt()) {
-                            Icon(
-                                imageVector = Icons.Outlined.Check,
-                                contentDescription = "Selected",
-                                tint = Color.White,
-                                modifier = Modifier.size(24.dp)
-                            )
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(Color(colorHex.toInt()))
+                                .clickable {
+                                    scope.launch { context.dataStore.edit { it[ThemeConfig.CUSTOM_COLOR] = colorHex.toInt() } }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (customColor == colorHex.toInt()) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Check,
+                                    contentDescription = "Selected",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
                         }
+                        Text(
+                            text = colorName,
+                            style = MiuixTheme.textStyles.footnote1,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }

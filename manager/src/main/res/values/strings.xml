@@ -46,7 +46,7 @@
     <string name="manage_no_modules">No modules yet</string>
     <string name="manage_module_settings">Module settings</string>
     <string name="manage_app_info">App info</string>
-    <string name="manage_check_manager_package_name">This program is managed by %1s\nModifying the scope %2s within this manager will not take effect\nPlease re-patch to resolve this issue</string>
+    <string name="manage_check_manager_package_name">This program is managed by %1$s\nModifying the scope %2$s within this manager will not take effect\nPlease re-patch to resolve this issue</string>
 
     <!-- New Patch Screen -->
     <string name="screen_new_patch">New Patch</string>
@@ -123,7 +123,14 @@
     <string name="settings_color_fresh_green">Fresh Green</string>
     <string name="settings_color_elegant_purple">Elegant Purple</string>
     <string name="settings_color_vibrant_orange">Vibrant Orange</string>
-    
+    <string name="settings_color_cyan">Cyan</string>
+    <string name="settings_color_mint_green">Mint Green</string>
+    <string name="settings_color_pink">Pink</string>
+    <string name="settings_color_deep_pink">Deep Pink</string>
+    <string name="settings_color_ice_blue">Ice Blue</string>
+    <string name="settings_color_rose">Rose</string>
+    <string name="enable_install_activity_title">Enable install activity</string>
+
     <!-- MiUI Uninstall Desc -->
     <string name="miui_uninstall_title">💩卸💩载💩金💩凡💩</string>
     <string name="miui_uninstall_content">金凡祭天，法力无边\n所以這就是那個魔改到連使用者列表都無法訪問的系統嗎?
