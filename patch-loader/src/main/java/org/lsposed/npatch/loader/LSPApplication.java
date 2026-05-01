@@ -69,17 +69,11 @@ public class LSPApplication {
     private static PatchConfig config;
 
     private static void logInfo(String msg) {
-        Log.i(TAG, msg);
-        if (config != null && config.outputLog) {
-            XposedBridge.log(TAG + ": " + msg);
-        }
+        XLog.i(TAG, msg);
     }
 
     private static void logWarn(String msg) {
-        Log.w(TAG, msg);
-        if (config != null && config.outputLog) {
-            XposedBridge.log(TAG + " [W]: " + msg);
-        }
+        XLog.w(TAG, msg);
     }
 
     public static boolean isIsolated() {
@@ -184,6 +178,7 @@ public class LSPApplication {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+            XLog.init(config.newPackage, ActivityThread.currentProcessName(), config.outputLog);
             logInfo("Loaded patch config for " + config.newPackage + ", useManager=" + config.useManager + ", outputLog=" + config.outputLog);
             Log.i(TAG, "Use manager: " + config.useManager);
             Log.i(TAG, "Signature bypass level: " + config.sigBypassLevel);
