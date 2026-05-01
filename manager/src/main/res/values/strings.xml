@@ -112,6 +112,17 @@
     <string name="settings_keystore_wrong_alias_password">Wrong alias password</string>
     <string name="settings_storage_directory">change storage directory</string>
     <string name="settings_detail_patch_logs">Detail patch logs</string>
+    <string name="settings_appearance_theme">Appearance &amp; Theme</string>
+    <string name="settings_other_settings">Other Settings</string>
+    <string name="settings_monet_dynamic_color">Monet Dynamic Color</string>
+    <string name="settings_monet_dynamic_color_summary">Follow system wallpaper color (Android 12+ only)</string>
+    <string name="settings_custom_background_image">Custom Background Image</string>
+    <string name="settings_clear">Clear</string>
+    <string name="settings_builtin_theme_color">Built-in Theme Color</string>
+    <string name="settings_color_default_blue">Default Blue</string>
+    <string name="settings_color_fresh_green">Fresh Green</string>
+    <string name="settings_color_elegant_purple">Elegant Purple</string>
+    <string name="settings_color_vibrant_orange">Vibrant Orange</string>
     
     <!-- MiUI Uninstall Desc -->
     <string name="miui_uninstall_title">💩卸💩载💩金💩凡💩</string>

@@ -15,7 +15,7 @@ java {
     targetCompatibility = androidTargetCompatibility
 }
 
-val generateTask = task<Copy>("generateJava") {
+val generateTask = tasks.register<Copy>("generateJava") {
     val template = mapOf(
         "apiCode" to apiCode,
         "verCode" to verCode,
@@ -25,9 +25,11 @@ val generateTask = task<Copy>("generateJava") {
     )
     inputs.properties(template)
     from("src/template/java")
-    into("$buildDir/generated/java")
+    into(layout.buildDirectory.dir("generated/java"))
     expand(template)
 }
 
-sourceSets["main"].java.srcDir("$buildDir/generated/java")
-tasks["compileJava"].dependsOn(generateTask)
+sourceSets["main"].java.srcDir(layout.buildDirectory.dir("generated/java"))
+tasks.named("compileJava").configure {
+    dependsOn(generateTask)
+}

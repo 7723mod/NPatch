@@ -20,7 +20,7 @@ fun LoadingDialog(
 ) {
     SuperDialog(
         title = title,
-        show = show,
+        show = show.value,
         onDismissRequest = {},
     ) {
         Box(

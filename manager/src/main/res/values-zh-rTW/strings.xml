@@ -114,6 +114,17 @@
     <string name="settings_keystore_wrong_alias_password">別名密碼錯誤</string>
     <string name="settings_detail_patch_logs">詳細打包日誌</string>
     <string name="settings_storage_directory">更改存儲資料夾</string>
+    <string name="settings_appearance_theme">外觀與主題</string>
+    <string name="settings_other_settings">其他設定</string>
+    <string name="settings_monet_dynamic_color">Monet 動態取色</string>
+    <string name="settings_monet_dynamic_color_summary">跟隨系統桌布顏色 (Android 12+)</string>
+    <string name="settings_custom_background_image">自定義背景圖片</string>
+    <string name="settings_clear">清除</string>
+    <string name="settings_builtin_theme_color">內建主題色</string>
+    <string name="settings_color_default_blue">預設藍</string>
+    <string name="settings_color_fresh_green">清新綠</string>
+    <string name="settings_color_elegant_purple">優雅紫</string>
+    <string name="settings_color_vibrant_orange">活力橘</string>
 
     <!-- Modules Repo-->
     <string name="sort_by_name">應用程式名稱</string>

@@ -4,12 +4,14 @@ import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.RewriteQueriesToDropUnusedColumns
 import org.lsposed.npatch.database.entity.Module
 import org.lsposed.npatch.database.entity.Scope
 
 @Dao
 interface ScopeDao {
 
+    @RewriteQueriesToDropUnusedColumns
     @Query("SELECT * FROM module INNER JOIN scope ON module.pkgName = scope.modulePkgName WHERE scope.appPkgName = :appPkgName")
     suspend fun getModulesForApp(appPkgName: String): List<Module>
 

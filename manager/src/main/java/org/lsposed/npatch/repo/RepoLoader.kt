@@ -255,7 +255,7 @@ class RepoLoader private constructor() {
 
             override fun onResponse(call: Call, response: Response) {
                 if (response.isSuccessful) {
-                    response.body?.string()?.let { bodyString ->
+                    response.body.string().let { bodyString ->
                         try {
                             val gson = Gson()
                             val module = gson.fromJson(bodyString, OnlineModule::class.java)

@@ -322,7 +322,7 @@ fun UninstallConfirmationDialog(
     val show = remember { mutableStateOf(true) }
     SuperDialog(
         title = stringResource(R.string.uninstall),
-        show = show,
+        show = show.value,
         onDismissRequest = { show.value = false; onDismiss() },
     ) {
         Column {
@@ -396,7 +396,7 @@ fun InstallDialog(patchApp: AppInfo, onFinish: (Int, String?) -> Unit) {
         val showInstalling = remember { mutableStateOf(true) }
         SuperDialog(
             title = stringResource(if (installing == 1) R.string.installing else R.string.uninstalling),
-            show = showInstalling,
+            show = showInstalling.value,
             onDismissRequest = {},
         ) {
             Row(

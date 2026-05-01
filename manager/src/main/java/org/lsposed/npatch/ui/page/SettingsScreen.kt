@@ -5,19 +5,27 @@ import android.content.Intent
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Ballot
 import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,41 +34,42 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-
+import androidx.datastore.preferences.core.edit
 import kotlinx.coroutines.launch
 import org.lsposed.npatch.R
 import org.lsposed.npatch.config.Configs
 import org.lsposed.npatch.config.MyKeyStore
+import org.lsposed.npatch.config.ThemeConfig
+import org.lsposed.npatch.config.dataStore
 import org.lsposed.npatch.ui.activity.MainActivity
-
 import org.lsposed.npatch.ui.util.LocalSnackbarHost
-import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.extra.SuperArrow
 import top.yukonga.miuix.kmp.extra.SuperDialog
-import top.yukonga.miuix.kmp.extra.SuperSwitch
 import top.yukonga.miuix.kmp.extra.SuperDropdown
-import top.yukonga.miuix.kmp.extra.WindowBottomSheet
+import top.yukonga.miuix.kmp.extra.SuperSwitch
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.security.KeyStore
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 
 private const val TAG = "SettingsScreen"
 
@@ -87,10 +96,18 @@ fun SettingsScreen() {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 12.dp)
         ) {
+            SmallTitle(text = stringResource(R.string.settings_appearance_theme))
             Card(
-                modifier = Modifier
-                    .padding(top = 12.dp)
-                    .fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                AppearanceSettings()
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            SmallTitle(text = stringResource(R.string.settings_other_settings))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Language()
                 KeyStore()
@@ -98,6 +115,122 @@ fun SettingsScreen() {
                 StorageDirectory()
             }
             Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun AppearanceSettings() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val themeState by ThemeConfig.getThemeFlow(context).collectAsState(initial = Triple("", false, 0xFF007AFF.toInt()))
+    val (bgImageUri, useMonet, customColor) = themeState
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let {
+            context.contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            scope.launch { context.dataStore.edit { prefs -> prefs[ThemeConfig.BG_IMAGE_URI] = it.toString() } }
+        }
+    }
+
+    SuperSwitch(
+        title = stringResource(R.string.settings_monet_dynamic_color),
+        summary = stringResource(R.string.settings_monet_dynamic_color_summary),
+        checked = useMonet,
+        onCheckedChange = { isChecked ->
+            scope.launch { context.dataStore.edit { it[ThemeConfig.USE_MONET] = isChecked } }
+        },
+        startAction = {
+            Icon(
+                Icons.Outlined.Palette,
+                modifier = Modifier.padding(end = 6.dp),
+                contentDescription = null,
+                tint = MiuixTheme.colorScheme.onBackground
+            )
+        }
+    )
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { imagePickerLauncher.launch(arrayOf("image/*")) }
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            Icons.Outlined.Image,
+            modifier = Modifier.padding(end = 16.dp),
+            contentDescription = null,
+            tint = MiuixTheme.colorScheme.onBackground
+        )
+        Text(
+            text = stringResource(R.string.settings_custom_background_image),
+            style = MiuixTheme.textStyles.title3,
+            modifier = Modifier.weight(1f)
+        )
+        if (bgImageUri.isNotEmpty()) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable {
+                        scope.launch { context.dataStore.edit { it[ThemeConfig.BG_IMAGE_URI] = "" } }
+                    }
+                    .background(MiuixTheme.colorScheme.error.copy(alpha = 0.1f))
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_clear),
+                    color = MiuixTheme.colorScheme.error,
+                    style = MiuixTheme.textStyles.body2
+                )
+            }
+        }
+    }
+
+    AnimatedVisibility(visible = !useMonet) {
+        Column {
+            Text(
+                text = stringResource(R.string.settings_builtin_theme_color),
+                style = MiuixTheme.textStyles.body2,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
+                    .padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                val colorPalettes = listOf(
+                    0xFF007AFF to stringResource(R.string.settings_color_default_blue),
+                    0xFF34C759 to stringResource(R.string.settings_color_fresh_green),
+                    0xFFAF52DE to stringResource(R.string.settings_color_elegant_purple),
+                    0xFFFF9500 to stringResource(R.string.settings_color_vibrant_orange)
+                )
+
+                colorPalettes.forEach { (colorHex, _) ->
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(CircleShape)
+                            .background(Color(colorHex.toInt()))
+                            .clickable {
+                                scope.launch { context.dataStore.edit { it[ThemeConfig.CUSTOM_COLOR] = colorHex.toInt() } }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (customColor == colorHex.toInt()) {
+                            Icon(
+                                imageVector = Icons.Outlined.Check,
+                                contentDescription = "Selected",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -252,7 +385,7 @@ private fun KeyStore() {
 
         SuperDialog(
             title = stringResource(R.string.settings_keystore_dialog_title),
-            show = showDialog,
+            show = showDialog.value,
             onDismissRequest = {
                 showDialog.value = false
             },

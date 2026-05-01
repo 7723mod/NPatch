@@ -115,9 +115,9 @@ class RepositoryDetailViewModel : ViewModel(), RepoLoader.RepoListener {
         }
 
         if (module?.releasesLoaded == true) {
-            _releases.value = repoLoader.getReleases(packageName) ?: emptyList()
+            _releases.value = repoLoader.getReleases(packageName)
         } else {
-            _releases.value = repoLoader.getReleases(packageName) ?: emptyList()
+            _releases.value = repoLoader.getReleases(packageName)
             repoLoader.loadRemoteReleases(packageName)
         }
     }
@@ -125,10 +125,7 @@ class RepositoryDetailViewModel : ViewModel(), RepoLoader.RepoListener {
     override fun onModuleReleasesLoaded(module: OnlineModule?) {
         if (module != null && module.name == targetPackageName) {
             _module.value = module
-            val loaded = repoLoader.getReleases(module.name!!)
-            if (loaded != null) {
-                _releases.value = loaded
-            }
+            _releases.value = repoLoader.getReleases(module.name!!)
         }
         _isRefreshing.value = false
     }

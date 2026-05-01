@@ -17,7 +17,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
  * 主页面底部导航标签枚举。
  */
 enum class MainTab(
-    @StringRes val labelRes: Int,
+    @param:StringRes val labelRes: Int,
     val selectedIcon: ImageVector,
     val unselectedIcon: ImageVector
 ) {

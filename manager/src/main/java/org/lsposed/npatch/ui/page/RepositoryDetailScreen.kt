@@ -901,7 +901,7 @@ fun ReleaseAssetItem(
     SuperDialog(
         title = stringResource(R.string.download_asset),
         summary = asset.name ?: "",
-        show = showDownloadDialog,
+        show = showDownloadDialog.value,
         onDismissRequest = { showDownloadDialog.value = false }
     ) {
         Column(

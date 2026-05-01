@@ -140,7 +140,7 @@ fun RepositoryScreen(
                                 )
                             }
                             SuperListPopup(
-                                show = showSortMenu,
+                                show = showSortMenu.value,
                                 alignment = PopupPositionProvider.Align.TopEnd,
                                 onDismissRequest = { showSortMenu.value = false }
                             ) {
@@ -425,7 +425,7 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
             }
 
             SuperListPopup(
-                show = showMenu,
+                show = showMenu.value,
                 alignment = PopupPositionProvider.Align.End,
                 onDismissRequest = { showMenu.value = false }
             ) {

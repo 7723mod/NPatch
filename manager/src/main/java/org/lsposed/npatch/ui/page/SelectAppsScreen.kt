@@ -253,7 +253,10 @@ private fun SelectAppsList(
                     label = appInfo.label,
                     packageName = appInfo.app.packageName,
                     trailingContent = if (multiSelect) {
-                        { Checkbox(checked = checked, onCheckedChange = null) }
+                        {
+                            @Suppress("DEPRECATION")
+                            Checkbox(checked = checked, onCheckedChange = null)
+                        }
                     } else null
                 )
             }

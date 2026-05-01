@@ -13,6 +13,8 @@ miuix = "0.8.7"
 haze = "1.7.2"
 navigation3 = "1.0.1"
 webkit = "1.14.0"
+datastore = "1.1.3"
+coil = "2.7.0"
 
 [plugins]
 google-devtools-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
@@ -27,7 +29,7 @@ androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "core-ktx
 androidx-customview = "androidx.customview:customview:1.2.0"
 androidx-customview-poolingcontainer = "androidx.customview:customview-poolingcontainer:1.1.0"
 androidx-activity-compose = "androidx.activity:activity-compose:1.10.1"
-#androidx-navigation-compose = "androidx.navigation:navigation-compose:2.9.3"
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3" }
 androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "navigation3" }
 androidx-lifecycle-viewmodel-compose = "androidx.lifecycle:lifecycle-viewmodel-compose:2.9.2"
@@ -57,3 +59,4 @@ beust-jcommander = { module = "com.beust:jcommander", version.ref = "beust-jcomm
 google-gson = { module = "com.google.code.gson:gson", version.ref = "google-gson" }
 miuix-android = { module = "top.yukonga.miuix.kmp:miuix-android", version.ref = "miuix" }
 haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
+coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }

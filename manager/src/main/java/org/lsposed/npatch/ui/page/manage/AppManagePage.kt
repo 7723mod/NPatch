@@ -122,7 +122,7 @@ fun AppManageBody(
         val showLoading = remember { mutableStateOf(true) }
         SuperDialog(
             title = stringResource(R.string.manage_loading),
-            show = showLoading,
+            show = showLoading.value,
             onDismissRequest = { /* 阻断取消，等待处理完成 */ }
         ) {
             Box(
@@ -265,7 +265,7 @@ fun AppManageBody(
                         )
 
                         SuperListPopup(
-                            show = showDropdown,
+                            show = showDropdown.value,
                             alignment = PopupPositionProvider.Align.End,
                             onDismissRequest = { showDropdown.value = false }
                         ) {
@@ -374,7 +374,7 @@ fun AppManageFab(navigator: Navigator) {
     if (shouldSelectDirectory.value) {
         SuperDialog(
             title = stringResource(R.string.patch_select_dir_title),
-            show = shouldSelectDirectory,
+            show = shouldSelectDirectory.value,
             onDismissRequest = { shouldSelectDirectory.value = false },
         ) {
             Column {
@@ -408,7 +408,7 @@ fun AppManageFab(navigator: Navigator) {
     if (showNewPatchDialog.value) {
         SuperDialog(
             title = stringResource(R.string.screen_new_patch),
-            show = showNewPatchDialog,
+            show = showNewPatchDialog.value,
             onDismissRequest = { showNewPatchDialog.value = false },
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -21,20 +21,23 @@ android {
 androidComponents.onVariants { variant ->
     val variantCapped = variant.name.replaceFirstChar { it.uppercase() }
     val variantLowered = variant.name.lowercase()
+    val buildDirProvider = layout.buildDirectory
+    val dexDirProvider = if (variant.buildType == "release") {
+        buildDirProvider.dir("intermediates/dex/$variantLowered/minify${variantCapped}WithR8")
+    } else {
+        buildDirProvider.dir("intermediates/dex/$variantLowered/mergeDex$variantCapped")
+    }
+    val copyDestination = rootProject.layout.projectDirectory.dir("out/assets/${variant.name}/npatch")
 
-    task<Copy>("copyDex$variantCapped") {
+    val copyDexTask = tasks.register<Copy>("copyDex$variantCapped") {
         dependsOn("assemble$variantCapped")
-        val dexOutPath = if (variant.buildType == "release")
-            "$buildDir/intermediates/dex/$variantLowered/minify${variantCapped}WithR8" else
-            "$buildDir/intermediates/dex/$variantLowered/mergeDex$variantCapped"
-        from(dexOutPath)
+        from(dexDirProvider)
         rename("classes.dex", "metaloader.dex")
-        into("${rootProject.projectDir}/out/assets/${variant.name}/npatch")
+        into(copyDestination)
     }
 
-    task("copy$variantCapped") {
-        dependsOn("copyDex$variantCapped")
-
+    tasks.register("copy$variantCapped") {
+        dependsOn(copyDexTask)
         doLast {
             println("Loader dex has been copied to ${rootProject.projectDir}${File.separator}out")
         }

@@ -148,7 +148,7 @@ fun ModuleManageBody(
                         )
 
                         SuperListPopup(
-                            show = showDropdown,
+                            show = showDropdown.value,
                             alignment = PopupPositionProvider.Align.End,
                             onDismissRequest = { showDropdown.value = false }
                         ) {

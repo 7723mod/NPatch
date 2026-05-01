@@ -1,8 +1,8 @@
 package org.lsposed.npatch.ui.component.settings
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Api
 import androidx.compose.runtime.*
@@ -21,6 +21,7 @@ fun SettingsCheckBox(
     desc: String? = null,
     extraContent: (@Composable ColumnScope.() -> Unit)? = null
 ) {
+    @Suppress("DEPRECATION")
     SettingsSlot(modifier, enabled, icon, title, desc, extraContent) {
         Checkbox(checked = checked, onCheckedChange = null)
     }
