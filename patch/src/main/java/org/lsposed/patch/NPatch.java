@@ -361,7 +361,6 @@ public class NPatch {
                         // More exception info
                         throw new PatchError("Error when adding native lib", e);
                     }
-                    logger.d("added " + entryName);
                 }
 
                 logger.i("Embedding modules...");

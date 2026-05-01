@@ -49,6 +49,7 @@ class NewPatchViewModel : ViewModel() {
     var useMicroG by mutableStateOf(false)
     var outputLog by mutableStateOf(true)
     var embeddedModules by mutableStateOf<List<AppInfo>>(emptyList())
+    var hasExecutedIntent by mutableStateOf(false)
 
     lateinit var patchApp: AppInfo
         private set
@@ -99,6 +100,7 @@ class NewPatchViewModel : ViewModel() {
         outputLog = true
         embeddedModules = emptyList()
         logs.clear()
+        hasExecutedIntent = false
     }
     private fun doneInit() {
         patchState = PatchState.SELECTING

@@ -33,11 +33,13 @@ public class PatchConfig {
         this.sigBypassLevel = sigBypassLevel;
         this.originalSignature = originalSignature;
         this.appComponentFactory = appComponentFactory;
-        this.lspConfig = LSPConfig.instance;
         this.injectProvider = injectProvider;
         this.managerPackageName = Constants.MANAGER_PACKAGE_NAME;
         this.newPackage = newPackage;
         this.outputLog = outputLog;
         this.useMicroG = useMicroG;
+
+        this.lspConfig = LSPConfig.instance;
+        this.lspConfig.sigBypassLevel = sigBypassLevel;
     }
 }

@@ -71,47 +71,44 @@ fun NewPatchScreen(
         }
     }
 
-    when (viewModel.patchState) {
-        PatchState.INIT -> {
-            LaunchedEffect(Unit) {
-                NPackageManager.cleanTmpApkDir()
-                when (id) {
-                    ACTION_STORAGE -> {
-                        storageLauncher.launch(arrayOf("application/vnd.android.package-archive"))
-                        viewModel.dispatch(ViewAction.DoneInit)
-                    }
-                    ACTION_APPLIST -> {
-                        activityScope.launch {
-                            val result = navigator.navigateForResult<SelectAppsResult>(Route.SelectApps(false, null))
-                            if (result == null) {
-                                viewModel.reset()
-                                navigator.pop()
-                            } else {
-                                val singleApp = result as SelectAppsResult.SingleApp
-                                viewModel.dispatch(ViewAction.ConfigurePatch(singleApp.selected))
-                            }
-                        }
-                        viewModel.dispatch(ViewAction.DoneInit)
-                    }
-                    ACTION_INTENT_INSTALL -> {
-                        data?.let { dataStr ->
-                            val uri = dataStr.toUri()
-                            scope.launch {
-                                NPackageManager.getAppInfoFromApks(listOf(uri)).onSuccess {
-                                    viewModel.dispatch(ViewAction.ConfigurePatch(it.first()))
-                                }.onFailure {
-                                    snackbarHost.showSnackbar(it.message ?: errorUnknown)
-                                    viewModel.reset()
-                                    navigator.pop()
-                                }
-                            }
-                        }
-                        viewModel.dispatch(ViewAction.DoneInit)
+    LaunchedEffect(Unit) {
+        if (viewModel.hasExecutedIntent) return@LaunchedEffect
+        viewModel.hasExecutedIntent = true
+        NPackageManager.cleanTmpApkDir()
+        when (id) {
+            ACTION_STORAGE -> {
+                storageLauncher.launch(arrayOf("application/vnd.android.package-archive"))
+                viewModel.dispatch(ViewAction.DoneInit)
+            }
+            ACTION_APPLIST -> {
+                activityScope.launch {
+                    val result = navigator.navigateForResult<SelectAppsResult>(Route.SelectApps(false, null))
+                    if (result == null) {
+                        viewModel.reset()
+                        navigator.pop()
+                    } else {
+                        val singleApp = result as SelectAppsResult.SingleApp
+                        viewModel.dispatch(ViewAction.ConfigurePatch(singleApp.selected))
                     }
                 }
+                viewModel.dispatch(ViewAction.DoneInit)
+            }
+            ACTION_INTENT_INSTALL -> {
+                data?.let { dataStr ->
+                    val uri = dataStr.toUri()
+                    scope.launch {
+                        NPackageManager.getAppInfoFromApks(listOf(uri)).onSuccess {
+                            viewModel.dispatch(ViewAction.ConfigurePatch(it.first()))
+                        }.onFailure {
+                            snackbarHost.showSnackbar(it.message ?: errorUnknown)
+                            viewModel.reset()
+                            navigator.pop()
+                        }
+                    }
+                }
+                viewModel.dispatch(ViewAction.DoneInit)
             }
         }
-        else -> Unit
     }
 
     // 返回鍵攔截
