@@ -80,7 +80,8 @@ fun SelectAppsScreen(
         else contains && it.app.flags and ApplicationInfo.FLAG_SYSTEM == 0
     }
 
-    val searchStatus = remember { SearchStatus("搜索") }
+    val title = if (multiSelect) stringResource(R.string.screen_select_modules) else stringResource(R.string.screen_select_apps)
+    val searchStatus = remember(multiSelect, title) { SearchStatus(title) }
     val hazeState = remember { HazeState() }
     val hazeStyle = HazeStyle(
         backgroundColor = MiuixTheme.colorScheme.surface,
@@ -93,6 +94,7 @@ fun SelectAppsScreen(
     }
 
     LaunchedEffect(Unit) {
+        viewModel.multiSelected.clear()
         viewModel.filterAppList(false, filter)
         initialSelected?.let {
             val tmp = initialSelected.toSet()
@@ -114,7 +116,7 @@ fun SelectAppsScreen(
             searchStatus.TopAppBarAnim(hazeState = hazeState, hazeStyle = hazeStyle) {
                 TopAppBar(
                     color = Color.Transparent,
-                    title = stringResource(R.string.screen_select_apps),
+                    title = title,
                     scrollBehavior = scrollBehavior,
                     navigationIcon = {
                         IconButton(

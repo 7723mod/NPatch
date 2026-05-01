@@ -1,6 +1,5 @@
 package org.lsposed.npatch.ui.page
 
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -33,8 +32,6 @@ import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.extra.SuperDialog
 
-private const val TAG = "NewPatchPage"
-
 const val ACTION_STORAGE = 0
 const val ACTION_APPLIST = 1
 const val ACTION_INTENT_INSTALL = 2
@@ -53,19 +50,6 @@ fun NewPatchScreen(
     val scope = rememberCoroutineScope()
     val errorUnknown = stringResource(R.string.error_unknown)
     val showSelectModuleDialog = remember { mutableStateOf(false) }
-
-    // 頁面離開時清理暫存
-    DisposableEffect(Unit) {
-        onDispose {
-            if (viewModel.patchState != PatchState.PATCHING && viewModel.patchState != PatchState.FINISHED) {
-                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-                    NPackageManager.cleanTmpApkDir()
-                }
-                Log.d(TAG, "Tmp Apk Directory cleaned on dispose.")
-            }
-            viewModel.reset()
-        }
-    }
 
     // 從儲存空間選取 APK
     val storageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { apks ->
@@ -87,28 +71,6 @@ fun NewPatchScreen(
         }
     }
 
-    // 從儲存空間選取內嵌模組
-    val noXposedModules = stringResource(R.string.patch_no_xposed_module)
-    val storageModuleLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { apks ->
-            if (apks.isEmpty()) {
-                return@rememberLauncherForActivityResult
-            }
-            scope.launch {
-                NPackageManager.getAppInfoFromApks(apks).onSuccess { appInfos ->
-                    val modules = appInfos.filter { it.isXposedModule }
-                    if (modules.isEmpty()) {
-                        snackbarHost.showSnackbar(noXposedModules)
-                    } else {
-                        viewModel.embeddedModules = modules
-                    }
-                }.onFailure {
-                    snackbarHost.showSnackbar(it.message ?: errorUnknown)
-                }
-            }
-        }
-
-    Log.d(TAG, "PatchState: ${viewModel.patchState}")
     when (viewModel.patchState) {
         PatchState.INIT -> {
             LaunchedEffect(Unit) {
@@ -155,6 +117,7 @@ fun NewPatchScreen(
     // 返回鍵攔截
     BackHandler(enabled = true) {
         if (viewModel.patchState != PatchState.PATCHING) {
+            scope.launch { NPackageManager.cleanTmpApkDir() }
             viewModel.reset()
             navigator.pop()
         }
@@ -165,6 +128,7 @@ fun NewPatchScreen(
         topBar = {
             when (viewModel.patchState) {
                 PatchState.CONFIGURING -> ConfiguringTopBar(scrollBehavior) {
+                    scope.launch { NPackageManager.cleanTmpApkDir() }
                     viewModel.reset()
                     navigator.pop()
                 }
@@ -187,7 +151,6 @@ fun NewPatchScreen(
                     PatchOptionsBody(
                         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
                         onAddEmbed = {
-                            Log.d(TAG, "onAddEmbed clicked! showSelectModuleDialog was ${showSelectModuleDialog.value}")
                             showSelectModuleDialog.value = true
                         }
                     )
@@ -200,44 +163,34 @@ fun NewPatchScreen(
                 else -> {}
             }
 
-            if (showSelectModuleDialog.value) {
-                Log.d(TAG, "Entering SuperDialog composition")
-                SuperDialog(
-                    title = stringResource(R.string.patch_embed_modules),
-                    show = showSelectModuleDialog,
-                    onDismissRequest = { showSelectModuleDialog.value = false },
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TextButton(
-                            text = stringResource(R.string.patch_from_storage),
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = {
-                                showSelectModuleDialog.value = false
-                                storageModuleLauncher.launch(arrayOf("application/vnd.android.package-archive"))
-                            },
-                        )
-                        TextButton(
-                            text = stringResource(R.string.patch_from_applist),
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = {
-                                showSelectModuleDialog.value = false
-                                activityScope.launch {
-                                    val result = navigator.navigateForResult<SelectAppsResult>(
-                                        Route.SelectApps(true, viewModel.embeddedModules.mapTo(ArrayList()) { it.app.packageName })
-                                    )
-                                    if (result is SelectAppsResult.MultipleApps) {
-                                        viewModel.embeddedModules = result.selected
-                                    }
+            SuperDialog(
+                title = stringResource(R.string.patch_embed_modules),
+                show = showSelectModuleDialog.value,
+                onDismissRequest = { showSelectModuleDialog.value = false },
+                renderInRootScaffold = false,
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(
+                        text = stringResource(R.string.patch_from_installed_modules),
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            showSelectModuleDialog.value = false
+                            activityScope.launch {
+                                val result = navigator.navigateForResult<SelectAppsResult>(
+                                    Route.SelectApps(true, viewModel.embeddedModules.mapTo(ArrayList()) { it.app.packageName })
+                                )
+                                if (result is SelectAppsResult.MultipleApps) {
+                                    viewModel.embeddedModules = result.selected
                                 }
-                            },
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        TextButton(
-                            text = stringResource(android.R.string.cancel),
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = { showSelectModuleDialog.value = false },
-                        )
-                    }
+                            }
+                        },
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    TextButton(
+                        text = stringResource(android.R.string.cancel),
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { showSelectModuleDialog.value = false },
+                    )
                 }
             }
         }

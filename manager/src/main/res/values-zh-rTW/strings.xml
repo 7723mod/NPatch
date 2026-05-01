@@ -55,14 +55,16 @@
     <string name="patch_select_dir_title">選擇儲存資料夾</string>
     <string name="patch_select_dir_text">選擇一個資料夾儲存打包好的 apk</string>
     <string name="patch_select_dir_error">設定儲存資料夾出錯</string>
-    <string name="patch_from_storage">從儲存空間中選取 (多个) apk</string>
-    <string name="patch_from_applist">選取已安裝的應用程式</string>
+    <string name="patch_from_storage">從儲存空間中選取 (多個) apk</string>
+    <string name="patch_from_applist">選取要打包的已安裝程式</string>
+    <string name="patch_from_installed_modules">選取已安裝的 Xposed 模組</string>
     <string name="patch_mode">打包模式</string>
     <string name="patch_local">本地模式</string>
     <string name="patch_local_desc">為未嵌入模組的應用程式打補丁。\nXposed 範圍可動態更改，無需重新打補丁。\n此模式下的應用程式只能在本地裝置上與 NPatch 管理器搭配使用。</string>
     <string name="patch_integrated">集成模式</string>
     <string name="patch_integrated_desc">修補 App 並內建模組。\n經修補的應用可以在沒有管理器的情況下獨立執行，但不能動態管理配置。\n此模式適用於需要在未安裝 NPatch 管理器的裝置上執行的應用程式。</string>
     <string name="patch_embed_modules">內建模組</string>
+    <string name="patch_advanced">進階選項</string>
     <string name="patch_debuggable">程式可偵錯</string>
     <string name="patch_sigbypass">破解簽名驗證</string>
     <string name="patch_sigbypasslv0">lv0: 關閉</string>
@@ -91,6 +93,7 @@
 
     <!-- Select Apps Screen -->
     <string name="screen_select_apps">選取應用程式</string>
+    <string name="screen_select_modules">選取 Xposed 模組</string>
 
     <!-- Settings Screen -->
     <string name="screen_settings">設定</string>

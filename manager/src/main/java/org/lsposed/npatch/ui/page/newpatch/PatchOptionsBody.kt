@@ -142,7 +142,7 @@ fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
         }
 
         // ── 進階配置 ──
-        SmallTitle(text = stringResource(R.string.patch_new_package))
+        SmallTitle(text = stringResource(R.string.patch_advanced))
         Card(
             modifier = Modifier
                 .fillMaxWidth()

@@ -55,12 +55,14 @@
     <string name="patch_select_dir_error">Error when setting storage directory</string>
     <string name="patch_from_storage">Select apk(s) from storage</string>
     <string name="patch_from_applist">Select an installed app</string>
+    <string name="patch_from_installed_modules">Select installed Xposed modules</string>
     <string name="patch_mode">Patch Mode</string>
     <string name="patch_local">Local</string>
     <string name="patch_local_desc">Patches apps without embedding modules.\nThe Xposed scope can be dynamically changed without needing to re-patch.\nThis mode can only be used locally with the NPatch Manager.</string>
     <string name="patch_integrated">Integrated</string>
     <string name="patch_integrated_desc">Patches apps with built-in modules.\nThe patched app can run independently without the Manager, but it cannot dynamically manage configurations.\nThis mode is suitable for apps that need to run on devices without the NPatch Manager installed.</string>
     <string name="patch_embed_modules">Embed modules</string>
+    <string name="patch_advanced">Advanced options</string>
     <string name="patch_debuggable">Debuggable</string>
     <string name="patch_sigbypass">Signature bypass</string>
     <string name="patch_sigbypasslv0">lv0: Off</string>
@@ -88,7 +90,8 @@
     <string name="patch_no_xposed_module">No Xposed module(s) were found</string>
 
     <!-- Select Apps Screen -->
-    <string name="screen_select_apps">Select Apps</string>
+    <string name="screen_select_apps">Select apps</string>
+    <string name="screen_select_modules">Select Xposed modules</string>
 
     <!-- Settings Screen -->
     <string name="screen_settings">Settings</string>
