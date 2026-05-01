@@ -26,6 +26,7 @@ import org.lsposed.npatch.loader.util.XLog;
 import org.lsposed.npatch.service.IntegrApplicationService;
 import org.lsposed.npatch.service.NeoLocalApplicationService;
 import org.lsposed.npatch.service.RemoteApplicationService;
+import org.lsposed.npatch.share.Constants;
 import org.lsposed.npatch.share.PatchConfig;
 
 import java.io.BufferedReader;
@@ -39,6 +40,7 @@ import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -183,16 +185,18 @@ public class LSPApplication {
             Log.i(TAG, "Use manager: " + config.useManager);
             Log.i(TAG, "Signature bypass level: " + config.sigBypassLevel);
 
-            Path cacheApkPath = OriginApkHelper.prepareOriginApk(appInfo, baseClassLoader);
-            long sourceCrc = OriginApkHelper.getOriginalApkCrc(appInfo.sourceDir);
-
-            appInfo.sourceDir = cacheApkPath.toString();
-            appInfo.publicSourceDir = cacheApkPath.toString();
+            if (config.sigBypassLevel >= Constants.SIGBYPASS_LV_PM_OPENAT) {
+                Path cacheApkPath = OriginApkHelper.prepareOriginApk(appInfo, baseClassLoader);
+                appInfo.sourceDir = cacheApkPath.toString();
+                appInfo.publicSourceDir = cacheApkPath.toString();
+            }
             appInfo.appComponentFactory = config.appComponentFactory;
 
             Path providerPath = null;
             if (config.injectProvider) {
-                providerPath = cacheApkPath.getParent().resolve("p_" + sourceCrc + ".dex");
+                Path providerDir = Paths.get(appInfo.dataDir, "cache/npatch/origin/");
+                if (!Files.exists(providerDir)) Files.createDirectories(providerDir);
+                providerPath = providerDir.resolve("provider.dex");
                 try {
                     Files.deleteIfExists(providerPath);
                     try (InputStream is = baseClassLoader.getResourceAsStream(PROVIDER_DEX_ASSET_PATH)) {

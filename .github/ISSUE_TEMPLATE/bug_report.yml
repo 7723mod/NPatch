@@ -1,83 +1,105 @@
-name: Bug report/反馈 Bug
-description: Report errors or unexpected behavior./反馈错误或异常行为。
+name: Bug report / 反馈问题
+description: Report errors or unexpected behavior. / 反馈程序错误或功能异常问题
 labels: [bug]
 title: "[Bug] "
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for reporting issues of LSPatch!
-
-        To make it easier for us to help you please enter detailed information below.
+        Thanks for reporting issues for NPatch!
         
-        感谢给 NPatch 汇报问题！
-        为了使我们更好地帮助你，请提供以下信息。
-        为了防止重复汇报，标题请务必使用英文。
+        **Before reporting, please visit [t.me/ONPatch](https://t.me/ONPatch) to try the latest test release.**
+        If an app patched with a previous version crashes or malfunctions, please try re-patching it first.
+
+        To help us locate and fix the problem efficiently, please fill in the detailed information below as required.
+
+        ---
+
+        感谢您向 NPatch 反馈问题！
+        
+        **在提交反馈前，请先前往 [t.me/ONPatch](https://t.me/ONPatch) 尝试最新发布的测试版本。**
+        若之前版本修补的应用出现闪退或是无法正常工作，请先尝试重新修补。
+        
+        为了帮助我们高效定位并解决问题，请按要求填写下方详细信息。
+        为避免重复反馈，标题请务必使用英文填写。
   - type: textarea
     attributes:
-      label: Steps to reproduce/复现步骤
+      label: Steps to reproduce / 复现步骤
+      description: Please describe the complete operation steps to trigger the problem in detail / 请详细描述触发问题的完整操作步骤
       value: |
         1. 
-        1. 
-        1. 
+        2. 
+        3. 
     validations:
       required: true
   - type: textarea
     attributes:
-      label: Expected behaviour/预期行为
-      placeholder: Tell us what should happen/正常情况下应该发生什么
+      label: Expected behaviour / 预期行为
+      placeholder: Describe what should happen normally / 描述正常情况下应该出现的结果
     validations:
       required: true
   - type: textarea
     attributes:
-      label: Actual behaviour/实际行为
-      placeholder: Tell us what happens instead/实际上发生了什么
+      label: Actual behaviour / 实际行为
+      placeholder: Describe what actually happens, or which function is abnormal / 描述实际出现的结果，或具体哪个功能无法正常工作
     validations:
       required: true
   - type: textarea
     attributes:
-      label: Xposed Module List/Xposed 模块列表
+      label: Xposed Module List / Xposed 模块列表
+      description: List all Xposed modules you have enabled on the device / 列出设备上已启用的全部 Xposed 模块
       render: Shell
     validations:
       required: true
   - type: input
     attributes:
-      label: NPatch version/NPatch 版本
-      description:  Don't use 'latest'. Specify actual version with 4 digits, otherwise your issue will be closed./不要填用“最新版”。给出四位版本号，不然 issue 会被关闭。
+      label: NPatch version / NPatch 版本
+      description: Don't use 'latest'. Please fill in the 3-digit specific version number (like 533), otherwise your issue will be closed. / 请勿填写「最新版」，请填写3位数字的具体版本号 (比如533)，否则该 issue 将被关闭。
     validations:
       required: true
   - type: input
     attributes:
-      label: Android version/Android 版本
+      label: Android version / Android 版本
+      description: Specific Android version number (including minor versions, e.g. 14 / 15 / 14.0). / 具体的 Android 系统版本号（可包含小版本号，如 14 / 15 / 14.0）。
     validations:
       required: true
   - type: input
     attributes:
-      label: Shizuku version/Shizuku 版本
-      description: If you are not using Shizuku mode, input `N/A` instead./如果未使用 Shizuku 模式，请键入 `N/A`。
+      label: Shizuku version / Shizuku 版本
+      description: If you are not using Shizuku mode, please fill in `N/A`. / 如果未使用 Shizuku 模式，请填写 `N/A`。
     validations:
       required: true
   - type: checkboxes
-    id: latest
+    id: precheck
     attributes:
-      label: Version requirement/版本要求
+      label: Pre-check Confirmation / 预先检查确认
       options:
-        - label: I am using latest debug CI version of NPatch and enable verbose log/我正在使用最新 CI 调试版本且启用详细日志
+        - label: I am using the latest CI test version of NPatch, and confirm that NPatch has the log output function enabled. / 我正在使用 NPatch 最新的 CI 测试版本，且确认 NPatch 已启用日志输出功能。
           required: true
   - type: textarea
     attributes:
-      label: Apk file/Apk 文件
-      description: The apk file if patching failed / 修复失败的 apk 文件（如有）
-      placeholder: Upload apks by clicking the bar on the bottom. /点击文本框底栏上传安装包文件。
+      label: Apk file / Apk 文件
+      description: The original apk file that failed to be patched (if any). / 修补失败的原始安装包文件（如有）
+      placeholder: You can upload the apk file by clicking the bottom bar. / 可点击下方底栏上传安装包文件
   - type: textarea
     attributes:
-      label: Logs/日志
-      description: For usage issues, please provide the log zip saved from manager; for activation issues, please provide [bugreport](https://developer.android.com/studio/debug/bug-report). Without log, the issue will be closed. /使用问题请提供从管理器保存的日志压缩包；激活问题请提供 [bugreport](https://developer.android.google.cn/studio/debug/bug-report?hl=zh-cn) 日志。无日志提交会被关闭。
+      label: Logs / 日志
+      description: |
+        NPatch has the log output function enabled by default, no manual activation required. If a problem occurs, please submit the latest log files under the path: `/sdcard/Android/media/{PackageName}/npatch/log/`.
+        In the new version, all logs related to NPatch startup are also uniformly stored in this directory of the corresponding app.
+        For app startup/activation exceptions, please provide the complete [bugreport](https://developer.android.com/studio/debug/bug-report).
+        Issues without valid logs due to functional anomalies will be closed directly.
+
+        NPatch 已默认启用日志输出功能，无需手动开启。若出现问题，请提交以下路径下的最新日志文件：`/sdcard/Android/media/{应用包名}/npatch/log/`。
+        新版本中，所有与 NPatch 启动相关的日志，也会统一存放至对应应用的该目录下。
+        若为应用启动/激活异常问题，请提供完整的 [bugreport 日志](https://developer.android.google.cn/studio/debug/bug-report)。
+        功能异常问题而未提交有效日志的问题反馈，将被直接关闭。
       value: |
         <details>
-        
+        <summary>Click to expand and paste logs / 点击展开粘贴日志内容</summary>
+
         ```
-        # Replace this line with the log / 将此行用日志替换
+        # Replace this line with your log content / 将此行替换为你的日志内容
         ```
         </details>
     validations:

@@ -313,7 +313,7 @@ public class NPatch {
             logger.i("Adding metaloader dex...");
             try (var is = getClass().getClassLoader().getResourceAsStream(Constants.META_LOADER_DEX_ASSET_PATH)) {
                 if (is == null) throw new PatchError("Meta loader dex not found");
-                if (!injectDex) {
+                if (embedOriginal) {
                     dstZFile.add("classes.dex", is);
                 } else {
                     var dexCount = srcZFile.entries().stream().filter(entry -> {
@@ -373,7 +373,7 @@ public class NPatch {
             for (StoredEntry entry : srcZFile.entries()) {
                 String name = entry.getCentralDirectoryHeader().getName();
                 if (dstZFile.get(name) != null) continue;
-                if (!injectDex && name.startsWith("classes") && name.endsWith(".dex")) continue;
+                if (embedOriginal && name.startsWith("classes") && name.endsWith(".dex")) continue;
                 if (name.equals("AndroidManifest.xml")) continue;
                 if (name.startsWith("META-INF") && (name.endsWith(".SF") || name.endsWith(".MF") || name.endsWith(".RSA")))
                     continue;
