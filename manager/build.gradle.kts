@@ -122,9 +122,6 @@ dependencies {
     implementation(npatch.androidx.room.runtime)
     implementation("com.squareup.okhttp3:okhttp:5.3.2")
 
-    //implementation(npatch.google.accompanist.navigation.animation)
-    implementation(npatch.google.accompanist.pager)
-    implementation(npatch.google.accompanist.swiperefresh)
     implementation(libs.material)
     implementation(libs.gson)
     implementation(npatch.rikka.shizuku.api)

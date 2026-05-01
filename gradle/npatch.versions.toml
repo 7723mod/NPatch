@@ -1,6 +1,5 @@
 [versions]
 room = "2.8.3"
-accompanist = "0.36.0"
 shizuku = "13.1.5"
 hiddenapi = "4.4.0"
 compose-bom = "2025.12.01"
@@ -20,7 +19,6 @@ google-devtools-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 rikka-tools-refine = { id = "dev.rikka.tools.refine", version.ref = "hiddenapi" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 
 [libraries]
 androidx-webkit = { group = "androidx.webkit", name = "webkit", version.ref = "webkit" }
@@ -47,11 +45,6 @@ androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 
-# Accompanist Libraries
-#google-accompanist-navigation-animation = { module = "com.google.accompanist:accompanist-navigation-animation", version.ref = "accompanist" }
-google-accompanist-pager = { module = "com.google.accompanist:accompanist-pager", version.ref = "accompanist" }
-google-accompanist-swiperefresh = { module = "com.google.accompanist:accompanist-swiperefresh", version.ref = "accompanist" }
-
 # Rikka Libraries
 rikka-shizuku-api = { module = "dev.rikka.shizuku:api", version.ref = "shizuku" }
 rikka-shizuku-provider = { module = "dev.rikka.shizuku:provider", version.ref = "shizuku" }
@@ -59,8 +52,6 @@ rikka-refine = { module = "dev.rikka.tools.refine:runtime", version.ref = "hidde
 rikka-hidden-stub = { module = "dev.rikka.hidden:stub", version.ref = "hiddenapi" }
 
 # Other Third-Party Libraries
-#raamcosta-compose-destinations = { module = "io.github.raamcosta.compose-destinations:core", version.ref = "compose-destinations" }
-#raamcosta-compose-destinations-ksp = { module = "io.github.raamcosta.compose-destinations:ksp", version.ref = "compose-destinations" }
 commons-io = { module = "commons-io:commons-io", version.ref = "commons-io" }
 beust-jcommander = { module = "com.beust:jcommander", version.ref = "beust-jcommander" }
 google-gson = { module = "com.google.code.gson:gson", version.ref = "google-gson" }
