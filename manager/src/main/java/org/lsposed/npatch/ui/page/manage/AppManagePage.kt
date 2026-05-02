@@ -59,7 +59,7 @@ import org.lsposed.npatch.ui.page.Route
 import org.lsposed.npatch.ui.page.SelectAppsResult
 import org.lsposed.npatch.ui.viewmodel.manage.AppManageViewModel
 import org.lsposed.npatch.ui.viewstate.ProcessingState
-import nkbe.util.NPackageManager
+import nkbe.util.NeoPackageManager
 import nkbe.util.ShizukuApi
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.DropdownDefaults
@@ -186,7 +186,7 @@ fun AppManageBody(
                 item {
                     Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            if (NPackageManager.appList.isEmpty()) {
+                            if (NeoPackageManager.appList.isEmpty()) {
                                 InfiniteProgressIndicator()
                                 Spacer(Modifier.height(16.dp))
                                 Text(
@@ -233,7 +233,7 @@ fun AppManageBody(
                         AppItem(
                             icon = {
                                 Image(
-                                    bitmap = NPackageManager.getIcon(appInfo),
+                                    bitmap = NeoPackageManager.getIcon(appInfo),
                                     contentDescription = null,
                                     modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp))
                                 )
@@ -313,7 +313,7 @@ fun AppManageBody(
                                             ConfigManager.getModulesForApp(scopeApp).map { it.pkgName }.toSet()
                                         }
 
-                                        val initialSelected = NPackageManager.appList.mapNotNull {
+                                        val initialSelected = NeoPackageManager.appList.mapNotNull {
                                             if (activated.contains(it.app.packageName)) it.app.packageName else null
                                         }
                                         val result = navigator.navigateForResult<SelectAppsResult>(

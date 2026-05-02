@@ -23,8 +23,8 @@ import org.lsposed.npatch.share.PatchConfig
 import org.lsposed.npatch.ui.util.installApk
 import org.lsposed.npatch.ui.util.installApks
 import org.lsposed.npatch.ui.viewstate.ProcessingState
-import nkbe.util.NPackageManager
-import nkbe.util.NPackageManager.AppInfo
+import nkbe.util.NeoPackageManager
+import nkbe.util.NeoPackageManager.AppInfo
 import nkbe.util.ShizukuApi
 import org.lsposed.npatch.patch.util.Logger
 import java.io.FileNotFoundException
@@ -74,7 +74,7 @@ class AppManageViewModel : ViewModel() {
 
     init {
         viewModelScope.launch {
-            snapshotFlow { NPackageManager.appList }
+            snapshotFlow { NeoPackageManager.appList }
                 .filter { it.isNotEmpty() }
                 .first()
             Log.d(TAG, "Initial data ready, starting auto-refresh loop")
@@ -102,7 +102,7 @@ class AppManageViewModel : ViewModel() {
                     if (!isRefreshing) {
                         isRefreshing = true
                         withContext(Dispatchers.IO) {
-                            NPackageManager.fetchAppList()
+                            NeoPackageManager.fetchAppList()
                         }
                         loadData(silent = true)
                         isRefreshing = false
@@ -115,7 +115,7 @@ class AppManageViewModel : ViewModel() {
     // silent 参数用于区分是否显示 loading 状态
     private fun loadData(silent: Boolean = false) {
         if (!silent) isRefreshing = true
-        val currentList = NPackageManager.appList.mapNotNull { appInfo ->
+        val currentList = NeoPackageManager.appList.mapNotNull { appInfo ->
             runCatching {
                 appInfo.app.metaData?.getString("npatch")?.let {
                     val json = Base64.decode(it, Base64.DEFAULT).toString(Charsets.UTF_8)
@@ -136,7 +136,7 @@ class AppManageViewModel : ViewModel() {
         updateLoaderState = ProcessingState.Processing
         val result = runCatching {
             withContext(Dispatchers.IO) {
-                NPackageManager.apply {
+                NeoPackageManager.apply {
                     cleanTmpApkDir()
                     cleanExternalTmpApkDir()
                 }
@@ -183,7 +183,7 @@ class AppManageViewModel : ViewModel() {
                         installApk(lspApp, apkFiles.first())
                     }
                 } else {
-                    val (status, message) = NPackageManager.install()
+                    val (status, message) = NeoPackageManager.install()
                     if (status != PackageInstaller.STATUS_SUCCESS) throw RuntimeException(message)
                 }
             }

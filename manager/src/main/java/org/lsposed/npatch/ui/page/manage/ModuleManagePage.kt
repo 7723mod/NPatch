@@ -27,7 +27,7 @@ import dev.chrisbanes.haze.hazeSource
 import org.lsposed.npatch.R
 import org.lsposed.npatch.ui.component.AppItem
 import org.lsposed.npatch.ui.viewmodel.manage.ModuleManageViewModel
-import nkbe.util.NPackageManager
+import nkbe.util.NeoPackageManager
 import top.yukonga.miuix.kmp.basic.DropdownDefaults
 import top.yukonga.miuix.kmp.basic.DropdownImpl
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
@@ -84,7 +84,7 @@ fun ModuleManageBody(
                 item {
                     Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            if (NPackageManager.appList.isEmpty()) {
+                            if (NeoPackageManager.appList.isEmpty()) {
                                 InfiniteProgressIndicator()
                                 Spacer(Modifier.height(16.dp))
                                 Text(
@@ -108,13 +108,13 @@ fun ModuleManageBody(
                     key = { it.first.app.packageName }
                 ) { item ->
                     val showDropdown = remember { mutableStateOf(false) }
-                    val settingsIntent = remember { NPackageManager.getSettingsIntent(item.first.app.packageName) }
+                    val settingsIntent = remember { NeoPackageManager.getSettingsIntent(item.first.app.packageName) }
 
                     Box(modifier = Modifier.fillMaxWidth()) {
                         AppItem(
                             icon = {
                                 Image(
-                                    bitmap = NPackageManager.getIcon(item.first),
+                                    bitmap = NeoPackageManager.getIcon(item.first),
                                     contentDescription = null,
                                     modifier = Modifier.size(48.dp).clip(RoundedCornerShape(14.dp))
                                 )

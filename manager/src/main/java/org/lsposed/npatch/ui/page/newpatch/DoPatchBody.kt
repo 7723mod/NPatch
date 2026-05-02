@@ -36,8 +36,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
-import nkbe.util.NPackageManager
-import nkbe.util.NPackageManager.AppInfo
+import nkbe.util.NeoPackageManager
+import nkbe.util.NeoPackageManager.AppInfo
 import nkbe.util.ShizukuApi
 import org.lsposed.npatch.R
 import org.lsposed.npatch.lspApp
@@ -247,7 +247,7 @@ fun DoPatchBody(modifier: Modifier, navigator: Navigator) {
                     scope.launch {
                         if (status == PackageInstaller.STATUS_SUCCESS) {
                             Log.i(TAG, "Install reported success, waiting for broadcast to navigate.")
-                        } else if (status != NPackageManager.STATUS_USER_CANCELLED) {
+                        } else if (status != NeoPackageManager.STATUS_USER_CANCELLED) {
                             val result = snackbarHost.showSnackbar(installFailed, copyError)
                             if (result == SnackbarResult.ActionPerformed) {
                                 val cm = lspApp.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -363,7 +363,7 @@ fun InstallDialog(patchApp: AppInfo, onFinish: (Int, String?) -> Unit) {
     suspend fun doInstall() {
         Log.i(TAG, "Installing app ${patchApp.app.packageName}")
         installing = 1
-        val (status, message) = NPackageManager.install()
+        val (status, message) = NeoPackageManager.install()
         installing = 0
         Log.i(TAG, "Installation end: $status, $message")
         onFinish(status, message)
@@ -371,19 +371,19 @@ fun InstallDialog(patchApp: AppInfo, onFinish: (Int, String?) -> Unit) {
 
     LaunchedEffect(uninstallFirst) {
         if (!uninstallFirst && installing == 0) {
-            onFinish(NPackageManager.STATUS_USER_CANCELLED, "User cancelled")
+            onFinish(NeoPackageManager.STATUS_USER_CANCELLED, "User cancelled")
             doInstall()
         }
     }
 
     if (uninstallFirst) {
         UninstallConfirmationDialog(
-            onDismiss = { onFinish(NPackageManager.STATUS_USER_CANCELLED, "User cancelled") },
+            onDismiss = { onFinish(NeoPackageManager.STATUS_USER_CANCELLED, "User cancelled") },
             onConfirm = {
                 scope.launch {
                     Log.i(TAG, "Uninstalling app ${patchApp.app.packageName}")
                     installing = 2
-                    val (status, message) = NPackageManager.uninstall(patchApp.app.packageName)
+                    val (status, message) = NeoPackageManager.uninstall(patchApp.app.packageName)
                     installing = 0
                     Log.i(TAG, "Uninstallation end: $status, $message")
                     if (status == PackageInstaller.STATUS_SUCCESS) {
@@ -459,13 +459,13 @@ fun InstallDialog2(patchApp: AppInfo, onFinish: (Int, String?) -> Unit) {
         if (!uninstallFirst) {
             Log.d(TAG, "State changed to install, starting installation via system.")
             doInstall()
-            onFinish(NPackageManager.STATUS_USER_CANCELLED, "Handed over to system installer")
+            onFinish(NeoPackageManager.STATUS_USER_CANCELLED, "Handed over to system installer")
         }
     }
 
     if (uninstallFirst) {
         UninstallConfirmationDialog(
-            onDismiss = { onFinish(NPackageManager.STATUS_USER_CANCELLED, "User cancelled") },
+            onDismiss = { onFinish(NeoPackageManager.STATUS_USER_CANCELLED, "User cancelled") },
             onConfirm = {
                 scope.launch {
                     Log.i(TAG, "Uninstalling app ${patchApp.app.packageName}")

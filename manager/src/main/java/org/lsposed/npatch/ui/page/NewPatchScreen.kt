@@ -15,7 +15,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
-import nkbe.util.NPackageManager
+import nkbe.util.NeoPackageManager
 import org.lsposed.npatch.R
 import org.lsposed.npatch.ui.page.newpatch.ConfiguringFab
 import org.lsposed.npatch.ui.page.newpatch.ConfiguringTopBar
@@ -59,7 +59,7 @@ fun NewPatchScreen(
             return@rememberLauncherForActivityResult
         }
         scope.launch {
-            NPackageManager.getAppInfoFromApks(apks)
+            NeoPackageManager.getAppInfoFromApks(apks)
                 .onSuccess {
                     viewModel.dispatch(ViewAction.ConfigurePatch(it.first()))
                 }
@@ -74,7 +74,7 @@ fun NewPatchScreen(
     LaunchedEffect(Unit) {
         if (viewModel.hasExecutedIntent) return@LaunchedEffect
         viewModel.hasExecutedIntent = true
-        NPackageManager.cleanTmpApkDir()
+        NeoPackageManager.cleanTmpApkDir()
         when (id) {
             ACTION_STORAGE -> {
                 storageLauncher.launch(arrayOf("application/vnd.android.package-archive"))
@@ -97,7 +97,7 @@ fun NewPatchScreen(
                 data?.let { dataStr ->
                     val uri = dataStr.toUri()
                     scope.launch {
-                        NPackageManager.getAppInfoFromApks(listOf(uri)).onSuccess {
+                        NeoPackageManager.getAppInfoFromApks(listOf(uri)).onSuccess {
                             viewModel.dispatch(ViewAction.ConfigurePatch(it.first()))
                         }.onFailure {
                             snackbarHost.showSnackbar(it.message ?: errorUnknown)
@@ -114,7 +114,7 @@ fun NewPatchScreen(
     // 返回鍵攔截
     BackHandler(enabled = true) {
         if (viewModel.patchState != PatchState.PATCHING) {
-            scope.launch { NPackageManager.cleanTmpApkDir() }
+            scope.launch { NeoPackageManager.cleanTmpApkDir() }
             viewModel.reset()
             navigator.pop()
         }
@@ -125,7 +125,7 @@ fun NewPatchScreen(
         topBar = {
             when (viewModel.patchState) {
                 PatchState.CONFIGURING -> ConfiguringTopBar(scrollBehavior) {
-                    scope.launch { NPackageManager.cleanTmpApkDir() }
+                    scope.launch { NeoPackageManager.cleanTmpApkDir() }
                     viewModel.reset()
                     navigator.pop()
                 }

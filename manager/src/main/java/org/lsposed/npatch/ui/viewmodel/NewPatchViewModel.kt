@@ -10,8 +10,8 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import org.lsposed.npatch.Patcher
 import org.lsposed.npatch.share.PatchConfig
-import nkbe.util.NPackageManager
-import nkbe.util.NPackageManager.AppInfo
+import nkbe.util.NeoPackageManager
+import nkbe.util.NeoPackageManager.AppInfo
 import org.lsposed.npatch.patch.util.Logger
 
 class NewPatchViewModel : ViewModel() {
@@ -137,7 +137,7 @@ class NewPatchViewModel : ViewModel() {
             logger.e(t.stackTraceToString())
             PatchState.ERROR
         } finally {
-            NPackageManager.cleanTmpApkDir()
+            NeoPackageManager.cleanTmpApkDir()
         }
     }
 }

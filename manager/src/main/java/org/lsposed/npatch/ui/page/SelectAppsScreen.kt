@@ -30,8 +30,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.parcelize.Parcelize
-import nkbe.util.NPackageManager
-import nkbe.util.NPackageManager.AppInfo
+import nkbe.util.NeoPackageManager
+import nkbe.util.NeoPackageManager.AppInfo
 import org.lsposed.npatch.R
 import org.lsposed.npatch.ui.component.AppItem
 import org.lsposed.npatch.ui.component.SearchBar
@@ -94,7 +94,7 @@ fun SelectAppsScreen(
         viewModel.filterAppList(false, filter)
         initialSelected?.let {
             val tmp = initialSelected.toSet()
-            viewModel.multiSelected.addAll(NPackageManager.appList.filter { tmp.contains(it.app.packageName) })
+            viewModel.multiSelected.addAll(NeoPackageManager.appList.filter { tmp.contains(it.app.packageName) })
         }
     }
 
@@ -240,7 +240,7 @@ private fun SelectAppsList(
                     },
                     icon = {
                         Image(
-                            bitmap = NPackageManager.getIcon(appInfo),
+                            bitmap = NeoPackageManager.getIcon(appInfo),
                             contentDescription = null,
                             modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp))
                         )

@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import nkbe.util.NPackageManager
+import nkbe.util.NeoPackageManager
 import org.lsposed.npatch.lspApp
 import org.lsposed.npatch.repo.OnlineModule
 import org.lsposed.npatch.repo.RepoLoader
@@ -71,8 +71,8 @@ class RepositoryViewModel : ViewModel(), RepoLoader.RepoListener {
         var uiList = filtered.map { module ->
             val pkgName = module.name ?: ""
 
-            // 使用 NPackageManager 判断是否安装
-            val installedAppInfo = NPackageManager.appList.find { it.app.packageName == pkgName }
+            // 使用 NeoPackageManager 判断是否安装
+            val installedAppInfo = NeoPackageManager.appList.find { it.app.packageName == pkgName }
             val isInstalled = installedAppInfo != null
 
             // 获取本地安装的版本号

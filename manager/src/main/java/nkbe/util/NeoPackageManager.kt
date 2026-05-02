@@ -34,9 +34,9 @@ import java.util.*
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
-object NPackageManager {
+object NeoPackageManager {
 
-    private const val TAG = "LSPPackageManager"
+    private const val TAG = "NeoPackageManager"
     private const val SETTINGS_CATEGORY = "de.robv.android.xposed.category.MODULE_SETTINGS"
 
     const val STATUS_USER_CANCELLED = -2
@@ -44,7 +44,7 @@ object NPackageManager {
     @Parcelize
     class AppInfo(val app: ApplicationInfo, val label: String) : Parcelable {
         val isXposedModule: Boolean
-            get() = app.metaData?.getString("xposedminversion") != null
+            get() = app.metaData?.get("xposedminversion") != null
     }
 
     var appList by mutableStateOf(listOf<AppInfo>())

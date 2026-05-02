@@ -8,8 +8,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
-import nkbe.util.NPackageManager
-import nkbe.util.NPackageManager.AppInfo
+import nkbe.util.NeoPackageManager
+import nkbe.util.NeoPackageManager.AppInfo
 
 class SelectAppsViewModel : ViewModel() {
 
@@ -31,12 +31,12 @@ class SelectAppsViewModel : ViewModel() {
 
     fun filterAppList(refresh: Boolean, filter: (AppInfo) -> Boolean) {
         viewModelScope.launch {
-            if (NPackageManager.appList.isEmpty() || refresh) {
+            if (NeoPackageManager.appList.isEmpty() || refresh) {
                 isRefreshing = true
-                NPackageManager.fetchAppList()
+                NeoPackageManager.fetchAppList()
                 isRefreshing = false
             }
-            filteredList = NPackageManager.appList.filter(filter)
+            filteredList = NeoPackageManager.appList.filter(filter)
             Log.d(TAG, "Filtered ${filteredList.size} apps")
         }
     }

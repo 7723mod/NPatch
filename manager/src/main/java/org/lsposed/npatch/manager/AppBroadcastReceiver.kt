@@ -7,7 +7,7 @@ import android.content.IntentFilter
 import android.util.Log
 import kotlinx.coroutines.launch
 import org.lsposed.npatch.lspApp
-import nkbe.util.NPackageManager
+import nkbe.util.NeoPackageManager
 
 class AppBroadcastReceiver : BroadcastReceiver() {
 
@@ -34,7 +34,7 @@ class AppBroadcastReceiver : BroadcastReceiver() {
         if (intent.action in actions || intent.action == Intent.ACTION_UID_REMOVED) {
             lspApp.globalScope.launch {
                 Log.i(TAG, "Received intent: $intent")
-                NPackageManager.fetchAppList()
+                NeoPackageManager.fetchAppList()
             }
         }
     }

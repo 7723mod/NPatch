@@ -10,7 +10,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import nkbe.util.NPackageManager
+import nkbe.util.NeoPackageManager
 
 class ModuleManageViewModel : ViewModel() {
 
@@ -27,8 +27,8 @@ class ModuleManageViewModel : ViewModel() {
         val scope: List<String>
     )
 
-    val appList: List<Pair<NPackageManager.AppInfo, XposedInfo>> by derivedStateOf {
-        NPackageManager.appList.mapNotNull { appInfo ->
+    val appList: List<Pair<NeoPackageManager.AppInfo, XposedInfo>> by derivedStateOf {
+        NeoPackageManager.appList.mapNotNull { appInfo ->
             val metaData = appInfo.app.metaData ?: return@mapNotNull null
             appInfo to XposedInfo(
                 metaData.getInt("xposedminversion", -1).also { if (it == -1) return@mapNotNull null },
@@ -45,7 +45,7 @@ class ModuleManageViewModel : ViewModel() {
         viewModelScope.launch {
             isRefreshing = true
             withContext(Dispatchers.IO) {
-                NPackageManager.fetchAppList()
+                NeoPackageManager.fetchAppList()
             }
             isRefreshing = false
         }

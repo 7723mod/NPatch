@@ -14,7 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 import org.lsposed.npatch.manager.AppBroadcastReceiver
-import nkbe.util.NPackageManager
+import nkbe.util.NeoPackageManager
 import nkbe.util.ShizukuApi
 import java.io.File
 
@@ -52,7 +52,7 @@ class LSPApplication : Application() {
         prefs = lspApp.getSharedPreferences("settings", Context.MODE_PRIVATE)
         ShizukuApi.init()
         AppBroadcastReceiver.register(this)
-        globalScope.launch { NPackageManager.fetchAppList() }
+        globalScope.launch { NeoPackageManager.fetchAppList() }
     }
 
     private fun verifySignature() {

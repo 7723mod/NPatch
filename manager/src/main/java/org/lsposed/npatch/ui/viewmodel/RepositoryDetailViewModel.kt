@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
-import nkbe.util.NPackageManager
+import nkbe.util.NeoPackageManager
 import org.lsposed.npatch.lspApp
 import org.lsposed.npatch.repo.OnlineModule
 import org.lsposed.npatch.repo.Release
@@ -72,7 +72,7 @@ class RepositoryDetailViewModel : ViewModel(), RepoLoader.RepoListener {
 
     // 封装一个获取本地安装状态的辅助方法
     private fun getInstalledState(packageName: String): InstalledState? {
-        val isInstalled = NPackageManager.appList.any { it.app.packageName == packageName }
+        val isInstalled = NeoPackageManager.appList.any { it.app.packageName == packageName }
         if (!isInstalled) return null
 
         return try {
