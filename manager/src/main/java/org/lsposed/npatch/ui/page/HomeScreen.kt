@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -30,7 +31,9 @@ import kotlinx.coroutines.launch
 import nkbe.util.ShizukuApi
 import org.lsposed.npatch.R
 import org.lsposed.npatch.share.LSPConfig
+import org.lsposed.npatch.ui.component.NPatchScaffold
 import org.lsposed.npatch.ui.util.LocalSnackbarHost
+import org.lsposed.npatch.ui.util.backgroundAwareCardColors
 import org.lsposed.npatch.ui.viewmodel.manage.AppManageViewModel
 import org.lsposed.npatch.ui.viewmodel.manage.ModuleManageViewModel
 import rikka.shizuku.Shizuku
@@ -38,7 +41,6 @@ import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
@@ -71,14 +73,14 @@ fun HomeScreen(navigator: Navigator) {
         }
     }
 
-    Scaffold(
+    NPatchScaffold(
         topBar = {
             TopAppBar(
+                color = Color.Transparent,
                 title = stringResource(R.string.app_name),
                 scrollBehavior = scrollBehavior
             )
-        },
-        popupHost = {}
+        }
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
@@ -144,7 +146,7 @@ private fun StatusCard() {
             modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight(),
-            colors = CardDefaults.defaultColors(color = containerColor),
+            colors = backgroundAwareCardColors(color = containerColor),
             onClick = {
                 if (ShizukuApi.isBinderAvailable && !isGranted) {
                     Shizuku.requestPermission(114514)
@@ -200,6 +202,7 @@ private fun StatusCard() {
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
+                colors = backgroundAwareCardColors(),
                 insideMargin = PaddingValues(16.dp),
                 showIndication = false,
             ) {
@@ -228,6 +231,7 @@ private fun StatusCard() {
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
+                colors = backgroundAwareCardColors(),
                 insideMargin = PaddingValues(16.dp),
                 showIndication = false,
             ) {
@@ -298,6 +302,7 @@ private fun InfoCard() {
             .fillMaxWidth()
             .padding(horizontal = 12.dp)
             .padding(bottom = 12.dp),
+        colors = backgroundAwareCardColors(),
         onClick = {
             val contentString = listOf(
                 "API Version: ${LSPConfig.instance.API_CODE}",
@@ -356,6 +361,7 @@ private fun SupportCard() {
             .fillMaxWidth()
             .padding(horizontal = 12.dp)
             .padding(bottom = 12.dp),
+        colors = backgroundAwareCardColors(),
     ) {
         Column {
             SuperArrow(

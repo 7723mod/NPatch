@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Surface
+import org.lsposed.npatch.ui.util.backgroundAwareCardColors
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
@@ -46,6 +47,7 @@ fun AppItem(
             .fillMaxWidth()
             .padding(horizontal = 12.dp)
             .padding(bottom = 8.dp),
+        colors = backgroundAwareCardColors(),
         insideMargin = PaddingValues(12.dp),
         showIndication = true,
         pressFeedbackType = PressFeedbackType.Sink,

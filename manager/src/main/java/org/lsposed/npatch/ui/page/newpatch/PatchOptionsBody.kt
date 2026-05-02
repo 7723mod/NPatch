@@ -19,6 +19,7 @@ import org.lsposed.npatch.R
 import org.lsposed.npatch.ui.component.SelectionColumn
 import org.lsposed.npatch.ui.component.SelectionColumnScope.SelectionItem
 import org.lsposed.npatch.ui.component.settings.SettingsEditor
+import org.lsposed.npatch.ui.util.backgroundAwareCardColors
 import org.lsposed.npatch.ui.viewmodel.NewPatchViewModel
 import org.lsposed.npatch.ui.viewmodel.NewPatchViewModel.ViewAction
 import top.yukonga.miuix.kmp.basic.*
@@ -86,7 +87,8 @@ fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 12.dp)
-                .clip(cardShape)
+                .clip(cardShape),
+            colors = backgroundAwareCardColors(),
         ) {
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
                 Text(text = viewModel.patchApp.label, style = MiuixTheme.textStyles.headline1)
@@ -104,7 +106,8 @@ fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp)
-                .clip(cardShape)
+                .clip(cardShape),
+            colors = backgroundAwareCardColors(),
         ) {
             SelectionColumn(Modifier.padding(8.dp)) {
                 SelectionItem(
@@ -148,7 +151,8 @@ fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp)
-                .clip(cardShape)
+                .clip(cardShape),
+            colors = backgroundAwareCardColors(),
         ) {
             Column(Modifier.padding(vertical = 4.dp)) {
                 SettingsEditor(

@@ -82,6 +82,8 @@ import top.yukonga.miuix.kmp.icon.basic.Search
 import top.yukonga.miuix.kmp.icon.basic.SearchCleanup
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
+import org.lsposed.npatch.ui.util.BG_SURFACE_ALPHA
+import org.lsposed.npatch.ui.util.LocalBackgroundImagePath
 
 // Search Status Class
 @Stable
@@ -119,6 +121,7 @@ class SearchStatus(val label: String) {
         hazeStyle: HazeStyle? = null,
         content: @Composable () -> Unit
     ) {
+        val hasBackgroundImage = LocalBackgroundImagePath.current.isNotEmpty()
         val topAppBarAlpha = animateFloatAsState(
             if (visible) 1f else 0f,
             animationSpec = tween(if (visible) 550 else 0, easing = FastOutSlowInEasing),
@@ -135,7 +138,11 @@ class SearchStatus(val label: String) {
                                 noiseFactor = 0f
                             }
                         } else {
-                            Modifier.background(colorScheme.surface)
+                            if (hasBackgroundImage) {
+                                Modifier.background(colorScheme.surface.copy(alpha = BG_SURFACE_ALPHA))
+                            } else {
+                                Modifier.background(colorScheme.surface)
+                            }
                         }
                     )
             )
@@ -229,6 +236,7 @@ fun SearchStatus.SearchPager(
 ) {
     val searchStatus = this
     val systemBarsPadding = WindowInsets.systemBars.asPaddingValues().calculateTopPadding()
+    val hasBackgroundImage = LocalBackgroundImagePath.current.isNotEmpty()
     val topPadding by animateDpAsState(
         targetValue = if (searchStatus.shouldExpand()) {
             systemBarsPadding + 5.dp
@@ -240,7 +248,7 @@ fun SearchStatus.SearchPager(
         searchStatus.onAnimationComplete()
     }
     val surfaceAlpha by animateFloatAsState(
-        if (searchStatus.shouldExpand()) 1f else 0f,
+        if (searchStatus.shouldExpand()) if (hasBackgroundImage) BG_SURFACE_ALPHA else 1f else 0f,
         animationSpec = tween(200, easing = FastOutSlowInEasing)
     )
 
@@ -259,8 +267,13 @@ fun SearchStatus.SearchPager(
                 .fillMaxWidth()
                 .padding(top = topPadding)
                 .then(
-                    if (!searchStatus.isCollapsed()) Modifier.background(colorScheme.surface)
-                    else Modifier
+                    if (!searchStatus.isCollapsed()) {
+                        if (hasBackgroundImage) {
+                            Modifier.background(colorScheme.surface.copy(alpha = BG_SURFACE_ALPHA))
+                        } else {
+                            Modifier.background(colorScheme.surface)
+                        }
+                    } else Modifier
                 ),
             horizontalArrangement = Arrangement.Start,
             verticalAlignment = Alignment.CenterVertically
@@ -269,7 +282,13 @@ fun SearchStatus.SearchPager(
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .background(colorScheme.surface)
+                        .then(
+                            if (hasBackgroundImage) {
+                                Modifier.background(colorScheme.surface.copy(alpha = BG_SURFACE_ALPHA))
+                            } else {
+                                Modifier.background(colorScheme.surface)
+                            }
+                        )
                 ) {
                     expandBar(searchStatus, searchBarTopPadding)
                 }

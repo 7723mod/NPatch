@@ -1,5 +1,6 @@
 package org.lsposed.manager.ui.compose.repository
 
+import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,16 +36,17 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeSource
 import org.lsposed.npatch.R
 import org.lsposed.npatch.ui.component.SearchBarFake
 import org.lsposed.npatch.ui.component.SearchBox
 import org.lsposed.npatch.ui.component.SearchPager
 import org.lsposed.npatch.ui.component.SearchStatus
+import org.lsposed.npatch.ui.component.NPatchScaffold
 import org.lsposed.npatch.ui.page.Navigator
 import org.lsposed.npatch.ui.page.Route
+import org.lsposed.npatch.ui.util.backgroundAwareCardColors
+import org.lsposed.npatch.ui.util.backgroundAwareHazeStyle
 import org.lsposed.npatch.ui.viewmodel.RepoSort
 import org.lsposed.npatch.ui.viewmodel.RepoUiModel
 import org.lsposed.npatch.ui.viewmodel.RepositoryViewModel
@@ -58,7 +60,6 @@ import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.PullToRefresh
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
@@ -75,7 +76,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.utils.MiuixPopupUtils.Companion.MiuixPopupHost
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
-import java.text.SimpleDateFormat
+import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
 
@@ -99,10 +100,7 @@ fun RepositoryScreen(
     }
 
     val hazeState = remember { HazeState() }
-    val hazeStyle = HazeStyle(
-        backgroundColor = colorScheme.surface,
-        tint = HazeTint(colorScheme.surface.copy(0.8f))
-    )
+    val hazeStyle = backgroundAwareHazeStyle()
 
     val showSortMenu = remember { mutableStateOf(false) }
     val sortOptions = listOf(
@@ -123,7 +121,7 @@ fun RepositoryScreen(
         stringResource(R.string.refresh_complete),
     )
 
-    Scaffold(
+    NPatchScaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             searchStatus.TopAppBarAnim(hazeState = hazeState, hazeStyle = hazeStyle) {
@@ -294,7 +292,7 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
     val releaseTimeStr = item.module.latestReleaseTime
 
     val updatedTime = remember(releaseTimeStr) {
-        getRelativeTime(releaseTimeStr)
+        getRelativeTime(context, releaseTimeStr)
     }
 
     val showMenu = remember { mutableStateOf(false) }
@@ -360,7 +358,7 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
                     if (author != null) {
                         Spacer(modifier = Modifier.width(2.dp))
                         Text(
-                            text = "作者：$author",
+                            text = "${stringResource(R.string.author)}：$author",
                             fontSize = 12.sp,
                             modifier = Modifier.padding(bottom = 1.dp),
                             fontWeight = FontWeight(550),
@@ -477,7 +475,7 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
     }
 }
 
-fun getRelativeTime(timeString: String?): String {
+fun getRelativeTime(context: Context, timeString: String?): String {
     if (timeString == null) return "N/A"
     try {
         val instant = java.time.Instant.parse(timeString)
@@ -488,19 +486,19 @@ fun getRelativeTime(timeString: String?): String {
         val oneYearMillis = 365L * 24 * 60 * 60 * 1000
 
         return when {
-            diff < 60 * 1000 -> "刚刚"
-            diff < 60 * 60 * 1000 -> "${diff / (60 * 1000)}分钟前"
-            diff < 24 * 60 * 60 * 1000 -> "${diff / (60 * 60 * 1000)}小时前"
-            diff < 30L * 24 * 60 * 60 * 1000 -> "${diff / (24 * 60 * 60 * 1000)}天前"
+            diff < 60 * 1000 -> context.getString(R.string.time_just_now)
+            diff < 60 * 60 * 1000 -> context.getString(R.string.time_minutes_ago, diff / (60 * 1000))
+            diff < 24 * 60 * 60 * 1000 -> context.getString(R.string.time_hours_ago, diff / (60 * 60 * 1000))
+            diff < 30L * 24 * 60 * 60 * 1000 -> context.getString(R.string.time_days_ago, diff / (24 * 60 * 60 * 1000))
             diff >= oneYearMillis -> {
                 val date = Date(time)
-                val sdf = SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault())
+                val sdf = DateFormat.getDateInstance(DateFormat.MEDIUM, Locale.getDefault())
                 sdf.format(date)
             }
 
             else -> {
                 val date = Date(time)
-                val sdf = SimpleDateFormat("MM月dd日", Locale.getDefault())
+                val sdf = DateFormat.getDateInstance(DateFormat.SHORT, Locale.getDefault())
                 sdf.format(date)
             }
         }

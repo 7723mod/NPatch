@@ -51,12 +51,13 @@ import org.lsposed.npatch.config.MyKeyStore
 import org.lsposed.npatch.config.ThemeConfig
 import org.lsposed.npatch.config.dataStore
 import org.lsposed.npatch.ui.activity.MainActivity
+import org.lsposed.npatch.ui.component.NPatchScaffold
 import org.lsposed.npatch.ui.util.LocalSnackbarHost
+import org.lsposed.npatch.ui.util.backgroundAwareCardColors
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
@@ -78,15 +79,14 @@ private const val TAG = "SettingsScreen"
 @Composable
 fun SettingsScreen() {
     val scrollBehavior = MiuixScrollBehavior()
-    Scaffold(
+    NPatchScaffold(
         topBar = {
             TopAppBar(
                 color = Color.Transparent,
                 title = stringResource(R.string.screen_settings),
                 scrollBehavior = scrollBehavior
             )
-        },
-        popupHost = {}
+        }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -101,6 +101,7 @@ fun SettingsScreen() {
             SmallTitle(text = stringResource(R.string.settings_appearance_theme))
             Card(
                 modifier = Modifier.fillMaxWidth(),
+                colors = backgroundAwareCardColors(),
             ) {
                 AppearanceSettings()
             }
@@ -110,6 +111,7 @@ fun SettingsScreen() {
             SmallTitle(text = stringResource(R.string.settings_other_settings))
             Card(
                 modifier = Modifier.fillMaxWidth(),
+                colors = backgroundAwareCardColors(),
             ) {
                 Language()
                 KeyStore()
@@ -563,7 +565,7 @@ private fun StorageDirectory() {
     }
     SuperArrow(
         title = stringResource(R.string.settings_storage_directory),
-        summary = Configs.storageDirectory ?: "undefined",
+        summary = Configs.storageDirectory ?: "no path set",
         startAction = {
             Icon(
                 Icons.Outlined.Folder,

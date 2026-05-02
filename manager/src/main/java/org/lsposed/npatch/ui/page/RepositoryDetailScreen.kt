@@ -87,6 +87,8 @@ import org.lsposed.manager.ui.compose.repository.RepositoryDetailViewModel
 import org.lsposed.npatch.repo.OnlineModule
 import org.lsposed.npatch.repo.ReleaseAsset
 import org.lsposed.npatch.ui.component.GithubMarkdown
+import org.lsposed.npatch.ui.component.NPatchScaffold
+import org.lsposed.npatch.ui.util.backgroundAwareCardColors
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
@@ -95,7 +97,6 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Surface
@@ -181,7 +182,7 @@ fun RepositoryDetailScreen(
 
     val tabRowHeight by remember { mutableStateOf(40.dp) }
     val uriHandler = LocalUriHandler.current
-    Scaffold(
+    NPatchScaffold(
         topBar = {
             TopAppBar(
                 modifier = Modifier.hazeEffect(hazeState) {
@@ -236,7 +237,7 @@ fun RepositoryDetailScreen(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     InfiniteProgressIndicator()
                 }
-                return@Scaffold
+                return@NPatchScaffold
             }
 
             HorizontalPager(
@@ -305,7 +306,8 @@ fun RepositoryDetailScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp)
-                        .padding(bottom = 4.dp)
+                        .padding(bottom = 4.dp),
+                    colors = backgroundAwareCardColors()
                 ) {
                     Column(modifier = Modifier.padding(vertical = 12.dp, horizontal = 14.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -436,6 +438,7 @@ fun ReadmeTab(
             item {
                 Card(
                     modifier = Modifier.padding(horizontal = 12.dp),
+                    colors = backgroundAwareCardColors(),
                 ) {
                     GithubMarkdown(content = content)
                 }
@@ -532,7 +535,8 @@ fun ReleaseCard(release: Release, context: Context) {
 
     Card(
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxWidth(),
+        colors = backgroundAwareCardColors(),
     ) {
         Column {
             Row(
@@ -650,7 +654,8 @@ fun InfoTab(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 12.dp),
+                    colors = backgroundAwareCardColors(),
                 ) {
                     if (!module.homepageUrl.isNullOrEmpty()) {
                         InfoRowItem(
@@ -695,7 +700,8 @@ fun InfoTab(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp)
+                            .padding(horizontal = 12.dp),
+                        colors = backgroundAwareCardColors(),
                     ) {
                         Column {
                             collaborators.forEachIndexed { index, collaborator ->

@@ -21,13 +21,13 @@ import org.lsposed.npatch.ui.page.newpatch.ConfiguringFab
 import org.lsposed.npatch.ui.page.newpatch.ConfiguringTopBar
 import org.lsposed.npatch.ui.page.newpatch.DoPatchBody
 import org.lsposed.npatch.ui.page.newpatch.PatchOptionsBody
+import org.lsposed.npatch.ui.component.NPatchScaffold
 import org.lsposed.npatch.ui.util.LocalSnackbarHost
 import org.lsposed.npatch.ui.viewmodel.NewPatchViewModel
 import org.lsposed.npatch.ui.viewmodel.NewPatchViewModel.PatchState
 import org.lsposed.npatch.ui.viewmodel.NewPatchViewModel.ViewAction
 import org.lsposed.npatch.ui.page.SelectAppsResult
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.extra.SuperDialog
@@ -121,7 +121,7 @@ fun NewPatchScreen(
     }
 
     // 主體 UI 結構
-    Scaffold(
+    NPatchScaffold(
         topBar = {
             when (viewModel.patchState) {
                 PatchState.CONFIGURING -> ConfiguringTopBar(scrollBehavior) {

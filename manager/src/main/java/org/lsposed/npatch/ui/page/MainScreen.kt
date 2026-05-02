@@ -3,6 +3,7 @@ package org.lsposed.npatch.ui.page
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
@@ -11,9 +12,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
 import org.lsposed.manager.ui.compose.repository.RepositoryScreen
+import org.lsposed.npatch.ui.component.NPatchScaffold
+import org.lsposed.npatch.ui.util.backgroundAwareCardColors
 import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
-import top.yukonga.miuix.kmp.basic.Scaffold
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -22,9 +24,9 @@ fun MainScreen(navigator: Navigator) {
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
 
-    Scaffold(
+    NPatchScaffold(
         bottomBar = {
-            NavigationBar {
+            NavigationBar(modifier = Modifier.background(backgroundAwareCardColors().color)) {
                 tabs.forEachIndexed { index, tab ->
                     val isSelected = pagerState.currentPage == index
                     NavigationBarItem(

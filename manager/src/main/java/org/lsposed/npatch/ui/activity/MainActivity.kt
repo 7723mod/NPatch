@@ -13,6 +13,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
@@ -39,8 +40,10 @@ import org.lsposed.npatch.ui.page.RepositoryDetailScreen
 import org.lsposed.npatch.ui.page.Route
 import org.lsposed.npatch.ui.page.SelectAppsScreen
 import org.lsposed.npatch.ui.theme.LSPTheme
+import org.lsposed.npatch.ui.util.LocalBackgroundImagePath
 import org.lsposed.npatch.ui.util.LocalSnackbarHost
 import top.yukonga.miuix.kmp.basic.SnackbarHostState
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 class MainActivity : ComponentActivity() {
 
@@ -71,7 +74,7 @@ class MainActivity : ComponentActivity() {
             val context = LocalContext.current
 
             val themeState by ThemeConfig.getThemeFlow(context).collectAsState(initial = Triple("", false, 0xFF007AFF.toInt()))
-            val (bgImageUri, useMonet, customColor) = themeState
+            val (background, useMonet, customColor) = themeState
 
             DisposableEffect(isDark) {
                 enableEdgeToEdge(
@@ -91,56 +94,66 @@ class MainActivity : ComponentActivity() {
             }
 
             LSPTheme(isDarkTheme = isDark, useMonet = useMonet, customColor = customColor) {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    if (bgImageUri.isNotEmpty()) {
-                        AsyncImage(
-                            model = bgImageUri,
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .blur(20.dp)
-                        )
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.35f))
-                        )
-                    }
-
-                    val snackbarHostState = remember { SnackbarHostState() }
-                    val backStack = remember { mutableStateListOf<NavKey>(Route.Main) }
-                    val navigator = remember { Navigator(backStack) }
-
-                    CompositionLocalProvider(
-                        LocalSnackbarHost provides snackbarHostState,
-                        LocalNavigator provides navigator
-                    ) {
-                        NavDisplay(
-                            backStack = backStack,
-                            onBack = { navigator.pop() },
-                            entryProvider = entryProvider {
-                                entry<Route.Main> { MainScreen(navigator) }
-
-                                entry<Route.NewPatch> { route ->
-                                    NewPatchScreen(id = route.id, data = route.data)
-                                }
-
-                                entry<Route.SelectApps> { route ->
-                                    SelectAppsScreen(
-                                        multiSelect = route.multiSelect,
-                                        initialSelected = route.initialSelected
-                                    )
-                                }
-
-                                entry<Route.RepoDetail> { route ->
-                                    RepositoryDetailScreen(
-                                        packageName = route.packageName,
-                                        onBack = { navigator.pop() }
-                                    )
-                                }
+                CompositionLocalProvider(LocalBackgroundImagePath provides background) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Crossfade(targetState = background, label = "global_background") { path ->
+                            if (path.isNotEmpty()) {
+                                AsyncImage(
+                                    model = path,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .blur(20.dp)
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.Black.copy(alpha = 0.35f))
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(MiuixTheme.colorScheme.background)
+                                )
                             }
-                        )
+                        }
+
+                        val snackbarHostState = remember { SnackbarHostState() }
+                        val backStack = remember { mutableStateListOf<NavKey>(Route.Main) }
+                        val navigator = remember { Navigator(backStack) }
+
+                        CompositionLocalProvider(
+                            LocalSnackbarHost provides snackbarHostState,
+                            LocalNavigator provides navigator
+                        ) {
+                            NavDisplay(
+                                backStack = backStack,
+                                onBack = { navigator.pop() },
+                                entryProvider = entryProvider {
+                                    entry<Route.Main> { MainScreen(navigator) }
+
+                                    entry<Route.NewPatch> { route ->
+                                        NewPatchScreen(id = route.id, data = route.data)
+                                    }
+
+                                    entry<Route.SelectApps> { route ->
+                                        SelectAppsScreen(
+                                            multiSelect = route.multiSelect,
+                                            initialSelected = route.initialSelected
+                                        )
+                                    }
+
+                                    entry<Route.RepoDetail> { route ->
+                                        RepositoryDetailScreen(
+                                            packageName = route.packageName,
+                                            onBack = { navigator.pop() }
+                                        )
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
             }

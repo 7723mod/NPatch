@@ -49,7 +49,7 @@ fun SettingsSlot(
                         text = desc,
                         style = MiuixTheme.textStyles.body2,
                         modifier = Modifier
-                            .alpha(0.75f)
+                            .alpha(0.69f)
                             .padding(top = 4.dp)
                     )
                 }

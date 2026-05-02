@@ -28,8 +28,6 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.parcelize.Parcelize
 import nkbe.util.NPackageManager
@@ -41,6 +39,8 @@ import org.lsposed.npatch.ui.component.SearchBarFake
 import org.lsposed.npatch.ui.component.SearchBox
 import org.lsposed.npatch.ui.component.SearchPager
 import org.lsposed.npatch.ui.component.SearchStatus
+import org.lsposed.npatch.ui.component.NPatchScaffold
+import org.lsposed.npatch.ui.util.backgroundAwareHazeStyle
 import org.lsposed.npatch.ui.viewmodel.SelectAppsViewModel
 import top.yukonga.miuix.kmp.basic.Checkbox
 import top.yukonga.miuix.kmp.basic.FloatingActionButton
@@ -48,7 +48,6 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.PullToRefresh
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
@@ -83,10 +82,7 @@ fun SelectAppsScreen(
     val title = if (multiSelect) stringResource(R.string.screen_select_modules) else stringResource(R.string.screen_select_apps)
     val searchStatus = remember(multiSelect, title) { SearchStatus(title) }
     val hazeState = remember { HazeState() }
-    val hazeStyle = HazeStyle(
-        backgroundColor = MiuixTheme.colorScheme.surface,
-        tint = HazeTint(MiuixTheme.colorScheme.surface.copy(0.8f))
-    )
+    val hazeStyle = backgroundAwareHazeStyle()
 
     val scrollBehavior = MiuixScrollBehavior()
     val dynamicTopPadding by remember {
@@ -111,11 +107,10 @@ fun SelectAppsScreen(
         navigator.pop()
     }
 
-    Scaffold(
+    NPatchScaffold(
         topBar = {
             searchStatus.TopAppBarAnim(hazeState = hazeState, hazeStyle = hazeStyle) {
                 TopAppBar(
-                    color = Color.Transparent,
                     title = title,
                     scrollBehavior = scrollBehavior,
                     navigationIcon = {

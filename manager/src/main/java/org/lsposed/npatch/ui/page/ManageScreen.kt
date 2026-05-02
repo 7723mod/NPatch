@@ -16,8 +16,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
 import kotlinx.coroutines.launch
 import org.lsposed.npatch.R
 import org.lsposed.npatch.ui.component.SearchBar
@@ -28,13 +26,13 @@ import org.lsposed.npatch.ui.component.SearchBarFake
 import org.lsposed.npatch.ui.component.SearchBox
 import org.lsposed.npatch.ui.component.SearchPager
 import org.lsposed.npatch.ui.component.SearchStatus
-import top.yukonga.miuix.kmp.basic.Scaffold
+import org.lsposed.npatch.ui.component.NPatchScaffold
+import org.lsposed.npatch.ui.util.backgroundAwareHazeStyle
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.TabRow
 import top.yukonga.miuix.kmp.basic.TabRowDefaults
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun ManageScreen(navigator: Navigator) {
@@ -44,18 +42,16 @@ fun ManageScreen(navigator: Navigator) {
     val pagerState = rememberPagerState(pageCount = { tabTitles.size })
     val scrollBehavior = MiuixScrollBehavior()
 
-    val searchStatus = remember { SearchStatus(stringResource(R.string.manage_search)) }
+    val manageSearchLabel = stringResource(R.string.manage_search)
+    val searchStatus = remember(manageSearchLabel) { SearchStatus(manageSearchLabel) }
     val hazeState = remember { HazeState() }
-    val hazeStyle = HazeStyle(
-        backgroundColor = MiuixTheme.colorScheme.surface,
-        tint = HazeTint(MiuixTheme.colorScheme.surface.copy(0.8f))
-    )
+    val hazeStyle = backgroundAwareHazeStyle()
 
     val dynamicTopPadding by remember {
         derivedStateOf { 12.dp * (1f - scrollBehavior.state.collapsedFraction) }
     }
 
-    Scaffold(
+    NPatchScaffold(
         topBar = {
             searchStatus.TopAppBarAnim(hazeState = hazeState, hazeStyle = hazeStyle) {
                 TopAppBar(

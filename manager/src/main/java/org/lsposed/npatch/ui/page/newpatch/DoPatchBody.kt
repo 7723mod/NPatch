@@ -45,6 +45,7 @@ import org.lsposed.npatch.ui.component.ShimmerAnimation
 import org.lsposed.npatch.ui.page.Navigator
 import org.lsposed.npatch.ui.util.InstallResultReceiver
 import org.lsposed.npatch.ui.util.LocalSnackbarHost
+import org.lsposed.npatch.ui.util.backgroundAwareCardColors
 import org.lsposed.npatch.ui.util.checkIsApkFixedByLSP
 import org.lsposed.npatch.ui.util.installApk
 import org.lsposed.npatch.ui.util.installApks
@@ -125,7 +126,8 @@ fun DoPatchBody(modifier: Modifier, navigator: Navigator) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 12.dp)
+                    .padding(bottom = 12.dp),
+                colors = backgroundAwareCardColors(),
             ) {
                 Row(
                     modifier = Modifier
@@ -169,7 +171,8 @@ fun DoPatchBody(modifier: Modifier, navigator: Navigator) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 12.dp)
+                    .padding(bottom = 12.dp),
+                colors = backgroundAwareCardColors(),
             ) {
                 Row(
                     modifier = Modifier
@@ -200,7 +203,8 @@ fun DoPatchBody(modifier: Modifier, navigator: Navigator) {
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(bottom = 12.dp)
+                .padding(bottom = 12.dp),
+            colors = backgroundAwareCardColors(),
         ) {
             ShimmerAnimation(enabled = viewModel.patchState == PatchState.PATCHING) {
                 ProvideTextStyle(MiuixTheme.textStyles.footnote1.copy(fontFamily = FontFamily.Monospace)) {
