@@ -305,6 +305,7 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp)
                 .padding(bottom = 12.dp),
+            colors = backgroundAwareCardColors(),
             insideMargin = PaddingValues(16.dp),
             showIndication = true,
             pressFeedbackType = PressFeedbackType.Sink,
@@ -348,7 +349,7 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
 
                 Column {
                     Text(
-                        text = "包名：$packageName",
+                        text = "${stringResource(R.string.package_name)}：$packageName",
                         fontSize = 12.sp,
                         fontWeight = FontWeight(550),
                         color = colorScheme.onSurfaceVariantSummary,

@@ -29,6 +29,8 @@
     <!-- Manage Screen -->
     <string name="screen_manage">管理</string>
     <string name="manage_loading">載入中</string>
+    <string name="manage_search">搜索</string>
+    <string name="manage_no_search_results">暂无搜索结果</string>
     <string name="manage_no_apps">尚无已修补的應用程式</string>
     <string name="manage_rolling">滚动</string>
     <string name="manage_update_loader">更新載入器</string>
@@ -91,4 +93,10 @@
     <string name="enable_install_activity_title">启用 install activity</string>
     <string name="patch_inject_dex">注入載入器 Dex</string>
     <string name="patch_inject_dex_desc">对那些需要孤立服务进程的應用程式程序，譬如说浏览器的渲染引擎，请勾选此选项以确保他们正常运行</string>
+    <string name="package_name">包名</string>
+    <string name="author">作者</string>
+    <string name="time_just_now">剛剛</string>
+    <string name="time_minutes_ago">%d分鐘前</string>
+    <string name="time_hours_ago">%d小時前</string>
+    <string name="time_days_ago">%d天前</string>
 </resources>

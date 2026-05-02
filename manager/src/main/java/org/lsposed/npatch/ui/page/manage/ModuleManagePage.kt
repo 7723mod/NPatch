@@ -94,7 +94,7 @@ fun ModuleManageBody(
                                 )
                             } else {
                                 Text(
-                                    text = if (searchQuery.isNotEmpty()) "暂无搜索结果" else stringResource(R.string.manage_no_modules),
+                                    text = if (searchQuery.isNotEmpty()) stringResource(R.string.manage_no_search_results) else stringResource(R.string.manage_no_modules),
                                     style = MiuixTheme.textStyles.body1,
                                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary
                                 )

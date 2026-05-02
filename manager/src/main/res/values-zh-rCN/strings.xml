@@ -34,6 +34,8 @@
     <!-- Manage Screen -->
     <string name="screen_manage">管理</string>
     <string name="manage_loading">加载中</string>
+    <string name="manage_search">搜索</string>
+    <string name="manage_no_search_results">暂无搜索结果</string>
     <string name="manage_no_apps">尚无已修补的应用</string>
     <string name="manage_rolling">滚动</string>
     <string name="manage_update_loader">更新加载器</string>
@@ -175,4 +177,10 @@
         <item quantity="other">%d 次下载</item>
     </plurals>
     <string name="download_asset">下载</string>
+    <string name="package_name">包名</string>
+    <string name="author">作者</string>
+    <string name="time_just_now">刚刚</string>
+    <string name="time_minutes_ago">%d分钟前</string>
+    <string name="time_hours_ago">%d小时前</string>
+    <string name="time_days_ago">%d天前</string>
 </resources>

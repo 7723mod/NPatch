@@ -44,7 +44,7 @@ fun ManageScreen(navigator: Navigator) {
     val pagerState = rememberPagerState(pageCount = { tabTitles.size })
     val scrollBehavior = MiuixScrollBehavior()
 
-    val searchStatus = remember { SearchStatus("搜索") }
+    val searchStatus = remember { SearchStatus(stringResource(R.string.manage_search)) }
     val hazeState = remember { HazeState() }
     val hazeStyle = HazeStyle(
         backgroundColor = MiuixTheme.colorScheme.surface,

@@ -29,6 +29,8 @@
     <!-- Manage Screen -->
     <string name="screen_manage">Gérer</string>
     <string name="manage_loading">Chargement</string>
+    <string name="manage_search">Rechercher</string>
+    <string name="manage_no_search_results">Aucun résultat de recherche</string>
     <string name="manage_no_apps">Aucune appli patchée pour le moment</string>
     <string name="manage_rolling">Rouler</string>
     <string name="manage_update_loader">Mettre à jour le chargeur</string>
@@ -90,4 +92,10 @@
     <string name="patch_inject_dex_desc">Pour les applications avec des services isolés, comme les moteurs de rendu des navigateurs, veuillez activer cette option pour s\'assurer qu\'ils fonctionnent correctement.</string>
     <string name="patch_output_log_to_media">Sortir le journal vers le répertoire Media</string>
     <string name="patch_output_log_to_media_desc">Sortir les journaux Xposed et les journaux de démarrage du framework vers le répertoire Media.</string>
+    <string name="package_name">Nom du paquet</string>
+    <string name="author">Auteur</string>
+    <string name="time_just_now">À l\'instant</string>
+    <string name="time_minutes_ago">Il y a %d minutes</string>
+    <string name="time_hours_ago">Il y a %d heures</string>
+    <string name="time_days_ago">Il y a %d jours</string>
 </resources>

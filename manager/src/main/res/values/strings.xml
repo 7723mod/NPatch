@@ -32,6 +32,8 @@
     <!-- Manage Screen -->
     <string name="screen_manage">Manage</string>
     <string name="manage_loading">Loading</string>
+    <string name="manage_search">Search</string>
+    <string name="manage_no_search_results">No search results</string>
     <string name="manage_no_apps">No patched apps yet</string>
     <string name="manage_rolling">Rolling</string>
     <string name="manage_update_loader">Update loader</string>
@@ -179,4 +181,10 @@
         <item quantity="other">%d downloads</item>
     </plurals>
     <string name="download_asset">Download</string>
+    <string name="package_name">Package name</string>
+    <string name="author">Author</string>
+    <string name="time_just_now">Just now</string>
+    <string name="time_minutes_ago">%d minutes ago</string>
+    <string name="time_hours_ago">%d hours ago</string>
+    <string name="time_days_ago">%d days ago</string>
 </resources>

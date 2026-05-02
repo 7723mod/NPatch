@@ -69,7 +69,7 @@ object Patcher {
                     apkFileList.add(cachedApkFile)
 
                     val finalFile = root.createFile("application/vnd.android.package-archive", cachedApkFile.name)
-                        ?: throw IOException("無法建立輸出檔案： ${cachedApkFile.name}")
+                        ?: throw IOException("Unable to create output file: ${cachedApkFile.name}")
                     lspApp.contentResolver.openOutputStream(finalFile.uri)?.use { output ->
                         cachedApkFile.inputStream().use { input ->
                             input.copyTo(output)
