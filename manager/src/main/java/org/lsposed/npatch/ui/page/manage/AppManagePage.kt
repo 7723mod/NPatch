@@ -48,7 +48,6 @@ import org.lsposed.npatch.BuildConfig
 import org.lsposed.npatch.config.ConfigManager
 import org.lsposed.npatch.config.Configs
 import org.lsposed.npatch.database.entity.Module
-import org.lsposed.npatch.lspApp
 import org.lsposed.npatch.share.Constants
 import org.lsposed.npatch.share.LSPConfig
 
@@ -210,11 +209,24 @@ fun AppManageBody(
                     items = filteredList,
                     key = { it.first.app.packageName }
                 ) { (appInfo, patchConfig) ->
-                    val isRolling = patchConfig.useManager && patchConfig.lspConfig.VERSION_CODE >= Constants.MIN_ROLLING_VERSION_CODE
-                    val canUpdateLoader = !isRolling && (patchConfig.lspConfig.VERSION_CODE < LSPConfig.instance.VERSION_CODE || patchConfig.managerPackageName != BuildConfig.APPLICATION_ID)
+
+                    val isLocal = patchConfig.useManager
+                    val currentVersion = patchConfig.lspConfig.VERSION_CODE
+                    val managerVersion = LSPConfig.instance.VERSION_CODE
+
+                    val showVersionNumber = if (isLocal) {
+                        currentVersion < Constants.MIN_ROLLING_VERSION_CODE
+                    } else {
+                        currentVersion != managerVersion
+                    }
+
+                    val canUpdateLoader = if (isLocal) {
+                        currentVersion < Constants.MIN_ROLLING_VERSION_CODE
+                    } else {
+                        (currentVersion != managerVersion) || (patchConfig.managerPackageName != BuildConfig.APPLICATION_ID)
+                    }
 
                     val showDropdown = remember { mutableStateOf(false) }
-
                     val scopeUpdatedText = stringResource(R.string.manage_module_scope_updated)
 
                     Box(modifier = Modifier.fillMaxWidth()) {
@@ -229,28 +241,45 @@ fun AppManageBody(
                             label = appInfo.label,
                             packageName = appInfo.app.packageName,
                             summaryRow = {
-                                val patchText = if (patchConfig.useManager) stringResource(R.string.patch_local) else stringResource(R.string.patch_integrated)
-                                val patchColor = MiuixTheme.colorScheme.primary
-                                val versionText = if (isRolling) stringResource(R.string.manage_rolling) else patchConfig.lspConfig.VERSION_CODE.toString()
+                                val patchColor = if (isLocal) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurfaceVariantSummary
 
-                                Text(
-                                    text = "$patchText  $versionText",
-                                    color = patchColor,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontFamily = FontFamily.Serif
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    val modeLabel = if (isLocal) {
+                                        "${stringResource(R.string.patch_local)} ${stringResource(R.string.manage_rolling)}"
+                                    } else {
+                                        stringResource(R.string.patch_integrated)
+                                    }
 
-                                if (canUpdateLoader) {
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    with(LocalDensity.current) {
-                                        val size = 16.sp * 1.2
-                                        Icon(
-                                            imageVector = Icons.Filled.KeyboardCapslock,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(size.toDp()),
-                                            tint = patchColor
+                                    Text(
+                                        text = modeLabel,
+                                        color = patchColor,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontFamily = FontFamily.Serif
+                                    )
+
+                                    if (showVersionNumber) {
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = currentVersion.toString(),
+                                            color = patchColor,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontFamily = FontFamily.Serif
                                         )
+                                    }
+
+                                    if (canUpdateLoader) {
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        with(LocalDensity.current) {
+                                            val size = 16.sp * 1.2
+                                            Icon(
+                                                imageVector = Icons.Filled.KeyboardCapslock,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(size.toDp()),
+                                                tint = patchColor
+                                            )
+                                        }
                                     }
                                 }
                             },
@@ -276,11 +305,10 @@ fun AppManageBody(
                                     scope.launch { viewModel.dispatch(AppManageViewModel.ViewAction.UpdateLoader(appInfo, patchConfig)) }
                                 })
                             }
-                            if (patchConfig.useManager) {
+                            if (isLocal) {
                                 actions.add(stringResource(R.string.manage_module_scope) to {
                                     viewModel.viewModelScope.launch {
                                         scopeApp = appInfo.app.packageName
-
                                         val activated = withContext(Dispatchers.IO) {
                                             ConfigManager.getModulesForApp(scopeApp).map { it.pkgName }.toSet()
                                         }
@@ -382,9 +410,7 @@ fun AppManageFab(navigator: Navigator) {
                     text = stringResource(R.string.patch_select_dir_text),
                     modifier = Modifier.padding(bottom = 16.dp),
                 )
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
+                Row(horizontalArrangement = Arrangement.SpaceBetween) {
                     TextButton(
                         text = stringResource(android.R.string.cancel),
                         onClick = { shouldSelectDirectory.value = false },
