@@ -12,7 +12,6 @@
     <string name="shizuku_unavailable">Shizuku 服务未连接</string>
     <string name="screen_home">主页</string>
     <string name="screen_repo">仓库</string>
-
     <string name="off">关闭</string>
     <string name="error_unknown">未知错误</string>
 
@@ -107,7 +106,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">设置</string>
     <string name="settings_language">语言</string>
-    <string name="settings_language_system">跟随系统</string>
     <string name="settings_keystore">签名密钥库</string>
     <string name="settings_keystore_default">内置</string>
     <string name="settings_keystore_custom">自定义</string>

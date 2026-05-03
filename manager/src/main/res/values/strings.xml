@@ -105,7 +105,7 @@
     <!-- Settings Screen -->
     <string name="screen_settings">Settings</string>
     <string name="settings_language">Language</string>
-    <string name="settings_language_system">Follow System</string>
+    <string name="settings_language_system" translatable="false">Follow System</string>
     <string name="settings_keystore">Signature keystore</string>
     <string name="settings_keystore_default">Built-in</string>
     <string name="settings_keystore_custom">Custom</string>

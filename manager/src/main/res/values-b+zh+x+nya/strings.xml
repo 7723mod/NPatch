@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="add">收入爪下</string>
+    <string name="install">塞进窝里</string>
+    <string name="installing">正在努力踩奶...</string>
+    <string name="uninstall">踢出领地</string>
+    <string name="uninstalling">正在疯狂哈气...</string>
+    <string name="copy_error">读取哈气信息</string>
+    <string name="apps">Apps 罐罐</string>
+    <string name="modules">Modules 挂件</string>
+    <string name="shizuku_available">Shizuku 酱已经就绪喵！</string>
+    <string name="shizuku_unavailable">Shizuku 酱不见了喵呜...</string>
+    <string name="screen_home">喵的世界</string>
+    <string name="screen_repo">大猫猫库</string>
+    <string name="off">睡觉喵</string>
+    <string name="error_unknown">发生了 Unknown 哈气事件</string>
+
+    <!-- Home Screen -->
+    <string name="home_shizuku_warning">Shizuku 酱生病了喵...</string>
+    <string name="home_api_version">API 核心版本</string>
+    <string name="home_npatch_version">NP猫猫等级</string>
+    <string name="home_framework_version">猫猫核心版本</string>
+    <string name="home_system_version">猫窝系统版本</string>
+    <string name="home_device">猫爬架型号</string>
+    <string name="home_device_info">爬架详细参数</string>
+    <string name="coming_soon">喵喵待命中...</string>
+    <string name="home_system_abi">猫猫系统底层架构 (ABI)</string>
+    <string name="home_info_copied">已揣入肉垫（剪贴板）</string>
+    <string name="home_support">寻求投喂支持</string>
+    <string name="home_description">NPatch 是一款免费且迭代于 LSPatch 的，基于 LSPosed 核心的免 Root 的 Xposed 框架喵。让你的猫猫无需 Root 也能玩出新花样！</string>
+    <string name="home_view_source_code"><![CDATA[偷看喵星源代码 %1$s]]></string>
+
+    <!-- Manage Screen -->
+    <string name="screen_manage">巡视领地</string>
+    <string name="manage_loading">喵喵祈祷中...</string>
+    <string name="manage_no_apps">猫窝里还没修补过 Apps 喵</string>
+    <string name="manage_rolling">打个滚儿</string>
+    <string name="manage_update_loader">升级猫猫加载器</string>
+    <string name="manage_update_loader_successfully">升级完毕，呼噜噜~</string>
+    <string name="manage_update_loader_failed">升级失败炸毛了喵！</string>
+    <string name="manage_module_scope">模块领地</string>
+    <string name="manage_module_scope_updated">模块领地划分完毕</string>
+    <string name="manage_optimize">F5喵</string>
+    <string name="manage_optimize_successfully">优化成功！</string>
+    <string name="manage_optimize_failed">卡————住————了... 优化失败</string>
+    <string name="manage_uninstall_successfully">成功扔出猫窝！</string>
+    <string name="manage_no_modules">这里连个 Modules 都没有喵</string>
+    <string name="manage_module_settings">配置小鱼干挂件</string>
+    <string name="manage_app_info">打探 App 底细</string>
+    <string name="manage_check_manager_package_name">这只喵由 %1$s 领养\n在朕这里改 Scope %2$s 要哈气的喵\n得重新修理一下才听话！</string>
+
+    <!-- New Patch Screen -->
+    <string name="screen_new_patch">开始制作神奇猫猫</string>
+    <string name="patch_select_dir_title">选个藏宝处</string>
+    <string name="patch_select_dir_text">选个文件夹来存放好的神奇猫猫喵</string>
+    <string name="patch_select_dir_error">藏宝处没找对喵呜...</string>
+    <string name="patch_from_storage">从储藏室翻找</string>
+    <string name="patch_from_applist">从已住下的 Apps 里挑选</string>
+    <string name="patch_from_installed_modules">挑选已就绪的 Xposed 挂件</string>
+    <string name="patch_mode">打包套路</string>
+    <string name="patch_local">居家模式</string>
+    <string name="patch_local_desc">不把挂件塞进去。想来就来想走就走喵，无需重新制作。\n但这只猫只能在有NPatch大猫猫的爬架上撒欢喵。</string>
+    <string name="patch_integrated">合体模式（集成）</string>
+    <string name="patch_integrated_desc">直接把挂件缝进App里。离了管理器也能跑，但没法随时调教配置喵。\n适合送去没有猫猫的陌生人家里住。</string>
+    <string name="patch_embed_modules">缝入挂件</string>
+    <string name="patch_advanced">高阶喵技</string>
+    <string name="patch_debuggable">开启猫眼（调试）</string>
+    <string name="patch_sigbypass">伪装术</string>
+    <string name="patch_sigbypasslv0">lv0: 乖乖睡觉</string>
+    <string name="patch_sigbypasslv1">lv1: 瞒过 PM 警卫</string>
+    <string name="patch_sigbypasslv2">lv2: 瞒过 PM + openat(libc) 陷阱</string>
+    <string name="patch_sigbypasslv3">lv3: 瞒过 PM + openat(libc) + 路径幻术</string>
+    <string name="patch_sigbypasslv4">lv4: 瞒过 PM + openat(libc) + SVC 瞬移 (仅 64 位)</string>
+    <string name="patch_override_version_code">改写喵龄</string>
+    <string name="patch_override_version_code_desc">把喵龄改成 1。这样就算它“老了”也能强行塞回去，App通常察觉不到喵。</string>
+    <string name="patch_new_package">改名卡喵</string>
+    <string name="hint_patch_new_package">请输入这只猫的新包名喵</string>
+    <string name="patch_inject_mt_provider">注入猫洞（MT Provider）</string>
+    <string name="patch_inject_mt_provider_desc">挖个暗道，不用超级权限也能翻动 data 目录里的东西喵。</string>
+    <string name="patch_inject_dex">注入 Dex 强心针</string>
+    <string name="patch_inject_dex_desc">对那些脾气古怪的浏览器引擎，打一针确保它们不会在独立进程里哈气喵。</string>
+    <string name="patch_use_microg">强喂 MicroG 小药水</string>
+    <string name="patch_use_microg_desc">把GMS异化为MicroG喵。YT 等猫咪专用，记得自己先备好药喵。</string>
+    <string name="patch_output_log_to_media">把小秘密丢进 Media 目录</string>
+    <string name="patch_output_log_to_media_desc">把 Xposed 和框架启动的日志全都写在 Media 文件夹里喵。</string>
+    <string name="patch_start">起锅！制作！</string>
+    <string name="patch_return">溜了溜了</string>
+    <string name="patch_uninstall_text">气味变了！装修补版前得先把原来的猫踢走。\n一定要检查自己的珍藏小鱼干有没有备份喵！</string>
+    <string name="patch_install_successfully">新猫入窝成功！</string>
+    <string name="patch_install_failed">新猫进不去喵...</string>
+    <string name="patch_no_xposed_module">没找到能用的 Xposed 挂件喵</string>
+
+    <!-- Select Apps Screen -->
+    <string name="screen_select_apps">选择 Apps</string>
+    <string name="screen_select_modules">选择 Xposed 模组</string>
+
+    <!-- Settings Screen -->
+    <string name="screen_settings">猫咪偏好</string>
+    <string name="settings_language">喵语选择</string>
+    <string name="settings_keystore">签名爪印</string>
+    <string name="settings_keystore_default">自带肉垫印章</string>
+    <string name="settings_keystore_custom">特制专属印章</string>
+    <string name="settings_keystore_dialog_title">配置专属签印喵</string>
+    <string name="settings_keystore_file">印章文件</string>
+    <string name="settings_keystore_password">开锁暗号</string>
+    <string name="settings_keystore_alias">印章别名</string>
+    <string name="settings_keystore_alias_password">别名暗号</string>
+    <string name="settings_keystore_desc">配置 BKS 格式的印章库喵</string>
+    <string name="settings_keystore_wrong_keystore">印章库]对不上喵</string>
+    <string name="settings_keystore_wrong_password">暗号对错啦喵呜！</string>
+    <string name="settings_keystore_wrong_alias">这个名字没听过喵</string>
+    <string name="settings_keystore_wrong_alias_password">别名暗号不对喵</string>
+    <string name="settings_detail_patch_logs">编写小秘密(不要偷看喵!)</string>
+    <string name="settings_storage_directory">挪动藏宝处</string>
+    <string name="settings_appearance_theme">毛色与梳妆</string>
+    <string name="settings_other_settings">喵喵杂项</string>
+    <string name="settings_monet_dynamic_color">Monet 魔法</string>
+    <string name="settings_monet_dynamic_color_summary">毛色随喵喵壁纸而变 (Android 12+)</string>
+    <string name="settings_custom_background_image">换张图喵</string>
+    <string name="settings_clear">丢弃喵</string>
+    <string name="settings_builtin_theme_color">精选毛色</string>
+    <string name="settings_color_default_blue">忧郁波斯蓝</string>
+    <string name="settings_color_fresh_green">嫩草薄荷绿</string>
+    <string name="settings_color_elegant_purple">高冷贵族紫</string>
+    <string name="settings_color_vibrant_orange">元气大橘橙</string>
+
+    <!-- Modules Repo-->
+    <string name="sort_by_name">按 App 昵称排排坐</string>
+    <string name="sort_by_package_name">按 Package Name 查户口</string>
+    <string name="sort_by_install_time">按入窝顺序</string>
+    <string name="sort_by_update_time">按变漂亮的时间</string>
+    <string name="refresh_pulling">向下拽猫尾巴 哈！</string>
+    <string name="refresh_release">松爪刷新</string>
+    <string name="refresh_refresh">正在努力洗脸...</string>
+    <string name="refresh_complete">又是崭新的喵！</string>
+    <string name="module_repo">Module 藏宝库</string>
+    <string name="module_repo_up_to_date">所有挂件都是最闪亮的喵！</string>
+    <string name="module_repo_published_time">初见于 %s</string>
+    <string name="module_repo_updated_time">变强于 %s</string>
+    <plurals name="module_repo_upgradable">
+        <item quantity="one">%d 个挂件想升级喵</item>
+        <item quantity="other">%d 个挂件想升级喵</item>
+    </plurals>
+    <string name="sort_upgradable_first">想进化的喵站前面</string>
+    <string name="list_empty">这里连根猫毛都没有</string>
+    <string name="need_update">渴求进化</string>
+    <string name="installed">已在窝里</string>
+    <string name="menu_open_in_browser">去外面的世界看看喵</string>
+    <string name="download_latest_version">叼走最新的</string>
+    <string name="module_readme">喵喵喵</string>
+    <string name="module_releases">性格温和猫</string>
+    <string name="module_information">喵片档案</string>
+    <string name="unknown_author">神秘野猫</string>
+    <string name="unknown_version">未知岁数</string>
+    <string name="unknown_asset">神秘小东西</string>
+    <string name="module_app_info">打探 App 底细</string>
+    <string name="nav_back">缩回爪子</string>
+    <string name="module_information_homepage">猫爬架主页</string>
+    <string name="module_information_source_url">翻找源码根源</string>
+    <string name="module_information_collaborators">猫友团 (协作者)</string>
+    <string name="module_release_view_assets">翻开包裹 (Assets)</string>
+    <string name="module_release_load_more">翻找更久的记忆</string>
+    <string name="module_release_no_more">就这么多了喵</string>
+    <string name="repo_load_failed">宝库打不开了喵呜：%s</string>
+    <plurals name="module_release_assets_download_count">
+        <item quantity="one">被叼走 %d 次</item>
+        <item quantity="other">被叼走 %d 次</item>
+    </plurals>
+    <string name="download_asset">叼走它</string>
+</resources>
