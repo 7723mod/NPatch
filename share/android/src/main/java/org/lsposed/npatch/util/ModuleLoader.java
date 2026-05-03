@@ -56,11 +56,13 @@ public class ModuleLoader {
         }
     }
 
-    private static void readNamesWithFallback(ZipFile apkFile, String modernName, String legacyName, List<String> names) {
+    private static boolean readNamesWithFallback(ZipFile apkFile, String modernName, String legacyName, List<String> names) {
         readName(apkFile, modernName, names);
         if (names.isEmpty()) {
             readName(apkFile, legacyName, names);
+            return true;
         }
+        return false;
     }
 
     public static PreLoadedApk loadModule(String path) {
@@ -69,9 +71,10 @@ public class ModuleLoader {
         var preLoadedDexes = new ArrayList<SharedMemory>();
         var moduleClassNames = new ArrayList<String>(1);
         var moduleLibraryNames = new ArrayList<String>(1);
+        boolean isLegacy = false;
         try (var apkFile = new ZipFile(path)) {
             readDexes(apkFile, preLoadedDexes);
-            readNamesWithFallback(apkFile, MODERN_JAVA_INIT, LEGACY_JAVA_INIT, moduleClassNames);
+            isLegacy = readNamesWithFallback(apkFile, MODERN_JAVA_INIT, LEGACY_JAVA_INIT, moduleClassNames);
             readNamesWithFallback(apkFile, MODERN_NATIVE_INIT, LEGACY_NATIVE_INIT, moduleLibraryNames);
         } catch (IOException e) {
             Log.e(TAG, "Can not open " + path, e);
@@ -82,6 +85,7 @@ public class ModuleLoader {
         file.preLoadedDexes = preLoadedDexes;
         file.moduleClassNames = moduleClassNames;
         file.moduleLibraryNames = moduleLibraryNames;
+        file.legacy = isLegacy;
         return file;
     }
 }

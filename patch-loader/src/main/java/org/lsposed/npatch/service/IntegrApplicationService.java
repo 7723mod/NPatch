@@ -24,7 +24,8 @@ public class IntegrApplicationService extends ILSPApplicationService.Stub {
 
     private static final String TAG = "NPatch";
 
-    private final List<Module> modules = new ArrayList<>();
+    private final List<Module> legacyModules = new ArrayList<>();
+    private final List<Module> modernModules = new ArrayList<>();
 
     public IntegrApplicationService(Context context) {
         try {
@@ -62,7 +63,11 @@ public class IntegrApplicationService extends ILSPApplicationService.Stub {
                 module.apkPath = cacheApkPath;
                 module.packageName = packageName;
                 module.file = ModuleLoader.loadModule(cacheApkPath);
-                modules.add(module);
+                if (module.file != null && module.file.legacy) {
+                    legacyModules.add(module);
+                } else {
+                    modernModules.add(module);
+                }
             }
         } catch (IOException e) {
             Log.e(TAG, "Error when initializing IntegrApplicationServiceClient", e);
@@ -71,12 +76,12 @@ public class IntegrApplicationService extends ILSPApplicationService.Stub {
 
     @Override
     public List<Module> getLegacyModulesList() throws RemoteException {
-        return modules;
+        return legacyModules;
     }
 
     @Override
     public List<Module> getModulesList() throws RemoteException {
-        return new ArrayList<>();
+        return modernModules;
     }
 
     @Override

@@ -27,13 +27,15 @@ public class NeoLocalApplicationService extends ILSPApplicationService.Stub {
     private static final String AUTHORITY = "org.lsposed.npatch.manager.provider.config";
     private static final Uri PROVIDER_URI = Uri.parse("content://" + AUTHORITY + "/config");
 
-    private final List<Module> cachedModule;
+    private final List<Module> legacyModules;
+    private final List<Module> modernModules;
 
     public NeoLocalApplicationService(Context context) {
-        cachedModule = Collections.synchronizedList(new ArrayList<>());
+        legacyModules = Collections.synchronizedList(new ArrayList<>());
+        modernModules = Collections.synchronizedList(new ArrayList<>());
         loadModulesFromProvider(context);
 
-        if (cachedModule.isEmpty()) {
+        if (legacyModules.isEmpty() && modernModules.isEmpty()) {
             Log.w(TAG, "NeoLocal: Provider returned empty, falling back to local cache.");
             loadModulesFromCache(context);
         }
@@ -70,7 +72,11 @@ public class NeoLocalApplicationService extends ILSPApplicationService.Stub {
             m.packageName = pkgName;
             m.apkPath = path;
             m.file = ModuleLoader.loadModule(m.apkPath);
-            cachedModule.add(m);
+            if (m.file != null && m.file.legacy) {
+                legacyModules.add(m);
+            } else {
+                modernModules.add(m);
+            }
             Log.i(TAG, "Loaded cached module " + pkgName);
         } catch (Throwable e) {
             Log.e(TAG, "Failed to load cached module " + pkgName, e);
@@ -111,7 +117,11 @@ public class NeoLocalApplicationService extends ILSPApplicationService.Stub {
 
             if (m.apkPath != null && new File(m.apkPath).exists()) {
                 m.file = ModuleLoader.loadModule(m.apkPath);
-                cachedModule.add(m);
+                if (m.file != null && m.file.legacy) {
+                    legacyModules.add(m);
+                } else {
+                    modernModules.add(m);
+                }
                 Log.i(TAG, "NeoLocal: Loaded module " + pkgName);
             }
         } catch (Throwable e) {
@@ -121,12 +131,12 @@ public class NeoLocalApplicationService extends ILSPApplicationService.Stub {
 
     @Override
     public List<Module> getLegacyModulesList() throws RemoteException {
-        return cachedModule;
+        return legacyModules;
     }
 
     @Override
     public List<Module> getModulesList() throws RemoteException {
-        return new ArrayList<>();
+        return modernModules;
     }
 
     @Override

@@ -43,6 +43,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
@@ -109,15 +110,34 @@ public class LSPApplication {
         if (config.useManager) {
             try {
                 service = new RemoteApplicationService(context);
-                List<Module> m = service.getLegacyModulesList();
+                List<Module> legacyModules = service.getLegacyModulesList();
+                List<Module> modernModules = service.getModulesList();
                 JSONArray moduleArr = new JSONArray();
-                if (m != null) {
-                    for (Module module : m) {
-                        JSONObject moduleObj = new JSONObject();
-                        moduleObj.put("path", module.apkPath);
-                        moduleObj.put("packageName", module.packageName);
-                        moduleArr.put(moduleObj);
+                Map<String, String> cachedModules = new LinkedHashMap<>();
+
+                if (legacyModules != null) {
+                    for (Module module : legacyModules) {
+                        if (module == null || module.packageName == null || module.apkPath == null) {
+                            continue;
+                        }
+                        cachedModules.put(module.packageName, module.apkPath);
                     }
+                }
+
+                if (modernModules != null) {
+                    for (Module module : modernModules) {
+                        if (module == null || module.packageName == null || module.apkPath == null) {
+                            continue;
+                        }
+                        cachedModules.put(module.packageName, module.apkPath);
+                    }
+                }
+
+                for (Map.Entry<String, String> entry : cachedModules.entrySet()) {
+                    JSONObject moduleObj = new JSONObject();
+                    moduleObj.put("path", entry.getValue());
+                    moduleObj.put("packageName", entry.getKey());
+                    moduleArr.put(moduleObj);
                 }
                 SharedPreferences shared = context.getSharedPreferences("npatch", Context.MODE_PRIVATE);
                 shared.edit().putString("modules", moduleArr.toString()).apply();

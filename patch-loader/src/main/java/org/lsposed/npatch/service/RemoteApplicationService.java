@@ -111,8 +111,10 @@ public class RemoteApplicationService implements ILSPApplicationService {
 
     @Override
     public String getPrefsPath(String packageName) {
-        return new File(Environment.getDataDirectory(), "data/" + packageName + "/shared_prefs/")
-                .getAbsolutePath();
+        return service == null
+                ? new File(Environment.getDataDirectory(), "data/" + packageName + "/shared_prefs/")
+                .getAbsolutePath()
+                : service.getPrefsPath(packageName);
     }
 
     @Override
@@ -122,8 +124,7 @@ public class RemoteApplicationService implements ILSPApplicationService {
 
     @Override
     public ParcelFileDescriptor requestInjectedManagerBinder(List<IBinder> binder) {
-        return null;
-
+        return service == null ? null : service.requestInjectedManagerBinder(binder);
     }
 
     @Override

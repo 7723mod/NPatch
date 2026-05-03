@@ -50,8 +50,8 @@
     <string name="manage_no_modules">尚无模块</string>
     <string name="manage_module_settings">模块设置</string>
     <string name="manage_app_info">应用信息</string>
-    <string name="manage_module_pipeline_modern">Modern 架构</string>
-    <string name="manage_module_pipeline_legacy">Legacy 架构</string>
+    <string name="manage_module_pipeline_modern">Modern</string>
+    <string name="manage_module_pipeline_legacy">Legacy</string>
     <string name="manage_module_pipeline_unsupported">不支持的架构</string>
     <string name="manage_module_api_modern">Modern API %1$d</string>
     <string name="manage_module_api_legacy">Legacy API %1$d</string>
