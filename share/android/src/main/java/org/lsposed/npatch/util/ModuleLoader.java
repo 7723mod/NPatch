@@ -18,6 +18,10 @@ import java.util.zip.ZipFile;
 public class ModuleLoader {
 
     private static final String TAG = "NPatch";
+    private static final String MODERN_JAVA_INIT = "META-INF/xposed/java_init.list";
+    private static final String MODERN_NATIVE_INIT = "META-INF/xposed/native_init.list";
+    private static final String LEGACY_JAVA_INIT = "assets/xposed_init";
+    private static final String LEGACY_NATIVE_INIT = "assets/native_init";
 
     private static void readDexes(ZipFile apkFile, List<SharedMemory> preLoadedDexes) {
         int secondary = 2;
@@ -52,6 +56,13 @@ public class ModuleLoader {
         }
     }
 
+    private static void readNamesWithFallback(ZipFile apkFile, String modernName, String legacyName, List<String> names) {
+        readName(apkFile, modernName, names);
+        if (names.isEmpty()) {
+            readName(apkFile, legacyName, names);
+        }
+    }
+
     public static PreLoadedApk loadModule(String path) {
         if (path == null) return null;
         var file = new PreLoadedApk();
@@ -60,8 +71,8 @@ public class ModuleLoader {
         var moduleLibraryNames = new ArrayList<String>(1);
         try (var apkFile = new ZipFile(path)) {
             readDexes(apkFile, preLoadedDexes);
-            readName(apkFile, "assets/xposed_init", moduleClassNames);
-            readName(apkFile, "assets/native_init", moduleLibraryNames);
+            readNamesWithFallback(apkFile, MODERN_JAVA_INIT, LEGACY_JAVA_INIT, moduleClassNames);
+            readNamesWithFallback(apkFile, MODERN_NATIVE_INIT, LEGACY_NATIVE_INIT, moduleLibraryNames);
         } catch (IOException e) {
             Log.e(TAG, "Can not open " + path, e);
             return null;
