@@ -28,6 +28,7 @@ android {
     packaging {
         jniLibs {
             excludes += "lib/*/libandroidx.graphics.path.so"
+            excludes += "lib/*/libdatastore_shared_counter.so"
         }
         resources {
             excludes += "kotlin/**"

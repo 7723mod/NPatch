@@ -74,26 +74,27 @@ object ModuleMetadataReader {
         val packageInfo = runCatching {
             packageManager.getPackageArchiveInfo(apkFile.absolutePath, PackageManager.GET_META_DATA)
         }.getOrNull()
+        packageInfo?.applicationInfo?.apply {
+            sourceDir = apkFile.absolutePath
+            publicSourceDir = apkFile.absolutePath
+        }
 
         val legacyMeta = packageInfo?.applicationInfo?.metaData
         val modernProps = Properties()
-        val javaInitList = mutableListOf<String>()
-        val nativeInitList = mutableListOf<String>()
+        val modernJavaInitList = mutableListOf<String>()
+        val modernNativeInitList = mutableListOf<String>()
+        val legacyJavaInitList = mutableListOf<String>()
+        val legacyNativeInitList = mutableListOf<String>()
         val scopes = mutableListOf<String>()
 
         runCatching {
             ZipFile(apkFile).use { zipFile ->
                 loadProperties(zipFile, modernProps)
                 readList(zipFile, MODERN_SCOPE_LIST, scopes)
-                readList(zipFile, MODERN_JAVA_INIT_LIST, javaInitList)
-                readList(zipFile, MODERN_NATIVE_INIT_LIST, nativeInitList)
-
-                if (javaInitList.isEmpty()) {
-                    readList(zipFile, LEGACY_JAVA_INIT_LIST, javaInitList)
-                }
-                if (nativeInitList.isEmpty()) {
-                    readList(zipFile, LEGACY_NATIVE_INIT_LIST, nativeInitList)
-                }
+                readList(zipFile, MODERN_JAVA_INIT_LIST, modernJavaInitList)
+                readList(zipFile, MODERN_NATIVE_INIT_LIST, modernNativeInitList)
+                readList(zipFile, LEGACY_JAVA_INIT_LIST, legacyJavaInitList)
+                readList(zipFile, LEGACY_NATIVE_INIT_LIST, legacyNativeInitList)
             }
         }.getOrElse {
             return null
@@ -126,20 +127,33 @@ object ModuleMetadataReader {
             legacyMeta?.get(LEGACY_KEY_VERSION)?.toString(),
         )
 
-        if (scopes.isEmpty()) {
+        val hasModernEntrypoint = modernJavaInitList.isNotEmpty() || modernNativeInitList.isNotEmpty()
+        val hasLegacyEntrypoint = legacyJavaInitList.isNotEmpty() || legacyNativeInitList.isNotEmpty()
+        val hasModernMetadata = modernProps.isNotEmpty() || hasModernEntrypoint || scopes.isNotEmpty()
+        val hasLegacyMetadata = legacyMeta?.containsKey(LEGACY_KEY_MIN_API_VERSION) == true || legacyMeta?.containsKey(LEGACY_KEY_DESCRIPTION) == true
+
+        val pipeline = when {
+            hasModernEntrypoint && minApiVersion >= 101 -> ModulePipeline.MODERN
+            hasLegacyEntrypoint && minApiVersion <= 94 -> ModulePipeline.LEGACY
+            else -> ModulePipeline.UNSUPPORTED
+        }
+
+        val javaInitList = when (pipeline) {
+            ModulePipeline.MODERN -> modernJavaInitList
+            ModulePipeline.LEGACY -> legacyJavaInitList
+            ModulePipeline.UNSUPPORTED -> emptyList()
+        }
+        val nativeInitList = when (pipeline) {
+            ModulePipeline.MODERN -> modernNativeInitList
+            ModulePipeline.LEGACY -> legacyNativeInitList
+            ModulePipeline.UNSUPPORTED -> emptyList()
+        }
+
+        if (pipeline != ModulePipeline.MODERN && scopes.isEmpty()) {
             readLegacyScopeList(legacyMeta?.get(LEGACY_KEY_SCOPES), scopes)
         }
 
-        val hasModernMetadata = modernProps.isNotEmpty() || javaInitList.isNotEmpty() || nativeInitList.isNotEmpty() || scopes.isNotEmpty()
-        val hasLegacyMetadata = legacyMeta?.containsKey(LEGACY_KEY_MIN_API_VERSION) == true || legacyMeta?.containsKey(LEGACY_KEY_DESCRIPTION) == true
-
-        if (!hasModernMetadata && !hasLegacyMetadata) return null
-
-        val pipeline = when {
-            hasModernMetadata && minApiVersion >= 101 -> ModulePipeline.MODERN
-            hasLegacyMetadata && minApiVersion <= 94 -> ModulePipeline.LEGACY
-            else -> ModulePipeline.UNSUPPORTED
-        }
+        if (!hasModernMetadata && !hasLegacyEntrypoint && !hasLegacyMetadata) return null
 
         val displayName = firstNonEmpty(
             loadLabel(packageInfo?.applicationInfo, packageManager),

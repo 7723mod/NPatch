@@ -10,9 +10,11 @@ import org.lsposed.lspd.models.PreLoadedApk;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.channels.Channels;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.util.zip.ZipFile;
 
 public class ModuleLoader {
@@ -20,8 +22,17 @@ public class ModuleLoader {
     private static final String TAG = "NPatch";
     private static final String MODERN_JAVA_INIT = "META-INF/xposed/java_init.list";
     private static final String MODERN_NATIVE_INIT = "META-INF/xposed/native_init.list";
+    private static final String MODERN_MODULE_PROP = "META-INF/xposed/module.prop";
     private static final String LEGACY_JAVA_INIT = "assets/xposed_init";
     private static final String LEGACY_NATIVE_INIT = "assets/native_init";
+    private static final int MODERN_MIN_API_VERSION = 101;
+    private static final int LEGACY_MAX_API_VERSION = 94;
+
+    private enum ModulePipeline {
+        LEGACY,
+        MODERN,
+        UNSUPPORTED
+    }
 
     private static void readDexes(ZipFile apkFile, List<SharedMemory> preLoadedDexes) {
         int secondary = 2;
@@ -44,7 +55,7 @@ public class ModuleLoader {
         var initEntry = apkFile.getEntry(initName);
         if (initEntry == null) return;
         try (var in = apkFile.getInputStream(initEntry)) {
-            var reader = new BufferedReader(new InputStreamReader(in));
+            var reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
             String name;
             while ((name = reader.readLine()) != null) {
                 name = name.trim();
@@ -56,16 +67,43 @@ public class ModuleLoader {
         }
     }
 
-    private static boolean readNamesWithFallback(ZipFile apkFile, String modernName, String legacyName, List<String> names) {
-        readName(apkFile, modernName, names);
-        if (names.isEmpty()) {
-            readName(apkFile, legacyName, names);
-            return true;
+    private static int readMinApiVersion(ZipFile apkFile, int fallbackMinApiVersion) {
+        var entry = apkFile.getEntry(MODERN_MODULE_PROP);
+        if (entry == null) return fallbackMinApiVersion;
+        var properties = new Properties();
+        try (var in = apkFile.getInputStream(entry)) {
+            properties.load(new InputStreamReader(in, StandardCharsets.UTF_8));
+            var value = properties.getProperty("minApiVersion");
+            return value == null ? fallbackMinApiVersion : Integer.parseInt(value.trim());
+        } catch (IOException | NumberFormatException e) {
+            Log.w(TAG, "Can not read " + MODERN_MODULE_PROP + " in " + apkFile, e);
+            return fallbackMinApiVersion;
         }
-        return false;
+    }
+
+    private static ModulePipeline determinePipeline(ZipFile apkFile, int fallbackMinApiVersion) {
+        var minApiVersion = readMinApiVersion(apkFile, fallbackMinApiVersion);
+        var hasModernEntry =
+                apkFile.getEntry(MODERN_JAVA_INIT) != null
+                        || apkFile.getEntry(MODERN_NATIVE_INIT) != null;
+        var hasLegacyEntry =
+                apkFile.getEntry(LEGACY_JAVA_INIT) != null
+                        || apkFile.getEntry(LEGACY_NATIVE_INIT) != null;
+
+        if (hasModernEntry && minApiVersion >= MODERN_MIN_API_VERSION) {
+            return ModulePipeline.MODERN;
+        }
+        if (hasLegacyEntry && minApiVersion <= LEGACY_MAX_API_VERSION) {
+            return ModulePipeline.LEGACY;
+        }
+        return ModulePipeline.UNSUPPORTED;
     }
 
     public static PreLoadedApk loadModule(String path) {
+        return loadModule(path, 0);
+    }
+
+    public static PreLoadedApk loadModule(String path, int fallbackMinApiVersion) {
         if (path == null) return null;
         var file = new PreLoadedApk();
         var preLoadedDexes = new ArrayList<SharedMemory>();
@@ -73,15 +111,27 @@ public class ModuleLoader {
         var moduleLibraryNames = new ArrayList<String>(1);
         boolean isLegacy = false;
         try (var apkFile = new ZipFile(path)) {
+            var pipeline = determinePipeline(apkFile, fallbackMinApiVersion);
+            if (pipeline == ModulePipeline.UNSUPPORTED) {
+                Log.w(TAG, "Unsupported Xposed module API or missing init entries: " + path);
+                return null;
+            }
+
             readDexes(apkFile, preLoadedDexes);
-            isLegacy = readNamesWithFallback(apkFile, MODERN_JAVA_INIT, LEGACY_JAVA_INIT, moduleClassNames);
-            readNamesWithFallback(apkFile, MODERN_NATIVE_INIT, LEGACY_NATIVE_INIT, moduleLibraryNames);
+            if (pipeline == ModulePipeline.MODERN) {
+                readName(apkFile, MODERN_JAVA_INIT, moduleClassNames);
+                readName(apkFile, MODERN_NATIVE_INIT, moduleLibraryNames);
+            } else {
+                isLegacy = true;
+                readName(apkFile, LEGACY_JAVA_INIT, moduleClassNames);
+                readName(apkFile, LEGACY_NATIVE_INIT, moduleLibraryNames);
+            }
         } catch (IOException e) {
             Log.e(TAG, "Can not open " + path, e);
             return null;
         }
-        if (preLoadedDexes.isEmpty()) return null;
-        if (moduleClassNames.isEmpty()) return null;
+        if (preLoadedDexes.isEmpty() && moduleLibraryNames.isEmpty()) return null;
+        if (moduleClassNames.isEmpty() && moduleLibraryNames.isEmpty()) return null;
         file.preLoadedDexes = preLoadedDexes;
         file.moduleClassNames = moduleClassNames;
         file.moduleLibraryNames = moduleLibraryNames;

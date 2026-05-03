@@ -1,6 +1,9 @@
 package org.lsposed.npatch.service;
 
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
@@ -8,6 +11,7 @@ import android.util.Log;
 
 import org.lsposed.npatch.loader.util.FileUtils;
 import org.lsposed.npatch.share.Constants;
+import org.lsposed.npatch.util.LocalInjectedModuleService;
 import org.lsposed.npatch.util.ModuleLoader;
 import org.lsposed.lspd.models.Module;
 import org.lsposed.lspd.service.ILSPApplicationService;
@@ -62,7 +66,14 @@ public class IntegrApplicationService extends ILSPApplicationService.Stub {
                 var module = new Module();
                 module.apkPath = cacheApkPath;
                 module.packageName = packageName;
-                module.file = ModuleLoader.loadModule(cacheApkPath);
+                module.applicationInfo = readApplicationInfo(context, cacheApkPath, packageName);
+                module.file = ModuleLoader.loadModule(cacheApkPath, readLegacyMinApiVersion(module.applicationInfo));
+                if (module.file == null) {
+                    Log.w(TAG, "Skipping unsupported or unreadable embedded module: " + packageName);
+                    continue;
+                }
+                module.appId = module.applicationInfo == null ? -1 : module.applicationInfo.uid;
+                module.service = new LocalInjectedModuleService(context, module.packageName);
                 if (module.file != null && module.file.legacy) {
                     legacyModules.add(module);
                 } else {
@@ -72,6 +83,47 @@ public class IntegrApplicationService extends ILSPApplicationService.Stub {
         } catch (IOException e) {
             Log.e(TAG, "Error when initializing IntegrApplicationServiceClient", e);
         }
+    }
+
+    private static ApplicationInfo readApplicationInfo(Context context, String apkPath, String fallbackPackageName) {
+        try {
+            PackageManager packageManager = context.getPackageManager();
+            PackageInfo packageInfo = packageManager.getPackageArchiveInfo(apkPath, PackageManager.GET_META_DATA);
+            if (packageInfo != null && packageInfo.applicationInfo != null) {
+                ApplicationInfo applicationInfo = packageInfo.applicationInfo;
+                applicationInfo.sourceDir = apkPath;
+                applicationInfo.publicSourceDir = apkPath;
+                if (applicationInfo.packageName == null) {
+                    applicationInfo.packageName = packageInfo.packageName;
+                }
+                return applicationInfo;
+            }
+        } catch (Throwable e) {
+            Log.w(TAG, "Failed to read embedded module ApplicationInfo: " + fallbackPackageName, e);
+        }
+        ApplicationInfo fallback = new ApplicationInfo();
+        fallback.packageName = fallbackPackageName;
+        fallback.sourceDir = apkPath;
+        fallback.publicSourceDir = apkPath;
+        fallback.uid = -1;
+        return fallback;
+    }
+
+    private static int readLegacyMinApiVersion(ApplicationInfo applicationInfo) {
+        if (applicationInfo == null || applicationInfo.metaData == null) {
+            return 0;
+        }
+        Object value = applicationInfo.metaData.get("xposedminversion");
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+        if (value != null) {
+            try {
+                return Integer.parseInt(String.valueOf(value).trim());
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return 0;
     }
 
     @Override

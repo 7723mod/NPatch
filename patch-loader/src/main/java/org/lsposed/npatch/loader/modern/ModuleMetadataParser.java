@@ -70,22 +70,19 @@ public final class ModuleMetadataParser {
         }
 
         Properties moduleProperties = new Properties();
-        List<String> javaInitList = new ArrayList<>();
-        List<String> nativeInitList = new ArrayList<>();
+        List<String> modernJavaInitList = new ArrayList<>();
+        List<String> modernNativeInitList = new ArrayList<>();
+        List<String> legacyJavaInitList = new ArrayList<>();
+        List<String> legacyNativeInitList = new ArrayList<>();
         List<String> scopes = new ArrayList<>();
 
         try (ZipFile zipFile = new ZipFile(apkFile)) {
             loadProperties(zipFile, moduleProperties);
-            javaInitList.addAll(readList(zipFile, MODERN_JAVA_INIT_LIST));
-            nativeInitList.addAll(readList(zipFile, MODERN_NATIVE_INIT_LIST));
+            modernJavaInitList.addAll(readList(zipFile, MODERN_JAVA_INIT_LIST));
+            modernNativeInitList.addAll(readList(zipFile, MODERN_NATIVE_INIT_LIST));
+            legacyJavaInitList.addAll(readList(zipFile, LEGACY_JAVA_INIT_LIST));
+            legacyNativeInitList.addAll(readList(zipFile, LEGACY_NATIVE_INIT_LIST));
             scopes.addAll(readList(zipFile, MODERN_SCOPE_LIST));
-
-            if (javaInitList.isEmpty()) {
-                javaInitList.addAll(readList(zipFile, LEGACY_JAVA_INIT_LIST));
-            }
-            if (nativeInitList.isEmpty()) {
-                nativeInitList.addAll(readList(zipFile, LEGACY_NATIVE_INIT_LIST));
-            }
         }
 
         Map<String, Object> legacyMetadata = readLegacyMetadata(apkFile);
@@ -119,11 +116,24 @@ public final class ModuleMetadataParser {
                 readString(moduleProperties, KEY_VERSION),
                 stringValue(legacyMetadata.get(LEGACY_KEY_VERSION)));
 
-        if (scopes.isEmpty()) {
-            scopes.addAll(readLegacyList(legacyMetadata.get(LEGACY_KEY_SCOPES)));
+        boolean hasModernEntrypoint = !modernJavaInitList.isEmpty() || !modernNativeInitList.isEmpty();
+        boolean hasLegacyEntrypoint = !legacyJavaInitList.isEmpty() || !legacyNativeInitList.isEmpty();
+        ModulePipeline pipeline =
+                versionRouter.determinePipeline(minApiVersion, hasModernEntrypoint, hasLegacyEntrypoint);
+
+        List<String> javaInitList = new ArrayList<>();
+        List<String> nativeInitList = new ArrayList<>();
+        if (pipeline == ModulePipeline.MODERN) {
+            javaInitList.addAll(modernJavaInitList);
+            nativeInitList.addAll(modernNativeInitList);
+        } else if (pipeline == ModulePipeline.LEGACY) {
+            javaInitList.addAll(legacyJavaInitList);
+            nativeInitList.addAll(legacyNativeInitList);
         }
 
-        ModulePipeline pipeline = versionRouter.determinePipeline(minApiVersion);
+        if (pipeline != ModulePipeline.MODERN && scopes.isEmpty()) {
+            scopes.addAll(readLegacyList(legacyMetadata.get(LEGACY_KEY_SCOPES)));
+        }
 
         return new ModuleMetadata(
                 packageName,
@@ -175,6 +185,8 @@ public final class ModuleMetadataParser {
                 return null;
             }
             ApplicationInfo applicationInfo = packageInfo.applicationInfo;
+            applicationInfo.sourceDir = apkFile.getAbsolutePath();
+            applicationInfo.publicSourceDir = apkFile.getAbsolutePath();
             CharSequence label = applicationInfo.loadLabel(packageManager);
             return label == null ? null : label.toString().trim();
         } catch (Throwable ignored) {
@@ -194,6 +206,8 @@ public final class ModuleMetadataParser {
                 return null;
             }
             ApplicationInfo applicationInfo = packageInfo.applicationInfo;
+            applicationInfo.sourceDir = apkFile.getAbsolutePath();
+            applicationInfo.publicSourceDir = apkFile.getAbsolutePath();
             CharSequence description = applicationInfo.loadDescription(packageManager);
             return description == null ? null : description.toString().trim();
         } catch (Throwable ignored) {

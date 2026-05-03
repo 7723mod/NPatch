@@ -12,11 +12,18 @@ public final class VersionRouter {
     }
 
     public ModulePipeline determinePipeline(int minApiVersion) {
+        return determinePipeline(minApiVersion, true, true);
+    }
+
+    public ModulePipeline determinePipeline(
+            int minApiVersion,
+            boolean hasModernEntrypoint,
+            boolean hasLegacyEntrypoint) {
         if (minApiVersion >= MODERN_MIN_API_VERSION) {
-            return ModulePipeline.MODERN;
+            return hasModernEntrypoint ? ModulePipeline.MODERN : ModulePipeline.UNSUPPORTED;
         }
         if (minApiVersion <= LEGACY_MAX_API_VERSION) {
-            return ModulePipeline.LEGACY;
+            return hasLegacyEntrypoint ? ModulePipeline.LEGACY : ModulePipeline.UNSUPPORTED;
         }
         return ModulePipeline.UNSUPPORTED;
     }

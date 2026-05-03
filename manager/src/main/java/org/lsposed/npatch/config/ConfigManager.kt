@@ -6,6 +6,7 @@ import androidx.room.Room
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.withContext
+import org.lsposed.npatch.util.LocalInjectedModuleService
 import org.lsposed.npatch.database.LSPDatabase
 import org.lsposed.npatch.database.entity.Module
 import org.lsposed.npatch.database.entity.Scope
@@ -80,12 +81,30 @@ object ConfigManager {
                     Log.i(TAG, "Module apk path updated: ${it.pkgName}")
                 }
                 loadedModules.getOrPut(it) {
+                    val appInfo = runCatching {
+                        lspApp.packageManager.getApplicationInfo(it.pkgName, PackageManager.GET_META_DATA)
+                    }.getOrNull()
+                    val preLoadedApk = ModuleLoader.loadModule(
+                        it.apkPath,
+                        readLegacyMinApiVersion(appInfo),
+                    ) ?: return@mapNotNull null
                     org.lsposed.lspd.models.Module().apply {
                         packageName = it.pkgName
                         apkPath = it.apkPath
-                        file = ModuleLoader.loadModule(it.apkPath)
+                        file = preLoadedApk
+                        applicationInfo = appInfo
+                        appId = appInfo?.uid ?: -1
+                        service = LocalInjectedModuleService(lspApp, it.pkgName)
                     }
                 }
             }
         }
+
+    private fun readLegacyMinApiVersion(appInfo: android.content.pm.ApplicationInfo?): Int {
+        val value = appInfo?.metaData?.get("xposedminversion") ?: return 0
+        return when (value) {
+            is Number -> value.toInt()
+            else -> value.toString().trim().toIntOrNull() ?: 0
+        }
+    }
 }

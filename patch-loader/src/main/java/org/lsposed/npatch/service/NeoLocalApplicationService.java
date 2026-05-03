@@ -3,6 +3,7 @@ package org.lsposed.npatch.service;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
@@ -13,6 +14,7 @@ import android.util.Log;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.lsposed.npatch.util.LocalInjectedModuleService;
 import org.lsposed.npatch.util.ModuleLoader;
 import org.lsposed.lspd.models.Module;
 import org.lsposed.lspd.service.ILSPApplicationService;
@@ -56,9 +58,9 @@ public class NeoLocalApplicationService extends ILSPApplicationService.Stub {
                 String path = obj.optString("path");
 
                 if (path != null && !path.isEmpty() && new File(path).exists()) {
-                    loadModuleByPath(packageName, path);
+                    loadModuleByPath(context, packageName, path);
                 } else if (packageName != null) {
-                    loadSingleModule(pm, packageName);
+                    loadSingleModule(context, pm, packageName);
                 }
             }
         } catch (Exception e) {
@@ -66,12 +68,19 @@ public class NeoLocalApplicationService extends ILSPApplicationService.Stub {
         }
     }
 
-    private void loadModuleByPath(String pkgName, String path) {
+    private void loadModuleByPath(Context context, String pkgName, String path) {
         try {
             Module m = new Module();
             m.packageName = pkgName;
             m.apkPath = path;
-            m.file = ModuleLoader.loadModule(m.apkPath);
+            m.applicationInfo = readApplicationInfo(context, path, pkgName);
+            m.file = ModuleLoader.loadModule(m.apkPath, readLegacyMinApiVersion(m.applicationInfo));
+            if (m.file == null) {
+                Log.w(TAG, "NeoLocal: Skipping unsupported cached module " + pkgName);
+                return;
+            }
+            m.appId = m.applicationInfo == null ? -1 : m.applicationInfo.uid;
+            m.service = new LocalInjectedModuleService(context, m.packageName);
             if (m.file != null && m.file.legacy) {
                 legacyModules.add(m);
             } else {
@@ -100,7 +109,7 @@ public class NeoLocalApplicationService extends ILSPApplicationService.Stub {
             while (cursor.moveToNext()) {
                 int colIndex = cursor.getColumnIndex("packageName");
                 if (colIndex != -1) {
-                    loadSingleModule(pm, cursor.getString(colIndex));
+                    loadSingleModule(context, pm, cursor.getString(colIndex));
                 }
             }
         } catch (Exception e) {
@@ -108,7 +117,7 @@ public class NeoLocalApplicationService extends ILSPApplicationService.Stub {
         }
     }
 
-    private void loadSingleModule(PackageManager pm, String pkgName) {
+    private void loadSingleModule(Context context, PackageManager pm, String pkgName) {
         try {
             ApplicationInfo appInfo = pm.getApplicationInfo(pkgName, 0);
             Module m = new Module();
@@ -116,7 +125,14 @@ public class NeoLocalApplicationService extends ILSPApplicationService.Stub {
             m.apkPath = appInfo.sourceDir;
 
             if (m.apkPath != null && new File(m.apkPath).exists()) {
-                m.file = ModuleLoader.loadModule(m.apkPath);
+                m.applicationInfo = appInfo;
+                m.file = ModuleLoader.loadModule(m.apkPath, readLegacyMinApiVersion(m.applicationInfo));
+                if (m.file == null) {
+                    Log.w(TAG, "NeoLocal: Skipping unsupported module " + pkgName);
+                    return;
+                }
+                m.appId = appInfo.uid;
+                m.service = new LocalInjectedModuleService(context, m.packageName);
                 if (m.file != null && m.file.legacy) {
                     legacyModules.add(m);
                 } else {
@@ -127,6 +143,47 @@ public class NeoLocalApplicationService extends ILSPApplicationService.Stub {
         } catch (Throwable e) {
             Log.e(TAG, "NeoLocal: Failed to load " + pkgName, e);
         }
+    }
+
+    private static ApplicationInfo readApplicationInfo(Context context, String apkPath, String fallbackPackageName) {
+        try {
+            PackageManager packageManager = context.getPackageManager();
+            PackageInfo packageInfo = packageManager.getPackageArchiveInfo(apkPath, PackageManager.GET_META_DATA);
+            if (packageInfo != null && packageInfo.applicationInfo != null) {
+                ApplicationInfo applicationInfo = packageInfo.applicationInfo;
+                applicationInfo.sourceDir = apkPath;
+                applicationInfo.publicSourceDir = apkPath;
+                if (applicationInfo.packageName == null) {
+                    applicationInfo.packageName = packageInfo.packageName;
+                }
+                return applicationInfo;
+            }
+        } catch (Throwable e) {
+            Log.w(TAG, "NeoLocal: Failed to read cached module ApplicationInfo: " + fallbackPackageName, e);
+        }
+        ApplicationInfo fallback = new ApplicationInfo();
+        fallback.packageName = fallbackPackageName;
+        fallback.sourceDir = apkPath;
+        fallback.publicSourceDir = apkPath;
+        fallback.uid = -1;
+        return fallback;
+    }
+
+    private static int readLegacyMinApiVersion(ApplicationInfo applicationInfo) {
+        if (applicationInfo == null || applicationInfo.metaData == null) {
+            return 0;
+        }
+        Object value = applicationInfo.metaData.get("xposedminversion");
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+        if (value != null) {
+            try {
+                return Integer.parseInt(String.valueOf(value).trim());
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return 0;
     }
 
     @Override
