@@ -64,7 +64,7 @@ import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
-import top.yukonga.miuix.kmp.extra.SuperListPopup
+import top.yukonga.miuix.kmp.overlay.OverlayListPopup
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Download
@@ -137,7 +137,7 @@ fun RepositoryScreen(
                                     contentDescription = "Sort"
                                 )
                             }
-                            SuperListPopup(
+                            OverlayListPopup(
                                 show = showSortMenu.value,
                                 alignment = PopupPositionProvider.Align.TopEnd,
                                 onDismissRequest = { showSortMenu.value = false }
@@ -423,7 +423,7 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
                 }
             }
 
-            SuperListPopup(
+            OverlayListPopup(
                 show = showMenu.value,
                 alignment = PopupPositionProvider.Align.End,
                 onDismissRequest = { showMenu.value = false }

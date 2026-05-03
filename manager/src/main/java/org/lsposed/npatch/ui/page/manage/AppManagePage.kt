@@ -74,8 +74,8 @@ import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
-import top.yukonga.miuix.kmp.extra.SuperDialog
-import top.yukonga.miuix.kmp.extra.SuperListPopup
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
+import top.yukonga.miuix.kmp.overlay.OverlayListPopup
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
@@ -119,7 +119,7 @@ fun AppManageBody(
     val isProcessing = viewModel.updateLoaderState is ProcessingState.Processing || viewModel.optimizeState is ProcessingState.Processing
     if (isProcessing) {
         val showLoading = remember { mutableStateOf(true) }
-        SuperDialog(
+        OverlayDialog(
             title = stringResource(R.string.manage_loading),
             show = showLoading.value,
             onDismissRequest = { /* 阻断取消，等待处理完成 */ }
@@ -293,7 +293,7 @@ fun AppManageBody(
                             }
                         )
 
-                        SuperListPopup(
+                        OverlayListPopup(
                             show = showDropdown.value,
                             alignment = PopupPositionProvider.Align.End,
                             onDismissRequest = { showDropdown.value = false }
@@ -400,7 +400,7 @@ fun AppManageFab(navigator: Navigator) {
     }
 
     if (shouldSelectDirectory.value) {
-        SuperDialog(
+        OverlayDialog(
             title = stringResource(R.string.patch_select_dir_title),
             show = shouldSelectDirectory.value,
             onDismissRequest = { shouldSelectDirectory.value = false },
@@ -432,7 +432,7 @@ fun AppManageFab(navigator: Navigator) {
     }
 
     if (showNewPatchDialog.value) {
-        SuperDialog(
+        OverlayDialog(
             title = stringResource(R.string.screen_new_patch),
             show = showNewPatchDialog.value,
             onDismissRequest = { showNewPatchDialog.value = false },

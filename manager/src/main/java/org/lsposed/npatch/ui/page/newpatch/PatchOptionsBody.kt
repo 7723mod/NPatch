@@ -23,8 +23,8 @@ import org.lsposed.npatch.ui.util.backgroundAwareCardColors
 import org.lsposed.npatch.ui.viewmodel.NewPatchViewModel
 import org.lsposed.npatch.ui.viewmodel.NewPatchViewModel.ViewAction
 import top.yukonga.miuix.kmp.basic.*
-import top.yukonga.miuix.kmp.extra.SuperDropdown
-import top.yukonga.miuix.kmp.extra.SuperSwitch
+import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
+import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
@@ -161,48 +161,48 @@ fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
                     viewModel.newPackageName,
                     onValueChange = { viewModel.newPackageName = it },
                 )
-                SuperSwitch(
+                SwitchPreference(
                     title = stringResource(R.string.patch_debuggable),
                     startAction = { Icon(Icons.Outlined.BugReport, null) },
                     checked = viewModel.debuggable,
                     onCheckedChange = { viewModel.debuggable = it }
                 )
-                SuperSwitch(
+                SwitchPreference(
                     title = stringResource(R.string.patch_override_version_code),
                     summary = stringResource(R.string.patch_override_version_code_desc),
                     startAction = { Icon(Icons.Outlined.Layers, null) },
                     checked = viewModel.overrideVersionCode,
                     onCheckedChange = { viewModel.overrideVersionCode = it }
                 )
-                SuperSwitch(
+                SwitchPreference(
                     title = stringResource(R.string.patch_inject_dex),
                     summary = stringResource(R.string.patch_inject_dex_desc),
                     startAction = { Icon(Icons.Outlined.Code, null) },
                     checked = viewModel.injectDex,
                     onCheckedChange = { viewModel.injectDex = it }
                 )
-                SuperSwitch(
+                SwitchPreference(
                     title = stringResource(R.string.patch_inject_mt_provider),
                     summary = stringResource(R.string.patch_inject_mt_provider_desc),
                     startAction = { Icon(Icons.Outlined.AddCard, null) },
                     checked = viewModel.injectProvider,
                     onCheckedChange = { viewModel.injectProvider = it }
                 )
-                SuperSwitch(
+                SwitchPreference(
                     title = stringResource(R.string.patch_use_microg),
                     summary = stringResource(R.string.patch_use_microg_desc),
                     startAction = { Icon(Icons.Outlined.CloudSync, null) },
                     checked = viewModel.useMicroG,
                     onCheckedChange = { viewModel.useMicroG = it }
                 )
-                SuperSwitch(
+                SwitchPreference(
                     title = stringResource(R.string.patch_output_log_to_media),
                     summary = stringResource(R.string.patch_output_log_to_media_desc),
                     startAction = { Icon(Icons.Outlined.Output, null) },
                     checked = viewModel.outputLog,
                     onCheckedChange = { viewModel.outputLog = it }
                 )
-                SuperDropdown(
+                OverlayDropdownPreference(
                     title = stringResource(R.string.patch_sigbypass),
                     items = (0..4).map { sigBypassLvStr(it) },
                     selectedIndex = viewModel.sigBypassLevel,

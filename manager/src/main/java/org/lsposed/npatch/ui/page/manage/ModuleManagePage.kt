@@ -38,7 +38,7 @@ import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.Surface
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
-import top.yukonga.miuix.kmp.extra.SuperListPopup
+import top.yukonga.miuix.kmp.overlay.OverlayListPopup
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
@@ -147,7 +147,7 @@ fun ModuleManageBody(
                             }
                         )
 
-                        SuperListPopup(
+                        OverlayListPopup(
                             show = showDropdown.value,
                             alignment = PopupPositionProvider.Align.End,
                             onDismissRequest = { showDropdown.value = false }

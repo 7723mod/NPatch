@@ -42,6 +42,7 @@ import org.lsposed.npatch.ui.component.SearchStatus
 import org.lsposed.npatch.ui.component.NPatchScaffold
 import org.lsposed.npatch.ui.util.backgroundAwareHazeStyle
 import org.lsposed.npatch.ui.viewmodel.SelectAppsViewModel
+import androidx.compose.ui.state.ToggleableState
 import top.yukonga.miuix.kmp.basic.Checkbox
 import top.yukonga.miuix.kmp.basic.FloatingActionButton
 import top.yukonga.miuix.kmp.basic.Icon
@@ -72,11 +73,13 @@ fun SelectAppsScreen(
     val viewModel = viewModel<SelectAppsViewModel>()
 
     var searchPackage by remember { mutableStateOf("") }
-    val filter: (AppInfo) -> Boolean = {
-        val packageLowerCase = searchPackage.toLowerCase(Locale.current)
-        val contains = it.label.toLowerCase(Locale.current).contains(packageLowerCase) || it.app.packageName.contains(packageLowerCase)
-        if (multiSelect) contains && it.isXposedModule
-        else contains && it.app.flags and ApplicationInfo.FLAG_SYSTEM == 0
+    val filter: (AppInfo) -> Boolean = remember(multiSelect, searchPackage) {
+        {
+            val packageLowerCase = searchPackage.toLowerCase(Locale.current)
+            val contains = it.label.toLowerCase(Locale.current).contains(packageLowerCase) || it.app.packageName.contains(packageLowerCase)
+            if (multiSelect) contains && it.isXposedModule
+            else contains && it.app.flags and ApplicationInfo.FLAG_SYSTEM == 0
+        }
     }
 
     val title = if (multiSelect) stringResource(R.string.screen_select_modules) else stringResource(R.string.screen_select_apps)
@@ -115,7 +118,6 @@ fun SelectAppsScreen(
                     scrollBehavior = scrollBehavior,
                     navigationIcon = {
                         IconButton(
-                            modifier = Modifier.padding(start = 16.dp),
                             onClick = { navigator.pop() }
                         ) {
                             val layoutDirection = LocalLayoutDirection.current
@@ -249,8 +251,10 @@ private fun SelectAppsList(
                     packageName = appInfo.app.packageName,
                     trailingContent = if (multiSelect) {
                         {
-                            @Suppress("DEPRECATION")
-                            Checkbox(checked = checked, onCheckedChange = null)
+                            Checkbox(
+                                state = if (checked) ToggleableState.On else ToggleableState.Off,
+                                onClick = null
+                            )
                         }
                     } else null
                 )

@@ -11,14 +11,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
-import top.yukonga.miuix.kmp.extra.SuperDialog
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
 
 @Composable
 fun LoadingDialog(
     show: MutableState<Boolean> = mutableStateOf(true),
     title: String = ""
 ) {
-    SuperDialog(
+    OverlayDialog(
         title = title,
         show = show.value,
         onDismissRequest = {},

@@ -135,9 +135,10 @@ dependencies {
     implementation(libs.hiddenapibypass)
 
     // MiuiX & Haze
-    implementation(npatch.miuix.android)
     implementation(npatch.haze)
-    implementation("top.yukonga.miuix.kmp:miuix-icons:0.8.7")
+    implementation("top.yukonga.miuix.kmp:miuix-ui:0.9.0")
+    implementation("top.yukonga.miuix.kmp:miuix-preference:0.9.0")
+    implementation("top.yukonga.miuix.kmp:miuix-icons:0.9.0")
     implementation(npatch.androidx.webkit)
 
 

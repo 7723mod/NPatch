@@ -44,7 +44,7 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.extra.SuperArrow
+import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
 import top.yukonga.miuix.kmp.utils.overScrollVertical
@@ -364,7 +364,7 @@ private fun SupportCard() {
         colors = backgroundAwareCardColors(),
     ) {
         Column {
-            SuperArrow(
+            ArrowPreference(
                 title = "GitHub",
                 summary = stringResource(R.string.home_view_source_code, "GitHub", ""),
                 onClick = {
@@ -372,7 +372,7 @@ private fun SupportCard() {
                     context.startActivity(intent)
                 }
             )
-            SuperArrow(
+            ArrowPreference(
                 title = "Telegram",
                 summary = "Subscribe to our channel",
                 onClick = {

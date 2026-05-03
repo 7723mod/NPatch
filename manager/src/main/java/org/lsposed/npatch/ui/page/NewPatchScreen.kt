@@ -30,7 +30,7 @@ import org.lsposed.npatch.ui.page.SelectAppsResult
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.extra.SuperDialog
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
 
 const val ACTION_STORAGE = 0
 const val ACTION_APPLIST = 1
@@ -160,7 +160,7 @@ fun NewPatchScreen(
                 else -> {}
             }
 
-            SuperDialog(
+            OverlayDialog(
                 title = stringResource(R.string.patch_embed_modules),
                 show = showSelectModuleDialog.value,
                 onDismissRequest = { showSelectModuleDialog.value = false },

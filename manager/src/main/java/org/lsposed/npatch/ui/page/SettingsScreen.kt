@@ -63,10 +63,10 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.extra.SuperArrow
-import top.yukonga.miuix.kmp.extra.SuperDialog
-import top.yukonga.miuix.kmp.extra.SuperDropdown
-import top.yukonga.miuix.kmp.extra.SuperSwitch
+import top.yukonga.miuix.kmp.preference.ArrowPreference
+import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
+import top.yukonga.miuix.kmp.preference.SwitchPreference
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
@@ -138,7 +138,7 @@ private fun AppearanceSettings() {
         }
     }
 
-    SuperSwitch(
+    SwitchPreference(
         title = stringResource(R.string.settings_monet_dynamic_color),
         summary = stringResource(R.string.settings_monet_dynamic_color_summary),
         checked = useMonet,
@@ -320,7 +320,7 @@ private fun Language() {
             LANGUAGE_ENTRIES.indexOfFirst { it.first == Configs.language }.takeIf { it >= 0 } ?: 0
         )
     }
-    SuperDropdown(
+    OverlayDropdownPreference(
         title = stringResource(R.string.settings_language),
         items = languageLabels,
         selectedIndex = selectedIndex,
@@ -357,7 +357,7 @@ private fun KeyStore() {
     )
     var selectedIndex by remember { mutableStateOf(if (MyKeyStore.useDefault) 0 else 1) }
 
-    SuperDropdown(
+    OverlayDropdownPreference(
         title = stringResource(R.string.settings_keystore),
         items = keyStoreItems,
         selectedIndex = selectedIndex,
@@ -409,7 +409,7 @@ private fun KeyStore() {
             }
         }
 
-        SuperDialog(
+        OverlayDialog(
             title = stringResource(R.string.settings_keystore_dialog_title),
             show = showDialog.value,
             onDismissRequest = {
@@ -529,7 +529,7 @@ private fun KeyStore() {
 
 @Composable
 private fun DetailPatchLogs() {
-    SuperSwitch(
+    SwitchPreference(
         title = stringResource(R.string.settings_detail_patch_logs),
         startAction = {
             Icon(
@@ -563,7 +563,7 @@ private fun StorageDirectory() {
             scope.launch { snackbarHost.showSnackbar(errorText) }
         }
     }
-    SuperArrow(
+    ArrowPreference(
         title = stringResource(R.string.settings_storage_directory),
         summary = Configs.storageDirectory ?: "no path set",
         startAction = {

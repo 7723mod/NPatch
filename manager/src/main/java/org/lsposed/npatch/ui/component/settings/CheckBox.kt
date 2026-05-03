@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.state.ToggleableState
 import top.yukonga.miuix.kmp.basic.Checkbox
 
 @Composable
@@ -23,7 +24,10 @@ fun SettingsCheckBox(
 ) {
     @Suppress("DEPRECATION")
     SettingsSlot(modifier, enabled, icon, title, desc, extraContent) {
-        Checkbox(checked = checked, onCheckedChange = null)
+        Checkbox(
+            state = if (checked) ToggleableState.On else ToggleableState.Off,
+            onClick = null
+        )
     }
 }
 

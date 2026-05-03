@@ -63,7 +63,7 @@ import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.SnackbarResult
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.extra.SuperDialog
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
@@ -324,7 +324,7 @@ fun UninstallConfirmationDialog(
     onConfirm: () -> Unit
 ) {
     val show = remember { mutableStateOf(true) }
-    SuperDialog(
+    OverlayDialog(
         title = stringResource(R.string.uninstall),
         show = show.value,
         onDismissRequest = { show.value = false; onDismiss() },
@@ -398,7 +398,7 @@ fun InstallDialog(patchApp: AppInfo, onFinish: (Int, String?) -> Unit) {
 
     if (installing != 0) {
         val showInstalling = remember { mutableStateOf(true) }
-        SuperDialog(
+        OverlayDialog(
             title = stringResource(if (installing == 1) R.string.installing else R.string.uninstalling),
             show = showInstalling.value,
             onDismissRequest = {},

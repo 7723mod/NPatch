@@ -9,7 +9,7 @@ commons-io = "2.20.0"
 beust-jcommander = "1.82"
 google-gson = "2.13.1"
 core-ktx = "1.17.0"
-miuix = "0.8.7"
+miuix = "0.9.0"
 haze = "1.7.2"
 navigation3 = "1.0.1"
 webkit = "1.14.0"
@@ -57,6 +57,5 @@ rikka-hidden-stub = { module = "dev.rikka.hidden:stub", version.ref = "hiddenapi
 commons-io = { module = "commons-io:commons-io", version.ref = "commons-io" }
 beust-jcommander = { module = "com.beust:jcommander", version.ref = "beust-jcommander" }
 google-gson = { module = "com.google.code.gson:gson", version.ref = "google-gson" }
-miuix-android = { module = "top.yukonga.miuix.kmp:miuix-android", version.ref = "miuix" }
 haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }

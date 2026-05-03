@@ -105,8 +105,8 @@ import top.yukonga.miuix.kmp.basic.TabRowDefaults
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.extra.SuperArrow
-import top.yukonga.miuix.kmp.extra.SuperDialog
+import top.yukonga.miuix.kmp.preference.ArrowPreference
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Contacts
@@ -731,7 +731,7 @@ fun InfoTab(
 fun InfoRowItem(icon: ImageVector, title: String, summary: String?, onClick: () -> Unit) {
     if (summary.isNullOrEmpty()) return
 
-    SuperArrow(
+    ArrowPreference(
         title = title,
         summary = summary,
         insideMargin = PaddingValues(vertical = 16.dp, horizontal = 12.dp),
@@ -904,7 +904,7 @@ fun ReleaseAssetItem(
         }
     }
     val uriHandler = LocalUriHandler.current
-    SuperDialog(
+    OverlayDialog(
         title = stringResource(R.string.download_asset),
         summary = asset.name ?: "",
         show = showDownloadDialog.value,
