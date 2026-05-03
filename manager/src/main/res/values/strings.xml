@@ -48,11 +48,10 @@
     <string name="manage_no_modules">No modules yet</string>
     <string name="manage_module_settings">Module settings</string>
     <string name="manage_app_info">App info</string>
-    <string name="manage_module_pipeline_modern">Modern</string>
-    <string name="manage_module_pipeline_legacy">Legacy</string>
+    <string name="manage_module_pipeline_modern" translatable="false">Modern</string>
+<string name="manage_module_pipeline_legacy" translatable="false">Legacy</string>
     <string name="manage_module_pipeline_unsupported">Unsupported</string>
-    <string name="manage_module_api_modern">Modern API %1$d</string>
-    <string name="manage_module_api_legacy">Legacy API %1$d</string>
+    <string name="manage_module_api_version" translatable="false">API %1$d</string>
     <string name="manage_module_api_unsupported">Unsupported API %1$d</string>
     <string name="manage_module_unsupported_warning">API %1$d is not supported by the modern pipeline</string>
     <string name="manage_check_manager_package_name">This program is managed by %1$s\nModifying the scope %2$s within this manager will not take effect\nPlease re-patch to resolve this issue</string>

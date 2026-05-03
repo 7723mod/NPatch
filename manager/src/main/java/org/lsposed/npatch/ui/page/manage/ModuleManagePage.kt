@@ -133,8 +133,8 @@ fun ModuleManageBody(
                                 ) {
                                     Text(
                                         text = when {
-                                            item.metadata.isModern -> stringResource(R.string.manage_module_api_modern, item.metadata.minApiVersion)
-                                            item.metadata.isLegacy -> stringResource(R.string.manage_module_api_legacy, item.metadata.minApiVersion)
+                                            item.metadata.isModern -> stringResource(R.string.manage_module_api_version, item.metadata.targetApiVersion)
+                                            item.metadata.isLegacy -> stringResource(R.string.manage_module_api_version, item.metadata.minApiVersion)
                                             else -> stringResource(R.string.manage_module_api_unsupported, item.metadata.minApiVersion)
                                         },
                                         fontSize = 11.sp,
