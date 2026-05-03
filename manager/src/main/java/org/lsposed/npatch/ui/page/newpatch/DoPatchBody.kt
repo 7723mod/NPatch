@@ -11,10 +11,12 @@ import android.content.IntentFilter
 import android.content.pm.PackageInstaller
 import android.os.Build
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -220,9 +222,38 @@ fun DoPatchBody(modifier: Modifier, navigator: Navigator) {
                         overscrollEffect = null
                     ) {
                         items(viewModel.logs) {
+                            val line = it.second
+                            val copySuccessMessage = stringResource(R.string.home_info_copied)
                             when (it.first) {
-                                Log.DEBUG, Log.INFO -> Text(text = it.second)
-                                Log.ERROR -> Text(text = it.second, color = MiuixTheme.colorScheme.error)
+                                Log.DEBUG, Log.INFO -> Text(
+                                    text = line,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .combinedClickable(
+                                            onClick = {},
+                                            onLongClick = {
+                                                val cm = lspApp.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                                cm.setPrimaryClip(ClipData.newPlainText("NPatch Log", line))
+                                                scope.launch { snackbarHost.showSnackbar(copySuccessMessage) }
+                                            }
+                                        )
+                                        .padding(vertical = 4.dp)
+                                )
+                                Log.ERROR -> Text(
+                                    text = line,
+                                    color = MiuixTheme.colorScheme.error,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .combinedClickable(
+                                            onClick = {},
+                                            onLongClick = {
+                                                val cm = lspApp.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                                cm.setPrimaryClip(ClipData.newPlainText("NPatch Log", line))
+                                                scope.launch { snackbarHost.showSnackbar(copySuccessMessage) }
+                                            }
+                                        )
+                                        .padding(vertical = 4.dp)
+                                )
                             }
                         }
                     }
@@ -246,7 +277,18 @@ fun DoPatchBody(modifier: Modifier, navigator: Navigator) {
                 val onFinish: (Int, String?) -> Unit = { status, message ->
                     scope.launch {
                         if (status == PackageInstaller.STATUS_SUCCESS) {
-                            Log.i(TAG, "Install reported success, waiting for broadcast to navigate.")
+                            if (installation == NewPatchViewModel.InstallMethod.SHIZUKU) {
+                                installation = null
+                                viewModel.reset()
+                                navigator.pop()
+                                Toast.makeText(
+                                    context.applicationContext,
+                                    context.getString(R.string.patch_install_successfully),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            } else {
+                                Log.i(TAG, "Install reported success, waiting for broadcast to navigate.")
+                            }
                         } else if (status != NeoPackageManager.STATUS_USER_CANCELLED) {
                             val result = snackbarHost.showSnackbar(installFailed, copyError)
                             if (result == SnackbarResult.ActionPerformed) {
@@ -254,7 +296,9 @@ fun DoPatchBody(modifier: Modifier, navigator: Navigator) {
                                 cm.setPrimaryClip(ClipData.newPlainText("NPatch", message))
                             }
                         }
-                        installation = null
+                        if (installation != null) {
+                            installation = null
+                        }
                     }
                 }
                 when (installation) {
@@ -359,9 +403,11 @@ fun InstallDialog(patchApp: AppInfo, onFinish: (Int, String?) -> Unit) {
     val scope = rememberCoroutineScope()
     var uninstallFirst by remember { mutableStateOf(ShizukuApi.isPackageInstalledWithoutPatch(patchApp.app.packageName)) }
     var installing by remember { mutableStateOf(0) }
+    var installStarted by remember { mutableStateOf(false) }
 
     suspend fun doInstall() {
         Log.i(TAG, "Installing app ${patchApp.app.packageName}")
+        installStarted = true
         installing = 1
         val (status, message) = NeoPackageManager.install()
         installing = 0
@@ -370,8 +416,7 @@ fun InstallDialog(patchApp: AppInfo, onFinish: (Int, String?) -> Unit) {
     }
 
     LaunchedEffect(uninstallFirst) {
-        if (!uninstallFirst && installing == 0) {
-            onFinish(NeoPackageManager.STATUS_USER_CANCELLED, "User cancelled")
+        if (!uninstallFirst && !installStarted) {
             doInstall()
         }
     }
