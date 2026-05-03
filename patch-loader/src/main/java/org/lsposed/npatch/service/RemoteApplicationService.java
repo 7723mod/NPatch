@@ -111,10 +111,17 @@ public class RemoteApplicationService implements ILSPApplicationService {
 
     @Override
     public String getPrefsPath(String packageName) {
-        return service == null
-                ? new File(Environment.getDataDirectory(), "data/" + packageName + "/shared_prefs/")
-                .getAbsolutePath()
-                : service.getPrefsPath(packageName);
+        if (service == null) {
+            return new File(Environment.getDataDirectory(), "data/" + packageName + "/shared_prefs/")
+                    .getAbsolutePath();
+        }
+        try {
+            return service.getPrefsPath(packageName);
+        } catch (RemoteException e) {
+            Log.e(TAG, "Failed to get prefs path from manager", e);
+            return new File(Environment.getDataDirectory(), "data/" + packageName + "/shared_prefs/")
+                    .getAbsolutePath();
+        }
     }
 
     @Override
@@ -124,7 +131,15 @@ public class RemoteApplicationService implements ILSPApplicationService {
 
     @Override
     public ParcelFileDescriptor requestInjectedManagerBinder(List<IBinder> binder) {
-        return service == null ? null : service.requestInjectedManagerBinder(binder);
+        if (service == null) {
+            return null;
+        }
+        try {
+            return service.requestInjectedManagerBinder(binder);
+        } catch (RemoteException e) {
+            Log.e(TAG, "Failed to request injected manager binder", e);
+            return null;
+        }
     }
 
     @Override
