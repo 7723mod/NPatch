@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import nkbe.util.ModuleMetadataSnapshot
 import nkbe.util.NeoPackageManager
 
 class ModuleManageViewModel : ViewModel() {
@@ -21,21 +22,20 @@ class ModuleManageViewModel : ViewModel() {
     var isRefreshing by mutableStateOf(false)
         private set
 
-    class XposedInfo(
-        val api: Int,
-        val description: String,
-        val scope: List<String>
+    data class ModuleInfo(
+        val appInfo: NeoPackageManager.AppInfo,
+        val metadata: ModuleMetadataSnapshot,
     )
 
-    val appList: List<Pair<NeoPackageManager.AppInfo, XposedInfo>> by derivedStateOf {
+    val appList: List<ModuleInfo> by derivedStateOf {
         NeoPackageManager.appList.mapNotNull { appInfo ->
-            val metaData = appInfo.app.metaData ?: return@mapNotNull null
-            appInfo to XposedInfo(
-                metaData.getInt("xposedminversion", -1).also { if (it == -1) return@mapNotNull null },
-                metaData.getString("xposeddescription") ?: "",
-                emptyList() // TODO: scope
-            )
-        }.also {
+            val metadata = appInfo.moduleMetadata ?: return@mapNotNull null
+            ModuleInfo(appInfo = appInfo, metadata = metadata)
+        }.sortedWith(
+            compareByDescending<ModuleInfo> { it.metadata.isModern }
+                .thenBy { it.metadata.isLegacy }
+                .thenBy { it.appInfo.label }
+        ).also {
             Log.d(TAG, "Loaded ${it.size} Xposed modules")
         }
     }

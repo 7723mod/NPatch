@@ -50,6 +50,13 @@
     <string name="manage_no_modules">還沒有模組</string>
     <string name="manage_module_settings">模組設定</string>
     <string name="manage_app_info">程式資訊</string>
+    <string name="manage_module_pipeline_modern">Modern 架構</string>
+    <string name="manage_module_pipeline_legacy">Legacy 架構</string>
+    <string name="manage_module_pipeline_unsupported">不支援的架構</string>
+    <string name="manage_module_api_modern">Modern API %1$d</string>
+    <string name="manage_module_api_legacy">Legacy API %1$d</string>
+    <string name="manage_module_api_unsupported">不支援的 API %1$d</string>
+    <string name="manage_module_unsupported_warning">Modern 架構不支援 API %1$d</string>
     <string name="manage_check_manager_package_name">該程式由 %1$s 管理\n在本管理器中修改作用域 %2$s 不會生效\n重新修補以解決此問題</string>
 
     <!-- New Patch Screen -->

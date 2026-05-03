@@ -58,8 +58,9 @@ fun ModuleManageBody(
     val filteredList = remember(viewModel.appList, searchQuery) {
         if (searchQuery.isEmpty()) viewModel.appList
         else viewModel.appList.filter {
-            it.first.label.contains(searchQuery, true) ||
-                    it.first.app.packageName.contains(searchQuery, true)
+            it.appInfo.label.contains(searchQuery, true) ||
+                    it.appInfo.app.packageName.contains(searchQuery, true) ||
+                    it.metadata.displayName.contains(searchQuery, true)
         }
     }
 
@@ -105,38 +106,88 @@ fun ModuleManageBody(
             } else {
                 items(
                     items = filteredList,
-                    key = { it.first.app.packageName }
+                    key = { it.appInfo.app.packageName }
                 ) { item ->
                     val showDropdown = remember { mutableStateOf(false) }
-                    val settingsIntent = remember { NeoPackageManager.getSettingsIntent(item.first.app.packageName) }
+                    val settingsIntent = remember { NeoPackageManager.getSettingsIntent(item.appInfo.app.packageName) }
 
                     Box(modifier = Modifier.fillMaxWidth()) {
                         AppItem(
                             icon = {
                                 Image(
-                                    bitmap = NeoPackageManager.getIcon(item.first),
+                                    bitmap = NeoPackageManager.getIcon(item.appInfo),
                                     contentDescription = null,
                                     modifier = Modifier.size(48.dp).clip(RoundedCornerShape(14.dp))
                                 )
                             },
-                            label = item.first.label,
-                            packageName = item.first.app.packageName,
-                            topRightContent = {
+                            label = item.metadata.displayName.ifEmpty { item.appInfo.label },
+                            packageName = item.appInfo.app.packageName,
+                            summaryRow = {
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
-                                    color = MiuixTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                    color = when {
+                                        item.metadata.isModern -> MiuixTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                        item.metadata.isLegacy -> MiuixTheme.colorScheme.secondary.copy(alpha = 0.15f)
+                                        else -> MiuixTheme.colorScheme.error.copy(alpha = 0.15f)
+                                    }
                                 ) {
                                     Text(
-                                        text = "API ${item.second.api}",
+                                        text = when {
+                                            item.metadata.isModern -> stringResource(R.string.manage_module_api_modern, item.metadata.minApiVersion)
+                                            item.metadata.isLegacy -> stringResource(R.string.manage_module_api_legacy, item.metadata.minApiVersion)
+                                            else -> stringResource(R.string.manage_module_api_unsupported, item.metadata.minApiVersion)
+                                        },
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         fontFamily = FontFamily.Serif,
-                                        color = MiuixTheme.colorScheme.primary,
+                                        color = when {
+                                            item.metadata.isModern -> MiuixTheme.colorScheme.primary
+                                            item.metadata.isLegacy -> MiuixTheme.colorScheme.secondary
+                                            else -> MiuixTheme.colorScheme.error
+                                        },
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                                if (item.metadata.version.isNotEmpty()) {
+                                    Text(
+                                        text = item.metadata.version,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                                    )
+                                }
+                            },
+                            topRightContent = {
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = when {
+                                        item.metadata.isModern -> MiuixTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                        item.metadata.isLegacy -> MiuixTheme.colorScheme.secondary.copy(alpha = 0.15f)
+                                        else -> MiuixTheme.colorScheme.error.copy(alpha = 0.15f)
+                                    }
+                                ) {
+                                    Text(
+                                        text = when {
+                                            item.metadata.isModern -> stringResource(R.string.manage_module_pipeline_modern)
+                                            item.metadata.isLegacy -> stringResource(R.string.manage_module_pipeline_legacy)
+                                            else -> stringResource(R.string.manage_module_pipeline_unsupported)
+                                        },
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = FontFamily.Serif,
+                                        color = when {
+                                            item.metadata.isModern -> MiuixTheme.colorScheme.primary
+                                            item.metadata.isLegacy -> MiuixTheme.colorScheme.secondary
+                                            else -> MiuixTheme.colorScheme.error
+                                        },
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                     )
                                 }
                             },
-                            description = item.second.description,
+                            description = item.metadata.description,
+                            warningText = if (item.metadata.isUnsupported) {
+                                stringResource(R.string.manage_module_unsupported_warning, item.metadata.minApiVersion)
+                            } else null,
                             onClick = {
                                 showDropdown.value = true
                                 hapticFeedback.performHapticFeedback(HapticFeedbackType.ContextClick)
@@ -162,7 +213,7 @@ fun ModuleManageBody(
                             actions.add(stringResource(R.string.manage_app_info) to {
                                 val intent = Intent(
                                     Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                                    Uri.fromParts("package", item.first.app.packageName, null)
+                                    Uri.fromParts("package", item.appInfo.app.packageName, null)
                                 )
                                 context.startActivity(intent)
                             })
