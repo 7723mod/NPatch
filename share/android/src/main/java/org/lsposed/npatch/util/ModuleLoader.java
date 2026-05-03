@@ -10,8 +10,10 @@ import org.lsposed.lspd.models.PreLoadedApk;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -38,15 +40,38 @@ public class ModuleLoader {
         int secondary = 2;
         for (var dexFile = apkFile.getEntry("classes.dex"); dexFile != null;
              dexFile = apkFile.getEntry("classes" + secondary + ".dex"), secondary++) {
+            SharedMemory memory = null;
             try (var in = apkFile.getInputStream(dexFile)) {
-                var memory = SharedMemory.create(null, in.available());
+                int dexSize = Math.toIntExact(dexFile.getSize());
+                if (dexSize <= 0) {
+                    Log.w(TAG, "Invalid dex size for " + dexFile + " in " + apkFile);
+                    continue;
+                }
+                memory = SharedMemory.create(null, dexSize);
                 var byteBuffer = memory.mapReadWrite();
-                Channels.newChannel(in).read(byteBuffer);
-                SharedMemory.unmap(byteBuffer);
+                try (ReadableByteChannel channel = Channels.newChannel(in)) {
+                    readFully(channel, byteBuffer, dexFile.getName());
+                } finally {
+                    SharedMemory.unmap(byteBuffer);
+                }
                 memory.setProtect(OsConstants.PROT_READ);
                 preLoadedDexes.add(memory);
-            } catch (IOException | ErrnoException e) {
+                memory = null;
+            } catch (IOException | ErrnoException | ArithmeticException e) {
+                if (memory != null) {
+                    memory.close();
+                }
                 Log.w(TAG, "Can not load " + dexFile + " in " + apkFile, e);
+            }
+        }
+    }
+
+    private static void readFully(ReadableByteChannel channel, ByteBuffer buffer, String name)
+            throws IOException {
+        while (buffer.hasRemaining()) {
+            int read = channel.read(buffer);
+            if (read < 0) {
+                throw new IOException("Unexpected EOF while reading " + name);
             }
         }
     }

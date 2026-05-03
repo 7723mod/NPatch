@@ -21,7 +21,8 @@ public final class LocalInjectedModuleService extends ILSPInjectedModuleService.
     private final String packageName;
 
     public LocalInjectedModuleService(Context context, String packageName) {
-        this.context = context.getApplicationContext();
+        Context appContext = context.getApplicationContext();
+        this.context = appContext == null ? context : appContext;
         this.packageName = packageName;
     }
 
