@@ -119,7 +119,11 @@ public final class ModuleMetadataParser {
         boolean hasModernEntrypoint = !modernJavaInitList.isEmpty() || !modernNativeInitList.isEmpty();
         boolean hasLegacyEntrypoint = !legacyJavaInitList.isEmpty() || !legacyNativeInitList.isEmpty();
         ModulePipeline pipeline =
-                versionRouter.determinePipeline(minApiVersion, hasModernEntrypoint, hasLegacyEntrypoint);
+                versionRouter.determinePipeline(
+                        minApiVersion,
+                        targetApiVersion,
+                        hasModernEntrypoint,
+                        hasLegacyEntrypoint);
 
         List<String> javaInitList = new ArrayList<>();
         List<String> nativeInitList = new ArrayList<>();

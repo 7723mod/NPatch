@@ -66,6 +66,10 @@ object ModuleMetadataReader {
     private const val LEGACY_KEY_DESCRIPTION = "xposeddescription"
     private const val LEGACY_KEY_SCOPES = "xposedscope"
 
+    private const val FRAMEWORK_API_VERSION = 101
+    private const val MODERN_TARGET_API_VERSION = 101
+    private const val LEGACY_MAX_API_VERSION = 94
+
     fun read(appInfo: ApplicationInfo, packageManager: PackageManager): ModuleMetadataSnapshot? {
         val apkPath = appInfo.sourceDir ?: return null
         val apkFile = File(apkPath)
@@ -133,8 +137,10 @@ object ModuleMetadataReader {
         val hasLegacyMetadata = legacyMeta?.containsKey(LEGACY_KEY_MIN_API_VERSION) == true || legacyMeta?.containsKey(LEGACY_KEY_DESCRIPTION) == true
 
         val pipeline = when {
-            hasModernEntrypoint && minApiVersion >= 101 -> ModulePipeline.MODERN
-            hasLegacyEntrypoint && minApiVersion <= 94 -> ModulePipeline.LEGACY
+            hasModernEntrypoint &&
+                minApiVersion <= FRAMEWORK_API_VERSION &&
+                targetApiVersion >= MODERN_TARGET_API_VERSION -> ModulePipeline.MODERN
+            hasLegacyEntrypoint && minApiVersion <= LEGACY_MAX_API_VERSION -> ModulePipeline.LEGACY
             else -> ModulePipeline.UNSUPPORTED
         }
 

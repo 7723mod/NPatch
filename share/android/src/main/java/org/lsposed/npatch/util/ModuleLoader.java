@@ -27,7 +27,8 @@ public class ModuleLoader {
     private static final String MODERN_MODULE_PROP = "META-INF/xposed/module.prop";
     private static final String LEGACY_JAVA_INIT = "assets/xposed_init";
     private static final String LEGACY_NATIVE_INIT = "assets/native_init";
-    private static final int MODERN_MIN_API_VERSION = 101;
+    private static final int FRAMEWORK_API_VERSION = 101;
+    private static final int MODERN_TARGET_API_VERSION = 101;
     private static final int LEGACY_MAX_API_VERSION = 94;
 
     private enum ModulePipeline {
@@ -92,22 +93,38 @@ public class ModuleLoader {
         }
     }
 
-    private static int readMinApiVersion(ZipFile apkFile, int fallbackMinApiVersion) {
-        var entry = apkFile.getEntry(MODERN_MODULE_PROP);
-        if (entry == null) return fallbackMinApiVersion;
-        var properties = new Properties();
-        try (var in = apkFile.getInputStream(entry)) {
-            properties.load(new InputStreamReader(in, StandardCharsets.UTF_8));
-            var value = properties.getProperty("minApiVersion");
-            return value == null ? fallbackMinApiVersion : Integer.parseInt(value.trim());
-        } catch (IOException | NumberFormatException e) {
-            Log.w(TAG, "Can not read " + MODERN_MODULE_PROP + " in " + apkFile, e);
-            return fallbackMinApiVersion;
+    private static final class ApiVersions {
+        final int minApiVersion;
+        final int targetApiVersion;
+
+        ApiVersions(int minApiVersion, int targetApiVersion) {
+            this.minApiVersion = minApiVersion;
+            this.targetApiVersion = targetApiVersion;
         }
     }
 
+    private static ApiVersions readApiVersions(ZipFile apkFile, int fallbackMinApiVersion) {
+        var entry = apkFile.getEntry(MODERN_MODULE_PROP);
+        if (entry == null) return new ApiVersions(fallbackMinApiVersion, fallbackMinApiVersion);
+        var properties = new Properties();
+        try (var in = apkFile.getInputStream(entry)) {
+            properties.load(new InputStreamReader(in, StandardCharsets.UTF_8));
+            var minApiVersion = readInt(properties, "minApiVersion", fallbackMinApiVersion);
+            var targetApiVersion = readInt(properties, "targetApiVersion", minApiVersion);
+            return new ApiVersions(minApiVersion, targetApiVersion);
+        } catch (IOException | NumberFormatException e) {
+            Log.w(TAG, "Can not read " + MODERN_MODULE_PROP + " in " + apkFile, e);
+            return new ApiVersions(fallbackMinApiVersion, fallbackMinApiVersion);
+        }
+    }
+
+    private static int readInt(Properties properties, String key, int fallback) {
+        var value = properties.getProperty(key);
+        return value == null ? fallback : Integer.parseInt(value.trim());
+    }
+
     private static ModulePipeline determinePipeline(ZipFile apkFile, int fallbackMinApiVersion) {
-        var minApiVersion = readMinApiVersion(apkFile, fallbackMinApiVersion);
+        var apiVersions = readApiVersions(apkFile, fallbackMinApiVersion);
         var hasModernEntry =
                 apkFile.getEntry(MODERN_JAVA_INIT) != null
                         || apkFile.getEntry(MODERN_NATIVE_INIT) != null;
@@ -115,10 +132,12 @@ public class ModuleLoader {
                 apkFile.getEntry(LEGACY_JAVA_INIT) != null
                         || apkFile.getEntry(LEGACY_NATIVE_INIT) != null;
 
-        if (hasModernEntry && minApiVersion >= MODERN_MIN_API_VERSION) {
+        if (hasModernEntry
+                && apiVersions.minApiVersion <= FRAMEWORK_API_VERSION
+                && apiVersions.targetApiVersion >= MODERN_TARGET_API_VERSION) {
             return ModulePipeline.MODERN;
         }
-        if (hasLegacyEntry && minApiVersion <= LEGACY_MAX_API_VERSION) {
+        if (hasLegacyEntry && apiVersions.minApiVersion <= LEGACY_MAX_API_VERSION) {
             return ModulePipeline.LEGACY;
         }
         return ModulePipeline.UNSUPPORTED;
