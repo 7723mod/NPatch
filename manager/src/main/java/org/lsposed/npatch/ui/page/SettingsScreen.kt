@@ -52,6 +52,7 @@ import org.lsposed.npatch.config.ThemeConfig
 import org.lsposed.npatch.config.dataStore
 import org.lsposed.npatch.ui.activity.MainActivity
 import org.lsposed.npatch.ui.component.NPatchScaffold
+import org.lsposed.npatch.ui.util.BackgroundImageStorage
 import org.lsposed.npatch.ui.util.LocalSnackbarHost
 import org.lsposed.npatch.ui.util.backgroundAwareCardColors
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
@@ -130,11 +131,20 @@ private fun AppearanceSettings() {
     val themeState by ThemeConfig.getThemeFlow(context).collectAsState(initial = Triple("", false, 0xFF007AFF.toInt()))
     val (bgImageUri, useMonet, customColor) = themeState
     val scrollState = rememberScrollState()
+    val snackbarHost = LocalSnackbarHost.current
+    val unknownErrorText = stringResource(R.string.error_unknown)
 
     val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri?.let {
-            context.contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            scope.launch { context.dataStore.edit { prefs -> prefs[ThemeConfig.BG_IMAGE_URI] = it.toString() } }
+        uri ?: return@rememberLauncherForActivityResult
+        scope.launch {
+            runCatching {
+                BackgroundImageStorage.persistFromUri(context, uri)
+            }.onSuccess { storedPath ->
+                context.dataStore.edit { prefs -> prefs[ThemeConfig.BG_IMAGE_URI] = storedPath }
+            }.onFailure { throwable ->
+                Log.e(TAG, "Failed to persist background image", throwable)
+                snackbarHost.showSnackbar(unknownErrorText)
+            }
         }
     }
 
@@ -178,7 +188,10 @@ private fun AppearanceSettings() {
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
                     .clickable {
-                        scope.launch { context.dataStore.edit { it[ThemeConfig.BG_IMAGE_URI] = "" } }
+                        scope.launch {
+                            BackgroundImageStorage.clear(context)
+                            context.dataStore.edit { it[ThemeConfig.BG_IMAGE_URI] = "" }
+                        }
                     }
                     .background(MiuixTheme.colorScheme.error.copy(alpha = 0.1f))
                     .padding(horizontal = 12.dp, vertical = 6.dp)

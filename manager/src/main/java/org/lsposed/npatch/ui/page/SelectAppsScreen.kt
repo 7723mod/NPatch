@@ -193,7 +193,11 @@ private fun MultiSelectFab(onClick: () -> Unit) {
     FloatingActionButton(
         onClick = onClick,
     ) {
-        Icon(Icons.Outlined.Done, stringResource(R.string.add))
+        Icon(
+            imageVector = Icons.Outlined.Done,
+            contentDescription = stringResource(R.string.add),
+            tint = MiuixTheme.colorScheme.onPrimary
+        )
     }
 }
 

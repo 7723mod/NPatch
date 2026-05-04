@@ -174,7 +174,7 @@ fun DoPatchBody(modifier: Modifier, navigator: Navigator) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 12.dp),
-                colors = backgroundAwareCardColors(),
+                colors = backgroundAwareCardColors(MiuixTheme.colorScheme.surfaceVariant),
             ) {
                 Row(
                     modifier = Modifier

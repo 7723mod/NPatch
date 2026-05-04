@@ -484,6 +484,10 @@ fun AppManageFab(navigator: Navigator) {
             }
         }
     ) {
-        Icon(Icons.Filled.Add, stringResource(R.string.add))
+        Icon(
+            imageVector = Icons.Filled.Add,
+            contentDescription = stringResource(R.string.add),
+            tint = MiuixTheme.colorScheme.onPrimary
+        )
     }
 }
