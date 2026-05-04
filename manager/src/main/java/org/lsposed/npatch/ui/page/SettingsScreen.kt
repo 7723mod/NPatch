@@ -24,6 +24,7 @@ import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.SettingsBrightness
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -49,6 +50,8 @@ import org.lsposed.npatch.R
 import org.lsposed.npatch.config.Configs
 import org.lsposed.npatch.config.MyKeyStore
 import org.lsposed.npatch.config.ThemeConfig
+import org.lsposed.npatch.config.ThemeMode
+import org.lsposed.npatch.config.ThemeSettings
 import org.lsposed.npatch.config.dataStore
 import org.lsposed.npatch.ui.activity.MainActivity
 import org.lsposed.npatch.ui.component.NPatchScaffold
@@ -128,11 +131,30 @@ fun SettingsScreen() {
 private fun AppearanceSettings() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val themeState by ThemeConfig.getThemeFlow(context).collectAsState(initial = Triple("", false, 0xFF007AFF.toInt()))
-    val (bgImageUri, useMonet, customColor) = themeState
+    val themeState by ThemeConfig.getThemeFlow(context).collectAsState(
+        initial = ThemeSettings(
+            backgroundImageUri = "",
+            useMonet = false,
+            customColor = 0xFF007AFF.toInt(),
+            themeMode = ThemeMode.SYSTEM
+        )
+    )
+    val bgImageUri = themeState.backgroundImageUri
+    val useMonet = themeState.useMonet
+    val customColor = themeState.customColor
     val scrollState = rememberScrollState()
     val snackbarHost = LocalSnackbarHost.current
     val unknownErrorText = stringResource(R.string.error_unknown)
+    val themeModeItems = listOf(
+        stringResource(R.string.settings_theme_mode_system),
+        stringResource(R.string.settings_theme_mode_light),
+        stringResource(R.string.settings_theme_mode_dark)
+    )
+    val themeModeIndex = when (themeState.themeMode) {
+        ThemeMode.SYSTEM -> 0
+        ThemeMode.LIGHT -> 1
+        ThemeMode.DARK -> 2
+    }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri ?: return@rememberLauncherForActivityResult
@@ -147,6 +169,30 @@ private fun AppearanceSettings() {
             }
         }
     }
+
+    OverlayDropdownPreference(
+        title = stringResource(R.string.settings_theme_mode),
+        items = themeModeItems,
+        selectedIndex = themeModeIndex,
+        startAction = {
+            Icon(
+                Icons.Outlined.SettingsBrightness,
+                modifier = Modifier.padding(end = 6.dp),
+                contentDescription = null,
+                tint = MiuixTheme.colorScheme.onBackground
+            )
+        },
+        onSelectedIndexChange = { index ->
+            val mode = when (index) {
+                1 -> ThemeMode.LIGHT
+                2 -> ThemeMode.DARK
+                else -> ThemeMode.SYSTEM
+            }
+            scope.launch {
+                context.dataStore.edit { it[ThemeConfig.THEME_MODE] = mode.value }
+            }
+        }
+    )
 
     SwitchPreference(
         title = stringResource(R.string.settings_monet_dynamic_color),
@@ -238,11 +284,11 @@ private fun AppearanceSettings() {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.width(60.dp)
+                        modifier = Modifier.width(74.dp)
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(42.dp)
+                                .size(46.dp)
                                 .clip(CircleShape)
                                 .background(Color(colorHex.toInt()))
                                 .clickable {
@@ -264,7 +310,7 @@ private fun AppearanceSettings() {
                             style = MiuixTheme.textStyles.footnote1,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                             textAlign = TextAlign.Center,
-                            maxLines = 1,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
                     }

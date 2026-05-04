@@ -127,6 +127,13 @@
     <string name="settings_detail_patch_logs">Detail patch logs</string>
     <string name="settings_appearance_theme">Appearance &amp; Theme</string>
     <string name="settings_other_settings">Other Settings</string>
+    <string name="settings_theme_mode">Theme Mode</string>
+    <string name="settings_theme_mode_system">Follow System</string>
+    <string name="settings_theme_mode_system_summary">Match the device light and dark appearance automatically</string>
+    <string name="settings_theme_mode_light">Light Mode</string>
+    <string name="settings_theme_mode_light_summary">Use a bright interface all the time</string>
+    <string name="settings_theme_mode_dark">Dark Mode</string>
+    <string name="settings_theme_mode_dark_summary">Use a dark interface all the time</string>
     <string name="settings_monet_dynamic_color">Monet Dynamic Color</string>
     <string name="settings_monet_dynamic_color_summary">Follow system wallpaper color (Android 12+ only)</string>
     <string name="settings_custom_background_image">Custom Background Image</string>

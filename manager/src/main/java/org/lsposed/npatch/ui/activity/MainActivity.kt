@@ -32,6 +32,7 @@ import androidx.navigation3.ui.NavDisplay
 import coil.compose.AsyncImage
 import org.lsposed.npatch.LSPApplication
 import org.lsposed.npatch.config.ThemeConfig
+import org.lsposed.npatch.config.ThemeMode
 import org.lsposed.npatch.ui.page.LocalNavigator
 import org.lsposed.npatch.ui.page.MainScreen
 import org.lsposed.npatch.ui.page.Navigator
@@ -70,11 +71,22 @@ class MainActivity : ComponentActivity() {
         checkAndRequestPermissions()
 
         setContent {
-            val isDark = isSystemInDarkTheme()
+            val systemIsDark = isSystemInDarkTheme()
             val context = LocalContext.current
 
-            val themeState by ThemeConfig.getThemeFlow(context).collectAsState(initial = Triple("", false, 0xFF007AFF.toInt()))
-            val (background, useMonet, customColor) = themeState
+            val themeState by ThemeConfig.getThemeFlow(context).collectAsState(
+                initial = org.lsposed.npatch.config.ThemeSettings(
+                    backgroundImageUri = "",
+                    useMonet = false,
+                    customColor = 0xFF007AFF.toInt(),
+                    themeMode = ThemeMode.SYSTEM
+                )
+            )
+            val isDark = when (themeState.themeMode) {
+                ThemeMode.SYSTEM -> systemIsDark
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+            }
 
             DisposableEffect(isDark) {
                 enableEdgeToEdge(
@@ -93,10 +105,14 @@ class MainActivity : ComponentActivity() {
                 onDispose {}
             }
 
-            LSPTheme(isDarkTheme = isDark, useMonet = useMonet, customColor = customColor) {
-                CompositionLocalProvider(LocalBackgroundImagePath provides background) {
+            LSPTheme(
+                isDarkTheme = isDark,
+                useMonet = themeState.useMonet,
+                customColor = themeState.customColor
+            ) {
+                CompositionLocalProvider(LocalBackgroundImagePath provides themeState.backgroundImageUri) {
                     Box(modifier = Modifier.fillMaxSize()) {
-                        Crossfade(targetState = background, label = "global_background") { path ->
+                        Crossfade(targetState = themeState.backgroundImageUri, label = "global_background") { path ->
                             if (path.isNotEmpty()) {
                                 AsyncImage(
                                     model = path,

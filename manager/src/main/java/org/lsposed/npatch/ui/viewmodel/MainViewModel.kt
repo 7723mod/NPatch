@@ -12,6 +12,6 @@ import org.lsposed.npatch.config.ThemeConfig
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val background: StateFlow<String> = ThemeConfig.getThemeFlow(getApplication())
-        .map { (bgUri, _, _) -> bgUri }
+        .map { it.backgroundImageUri }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 }

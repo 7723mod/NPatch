@@ -123,6 +123,13 @@
     <string name="settings_storage_directory">更改存儲資料夾</string>
     <string name="settings_appearance_theme">外觀與主題</string>
     <string name="settings_other_settings">其他設定</string>
+    <string name="settings_theme_mode">主題模式</string>
+    <string name="settings_theme_mode_system">跟隨系統</string>
+    <string name="settings_theme_mode_system_summary">自動配合裝置的亮色與暗色外觀</string>
+    <string name="settings_theme_mode_light">亮色模式</string>
+    <string name="settings_theme_mode_light_summary">始終使用明亮介面</string>
+    <string name="settings_theme_mode_dark">暗色模式</string>
+    <string name="settings_theme_mode_dark_summary">始終使用深色介面</string>
     <string name="settings_monet_dynamic_color">Monet 動態取色</string>
     <string name="settings_monet_dynamic_color_summary">跟隨系統桌布顏色 (Android 12+)</string>
     <string name="settings_custom_background_image">自定義背景圖片</string>
