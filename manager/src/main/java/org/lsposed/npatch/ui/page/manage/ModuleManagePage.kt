@@ -21,12 +21,16 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import org.lsposed.npatch.R
 import org.lsposed.npatch.ui.component.AppItem
 import org.lsposed.npatch.ui.viewmodel.manage.ModuleManageViewModel
+import org.lsposed.npatch.ui.util.ensureVisibleByMix
+import org.lsposed.npatch.ui.util.relativeLuminance
 import nkbe.util.NeoPackageManager
 import top.yukonga.miuix.kmp.basic.DropdownDefaults
 import top.yukonga.miuix.kmp.basic.DropdownImpl
@@ -42,6 +46,46 @@ import top.yukonga.miuix.kmp.overlay.OverlayListPopup
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
+
+private data class ModuleBadgeColors(
+    val container: Color,
+    val content: Color
+)
+
+@Composable
+private fun rememberModuleBadgeColors(
+    isModern: Boolean,
+    isLegacy: Boolean
+): ModuleBadgeColors {
+    val surfaceArgb = MiuixTheme.colorScheme.surface.toArgb()
+    val surfaceIsDark = relativeLuminance(surfaceArgb) < 0.5
+    fun boostedContainer(candidate: Color): Color {
+        val mixed = ensureVisibleByMix(
+            original = surfaceArgb,
+            candidate = candidate.toArgb(),
+            minRatio = 2.8,
+            mixWithWhiteIfLighter = surfaceIsDark
+        )
+        return Color(mixed)
+    }
+
+    return when {
+        isModern -> ModuleBadgeColors(
+            container = boostedContainer(MiuixTheme.colorScheme.primaryContainer),
+            content = MiuixTheme.colorScheme.onPrimaryContainer
+        )
+
+        isLegacy -> ModuleBadgeColors(
+            container = boostedContainer(MiuixTheme.colorScheme.secondaryContainer),
+            content = MiuixTheme.colorScheme.onSecondaryContainer
+        )
+
+        else -> ModuleBadgeColors(
+            container = boostedContainer(MiuixTheme.colorScheme.errorContainer),
+            content = MiuixTheme.colorScheme.onErrorContainer
+        )
+    }
+}
 
 @Composable
 fun ModuleManageBody(
@@ -110,6 +154,14 @@ fun ModuleManageBody(
                 ) { item ->
                     val showDropdown = remember { mutableStateOf(false) }
                     val settingsIntent = remember { NeoPackageManager.getSettingsIntent(item.appInfo.app.packageName) }
+                    val apiBadgeColors = rememberModuleBadgeColors(
+                        isModern = item.metadata.isModern,
+                        isLegacy = item.metadata.isLegacy
+                    )
+                    val pipelineBadgeColors = rememberModuleBadgeColors(
+                        isModern = item.metadata.isModern,
+                        isLegacy = item.metadata.isLegacy
+                    )
 
                     Box(modifier = Modifier.fillMaxWidth()) {
                         AppItem(
@@ -125,11 +177,7 @@ fun ModuleManageBody(
                             summaryRow = {
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
-                                    color = when {
-                                        item.metadata.isModern -> MiuixTheme.colorScheme.primary.copy(alpha = 0.15f)
-                                        item.metadata.isLegacy -> MiuixTheme.colorScheme.secondary.copy(alpha = 0.15f)
-                                        else -> MiuixTheme.colorScheme.error.copy(alpha = 0.15f)
-                                    }
+                                    color = apiBadgeColors.container
                                 ) {
                                     Text(
                                         text = when {
@@ -140,11 +188,7 @@ fun ModuleManageBody(
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         fontFamily = FontFamily.Serif,
-                                        color = when {
-                                            item.metadata.isModern -> MiuixTheme.colorScheme.primary
-                                            item.metadata.isLegacy -> MiuixTheme.colorScheme.secondary
-                                            else -> MiuixTheme.colorScheme.error
-                                        },
+                                        color = apiBadgeColors.content,
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                     )
                                 }
@@ -160,11 +204,7 @@ fun ModuleManageBody(
                             topRightContent = {
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
-                                    color = when {
-                                        item.metadata.isModern -> MiuixTheme.colorScheme.primary.copy(alpha = 0.15f)
-                                        item.metadata.isLegacy -> MiuixTheme.colorScheme.secondary.copy(alpha = 0.15f)
-                                        else -> MiuixTheme.colorScheme.error.copy(alpha = 0.15f)
-                                    }
+                                    color = pipelineBadgeColors.container
                                 ) {
                                     Text(
                                         text = when {
@@ -175,11 +215,7 @@ fun ModuleManageBody(
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         fontFamily = FontFamily.Serif,
-                                        color = when {
-                                            item.metadata.isModern -> MiuixTheme.colorScheme.primary
-                                            item.metadata.isLegacy -> MiuixTheme.colorScheme.secondary
-                                            else -> MiuixTheme.colorScheme.error
-                                        },
+                                        color = pipelineBadgeColors.content,
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                     )
                                 }
