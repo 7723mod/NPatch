@@ -38,10 +38,8 @@ import org.lsposed.npatch.ui.viewmodel.manage.AppManageViewModel
 import org.lsposed.npatch.ui.viewmodel.manage.ModuleManageViewModel
 import rikka.shizuku.Shizuku
 import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.preference.ArrowPreference
@@ -364,6 +362,14 @@ private fun SupportCard() {
         colors = backgroundAwareCardColors(),
     ) {
         Column {
+            ArrowPreference(
+                title = "About",
+                summary = stringResource(R.string.home_description),
+                onClick = {
+                    val intent = Intent(Intent.ACTION_VIEW, "https://www.nkbe.top".toUri())
+                    context.startActivity(intent)
+                }
+            )
             ArrowPreference(
                 title = "GitHub",
                 summary = stringResource(R.string.home_view_source_code, "GitHub", ""),

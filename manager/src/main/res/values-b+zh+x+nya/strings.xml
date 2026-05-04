@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-<string name="add">收入爪下</string>
+    <string name="add">收入爪下</string>
     <string name="install">塞进窝里</string>
     <string name="installing">正在努力踩奶...</string>
     <string name="uninstall">踢出领地</string>
@@ -16,7 +16,7 @@
     <string name="error_unknown">发生了 Unknown 哈气事件</string>
 
     <!-- Home Screen -->
-    <string name="home_shizuku_warning">Shizuku 酱生病了喵...</string>
+    <string name="home_shizuku_warning">Shizuku 酱没睡醒喵...</string>
     <string name="home_api_version">API 核心版本</string>
     <string name="home_npatch_version">NP猫猫等级</string>
     <string name="home_framework_version">猫猫核心版本</string>
@@ -60,7 +60,7 @@
     <string name="patch_mode">打包套路</string>
     <string name="patch_local">居家模式</string>
     <string name="patch_local_desc">不把挂件塞进去。想来就来想走就走喵，无需重新制作。\n但这只猫只能在有NPatch大猫猫的爬架上撒欢喵。</string>
-    <string name="patch_integrated">合体模式（集成）</string>
+    <string name="patch_integrated">合体模式 (集成)</string>
     <string name="patch_integrated_desc">直接把挂件缝进App里。离了管理器也能跑，但没法随时调教配置喵。\n适合送去没有猫猫的陌生人家里住。</string>
     <string name="patch_embed_modules">缝入挂件</string>
     <string name="patch_advanced">高阶喵技</string>
@@ -80,7 +80,7 @@
     <string name="patch_inject_dex">注入 Dex 强心针</string>
     <string name="patch_inject_dex_desc">对那些脾气古怪的浏览器引擎，打一针确保它们不会在独立进程里哈气喵。</string>
     <string name="patch_use_microg">强喂 MicroG 小药水</string>
-    <string name="patch_use_microg_desc">把GMS异化为MicroG喵。YT 等猫咪专用，记得自己先备好药喵。</string>
+    <string name="patch_use_microg_desc">把 GMS 异化为 MicroG 喵。YT 等猫咪专用，记得自己先备好药喵。</string>
     <string name="patch_output_log_to_media">把小秘密丢进 Media 目录</string>
     <string name="patch_output_log_to_media_desc">把 Xposed 和框架启动的日志全都写在 Media 文件夹里喵。</string>
     <string name="patch_start">起锅！制作！</string>
@@ -123,10 +123,16 @@
     <string name="settings_color_fresh_green">嫩草薄荷绿</string>
     <string name="settings_color_elegant_purple">高冷贵族紫</string>
     <string name="settings_color_vibrant_orange">元气大橘橙</string>
+    <string name="settings_color_mint_green">猫薄荷綠</string>
+    <string name="settings_color_pink">柔粉紅</string>
+    <string name="settings_color_deep_pink">喵桃红</string>
+    <string name="settings_color_ice_blue">蓝蓝猫</string>
+    <string name="settings_color_rose">蔷薇猫</string>
+
 
     <!-- Modules Repo-->
     <string name="sort_by_name">按 App 昵称排排坐</string>
-    <string name="sort_by_package_name">按 Package Name 查户口</string>
+    <string name="sort_by_package_name">按 Package Name 对对碰</string>
     <string name="sort_by_install_time">按入窝顺序</string>
     <string name="sort_by_update_time">按变漂亮的时间</string>
     <string name="refresh_pulling">向下拽猫尾巴 哈！</string>
@@ -147,8 +153,8 @@
     <string name="installed">已在窝里</string>
     <string name="menu_open_in_browser">去外面的世界看看喵</string>
     <string name="download_latest_version">叼走最新的</string>
-    <string name="module_readme">喵喵喵</string>
-    <string name="module_releases">性格温和猫</string>
+    <string name="module_readme">喵之自述</string>
+    <string name="module_releases">温和可靠猫基地</string>
     <string name="module_information">喵片档案</string>
     <string name="unknown_author">神秘野猫</string>
     <string name="unknown_version">未知岁数</string>
