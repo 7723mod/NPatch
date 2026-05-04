@@ -50,6 +50,9 @@
     <string name="manage_no_modules">这里连个 Modules 都没有喵</string>
     <string name="manage_module_settings">配置小鱼干挂件</string>
     <string name="manage_app_info">打探 App 底细</string>
+    <string name="manage_module_pipeline_unsupported">猫窝结构不对喵</string>
+    <string name="manage_module_api_unsupported">这只 API %1$d 喵没听过</string>
+    <string name="manage_module_unsupported_warning">Modern 架构容不下 API %1$d 喵</string>
     <string name="manage_check_manager_package_name">这只喵由 %1$s 领养\n在朕这里改 Scope %2$s 要哈气的喵\n得重新修理一下才听话！</string>
 
     <!-- New Patch Screen -->

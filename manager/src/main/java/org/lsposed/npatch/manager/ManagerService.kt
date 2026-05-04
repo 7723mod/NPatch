@@ -50,6 +50,10 @@ object ManagerService : ILSPApplicationService.Stub() {
     }
 
     override fun requestInjectedManagerBinder(binder: MutableList<IBinder>): ParcelFileDescriptor? {
+        getCallingPackageName()?.let {
+            Log.i(TAG, "$it requests injected manager binder from ManagerService")
+            binder.add(XposedServiceBinder(it))
+        }
         return null
     }
 }

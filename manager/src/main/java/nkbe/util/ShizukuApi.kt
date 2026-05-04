@@ -191,4 +191,41 @@ object ShizukuApi {
         val userId = Process.myUserHandle().hashCode()
         iActivityManager.forceStopPackage(packageName, userId)
     }
+
+    fun clearApplicationUserData(packageName: String, observer: IPackageDataObserver) {
+        ensureReady()
+        val userId = Process.myUserHandle().hashCode()
+        val method = iPackageManager.javaClass.getMethod(
+            "clearApplicationUserData",
+            String::class.java,
+            IPackageDataObserver::class.java,
+            Int::class.java
+        )
+        method.invoke(iPackageManager, packageName, observer, userId)
+    }
+
+    fun setApplicationEnabledSetting(packageName: String, newState: Int) {
+        ensureReady()
+        val userId = Process.myUserHandle().hashCode()
+        val method = iPackageManager.javaClass.getMethod(
+            "setApplicationEnabledSetting",
+            String::class.java,
+            Int::class.java,
+            Int::class.java,
+            Int::class.java,
+            String::class.java
+        )
+        method.invoke(iPackageManager, packageName, newState, 0, userId, "com.android.shell")
+    }
+
+    fun getApplicationEnabledSetting(packageName: String): Int {
+        ensureReady()
+        val userId = Process.myUserHandle().hashCode()
+        val method = iPackageManager.javaClass.getMethod(
+            "getApplicationEnabledSetting",
+            String::class.java,
+            Int::class.java
+        )
+        return method.invoke(iPackageManager, packageName, userId) as Int
+    }
 }

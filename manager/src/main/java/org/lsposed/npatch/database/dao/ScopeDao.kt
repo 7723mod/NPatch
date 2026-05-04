@@ -20,4 +20,7 @@ interface ScopeDao {
 
     @Delete
     suspend fun delete(scope: Scope)
+
+    @Query("SELECT appPkgName FROM scope WHERE modulePkgName = :modulePkgName")
+    suspend fun getAppsForModule(modulePkgName: String): List<String>
 }
