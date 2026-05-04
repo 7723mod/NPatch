@@ -81,8 +81,8 @@ private fun rememberModuleBadgeColors(
         )
 
         else -> ModuleBadgeColors(
-            container = boostedContainer(MiuixTheme.colorScheme.errorContainer),
-            content = MiuixTheme.colorScheme.onErrorContainer
+            container = MiuixTheme.colorScheme.error,
+            content = MiuixTheme.colorScheme.onError
         )
     }
 }

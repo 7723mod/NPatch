@@ -83,6 +83,12 @@ object ModuleMetadataReader {
             publicSourceDir = apkFile.absolutePath
         }
 
+        // Patched apps can embed module assets for their own runtime, but they are not standalone
+        // Xposed modules and should stay in app management instead of the module list.
+        if (packageInfo?.applicationInfo?.metaData?.containsKey("npatch") == true) {
+            return null
+        }
+
         val legacyMeta = packageInfo?.applicationInfo?.metaData
         val modernProps = Properties()
         val modernJavaInitList = mutableListOf<String>()
