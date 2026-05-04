@@ -1,5 +1,6 @@
 package nkbe.util
 
+import android.app.IActivityManager
 import android.content.ComponentName
 import android.content.IntentSender
 import android.content.ServiceConnection
@@ -27,6 +28,9 @@ object ShizukuApi {
 
     private val iPackageManager: IPackageManager
         get() = IPackageManager.Stub.asInterface(getSystemService("package"))
+
+    private val iActivityManager: IActivityManager
+        get() = IActivityManager.Stub.asInterface(getSystemService("activity"))
 
     private val iPackageInstaller: IPackageInstaller
         get() =
@@ -58,7 +62,7 @@ object ShizukuApi {
             return
         }
         initialized = true
-        ShizukuProvider.enableMultiProcessSupport()
+        ShizukuProvider.enableMultiProcessSupport(true)
         Shizuku.addBinderReceivedListenerSticky {
             refreshState()
         }
@@ -180,5 +184,11 @@ object ShizukuApi {
             SystemProperties.getBoolean("dalvik.vm.usejitprofiles", false),
             "verify", true, true, null
         )
+    }
+
+    fun forceStopPackage(packageName: String) {
+        ensureReady()
+        val userId = Process.myUserHandle().hashCode()
+        iActivityManager.forceStopPackage(packageName, userId)
     }
 }

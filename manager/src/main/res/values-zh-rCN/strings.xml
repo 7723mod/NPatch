@@ -47,6 +47,9 @@
     <string name="manage_optimize">优化</string>
     <string name="manage_optimize_successfully">优化成功</string>
     <string name="manage_optimize_failed">优化失败</string>
+    <string name="manage_force_stop">强制停止</string>
+    <string name="manage_force_stop_successfully">强制停止成功</string>
+    <string name="manage_force_stop_failed">强制停止失败</string>
     <string name="manage_uninstall_successfully">卸载成功</string>
     <string name="manage_no_modules">尚无模块</string>
     <string name="manage_module_settings">模块设置</string>

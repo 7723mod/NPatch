@@ -183,6 +183,15 @@ object NeoPackageManager {
         return Pair(status, message)
     }
 
+    suspend fun forceStop(packageName: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                ShizukuApi.forceStopPackage(packageName)
+                true
+            }.getOrDefault(false)
+        }
+    }
+
     suspend fun getAppInfoFromApks(apks: List<Uri>): Result<List<AppInfo>> {
         return withContext(Dispatchers.IO) {
             runCatching {

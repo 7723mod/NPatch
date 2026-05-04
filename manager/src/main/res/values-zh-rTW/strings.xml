@@ -46,6 +46,9 @@
     <string name="manage_optimize">最佳化</string>
     <string name="manage_optimize_successfully">最佳化成功</string>
     <string name="manage_optimize_failed">最佳化失敗</string>
+    <string name="manage_force_stop">強制停止</string>
+    <string name="manage_force_stop_successfully">強制停止成功</string>
+    <string name="manage_force_stop_failed">強制停止失敗</string>
     <string name="manage_uninstall_successfully">解除安裝成功</string>
     <string name="manage_no_modules">還沒有模組</string>
     <string name="manage_module_settings">模組設定</string>

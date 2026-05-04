@@ -46,6 +46,9 @@
     <string name="manage_optimize">Optimize</string>
     <string name="manage_optimize_successfully">Optimize successfully</string>
     <string name="manage_optimize_failed">Optimize failed</string>
+    <string name="manage_force_stop">Force stop</string>
+    <string name="manage_force_stop_successfully">Force stop successfully</string>
+    <string name="manage_force_stop_failed">Force stop failed</string>
     <string name="manage_uninstall_successfully">Uninstall successfully</string>
     <string name="manage_no_modules">No modules yet</string>
     <string name="manage_module_settings">Module settings</string>

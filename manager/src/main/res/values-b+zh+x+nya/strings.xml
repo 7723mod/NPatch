@@ -43,6 +43,9 @@
     <string name="manage_optimize">F5喵</string>
     <string name="manage_optimize_successfully">优化成功！</string>
     <string name="manage_optimize_failed">卡————住————了... 优化失败</string>
+    <string name="manage_force_stop">绝对降伏</string>
+    <string name="manage_force_stop_successfully">按住了，抓捕成功喵！</string>
+    <string name="manage_force_stop_failed">没按住，溜掉了喵呜...</string>
     <string name="manage_uninstall_successfully">成功扔出猫窝！</string>
     <string name="manage_no_modules">这里连个 Modules 都没有喵</string>
     <string name="manage_module_settings">配置小鱼干挂件</string>

@@ -116,7 +116,9 @@ fun AppManageBody(
         }
     }
 
-    val isProcessing = viewModel.updateLoaderState is ProcessingState.Processing || viewModel.optimizeState is ProcessingState.Processing
+    val isProcessing = viewModel.updateLoaderState is ProcessingState.Processing 
+            || viewModel.optimizeState is ProcessingState.Processing
+            || viewModel.forceStopState is ProcessingState.Processing
     if (isProcessing) {
         val showLoading = remember { mutableStateOf(true) }
         OverlayDialog(
@@ -161,6 +163,20 @@ fun AppManageBody(
             LaunchedEffect(Unit) {
                 Toast.makeText(context, if (it.result) optimizeSucceed else optimizeFailed, Toast.LENGTH_SHORT).show()
                 viewModel.dispatch(AppManageViewModel.ViewAction.ClearOptimizeResult)
+            }
+        }
+    }
+
+    when (viewModel.forceStopState) {
+        is ProcessingState.Idle -> Unit
+        is ProcessingState.Processing -> Unit
+        is ProcessingState.Done -> {
+            val it = viewModel.forceStopState as ProcessingState.Done
+            val forceStopSucceed = stringResource(R.string.manage_force_stop_successfully)
+            val forceStopFailed = stringResource(R.string.manage_force_stop_failed)
+            LaunchedEffect(Unit) {
+                Toast.makeText(context, if (it.result) forceStopSucceed else forceStopFailed, Toast.LENGTH_SHORT).show()
+                viewModel.dispatch(AppManageViewModel.ViewAction.ClearForceStopResult)
             }
         }
     }
@@ -343,6 +359,22 @@ fun AppManageBody(
                                         viewModel.dispatch(AppManageViewModel.ViewAction.PerformOptimize(appInfo))
                                     }
                                 }
+                            })
+                            actions.add(stringResource(R.string.manage_force_stop) to {
+                                if (ShizukuApi.isReady) {
+                                    scope.launch { viewModel.dispatch(AppManageViewModel.ViewAction.PerformForceStop(appInfo)) }
+                                } else {
+                                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = "package:${appInfo.app.packageName}".toUri()
+                                    }
+                                    context.startActivity(intent)
+                                }
+                            })
+                            actions.add(stringResource(R.string.manage_app_info) to {
+                                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                    data = "package:${appInfo.app.packageName}".toUri()
+                                }
+                                context.startActivity(intent)
                             })
                             actions.add(stringResource(R.string.uninstall) to {
                                 val intent = Intent(Intent.ACTION_DELETE).apply {

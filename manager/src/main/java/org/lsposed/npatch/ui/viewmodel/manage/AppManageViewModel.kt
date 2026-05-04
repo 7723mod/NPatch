@@ -42,6 +42,8 @@ class AppManageViewModel : ViewModel() {
         object ClearUpdateLoaderResult : ViewAction()
         data class PerformOptimize(val appInfo: AppInfo) : ViewAction()
         object ClearOptimizeResult : ViewAction()
+        data class PerformForceStop(val appInfo: AppInfo) : ViewAction()
+        object ClearForceStopResult : ViewAction()
         object Refresh : ViewAction()
     }
 
@@ -56,6 +58,9 @@ class AppManageViewModel : ViewModel() {
         private set
 
     var optimizeState: ProcessingState<Boolean> by mutableStateOf(ProcessingState.Idle)
+        private set
+
+    var forceStopState: ProcessingState<Boolean> by mutableStateOf(ProcessingState.Idle)
         private set
 
     private val logger = object : Logger() {
@@ -98,6 +103,8 @@ class AppManageViewModel : ViewModel() {
                 is ViewAction.ClearUpdateLoaderResult -> updateLoaderState = ProcessingState.Idle
                 is ViewAction.PerformOptimize -> performOptimize(action.appInfo)
                 is ViewAction.ClearOptimizeResult -> optimizeState = ProcessingState.Idle
+                is ViewAction.PerformForceStop -> performForceStop(action.appInfo)
+                is ViewAction.ClearForceStopResult -> forceStopState = ProcessingState.Idle
                 is ViewAction.Refresh -> {
                     if (!isRefreshing) {
                         isRefreshing = true
@@ -198,5 +205,14 @@ class AppManageViewModel : ViewModel() {
             ShizukuApi.performDexOptMode(appInfo.app.packageName)
         }
         optimizeState = ProcessingState.Done(result)
+    }
+
+    private suspend fun performForceStop(appInfo: AppInfo) {
+        Log.i(TAG, "Perform force stop for ${appInfo.app.packageName}")
+        forceStopState = ProcessingState.Processing
+        val result = withContext(Dispatchers.IO) {
+            NeoPackageManager.forceStop(appInfo.app.packageName)
+        }
+        forceStopState = ProcessingState.Done(result)
     }
 }
