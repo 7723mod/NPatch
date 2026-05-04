@@ -171,7 +171,7 @@ class AppManageViewModel : ViewModel() {
                     }
                 }
                 Patcher.patch(logger, Patcher.Options(appInfo.app.packageName, false, config, patchPaths, embeddedModulePaths))
-                if (!ShizukuApi.isPermissionGranted) {
+                if (!ShizukuApi.isReady) {
                     val apkFiles = lspApp.targetApkFiles
                     if (apkFiles.isNullOrEmpty()){
                         Log.e(TAG, "No patched APK files found")

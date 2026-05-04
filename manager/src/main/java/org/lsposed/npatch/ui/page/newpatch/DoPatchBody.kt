@@ -324,7 +324,9 @@ fun DoPatchBody(modifier: Modifier, navigator: Navigator) {
                         text = stringResource(R.string.install),
                         modifier = Modifier.weight(1f),
                         onClick = {
-                            installation = if (!ShizukuApi.isPermissionGranted) NewPatchViewModel.InstallMethod.SYSTEM else NewPatchViewModel.InstallMethod.SHIZUKU
+                            installation =
+                                if (!ShizukuApi.isReady) NewPatchViewModel.InstallMethod.SYSTEM
+                                else NewPatchViewModel.InstallMethod.SHIZUKU
                             Log.d(TAG, "Installation method: $installation")
                         },
                         colors = ButtonDefaults.textButtonColorsPrimary(),

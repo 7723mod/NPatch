@@ -65,7 +65,7 @@ object NeoPackageManager {
             val collection = mutableListOf<AppInfo>()
             val applicationList: List<ApplicationInfo>
 
-            if (ShizukuApi.isPermissionGranted) {
+            if (ShizukuApi.isReady) {
                 Log.i(TAG, "Fetching app list using Shizuku API")
                 applicationList = runCatching {
                     ShizukuApi.getInstalledApplications()

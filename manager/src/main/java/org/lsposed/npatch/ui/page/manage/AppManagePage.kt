@@ -337,7 +337,7 @@ fun AppManageBody(
                             val shizukuUnavailable = stringResource(R.string.shizuku_unavailable)
                             actions.add(stringResource(R.string.manage_optimize) to {
                                 scope.launch {
-                                    if (!ShizukuApi.isPermissionGranted) {
+                                    if (!ShizukuApi.isReady) {
                                         Toast.makeText(context, shizukuUnavailable, Toast.LENGTH_SHORT).show()
                                     } else {
                                         viewModel.dispatch(AppManageViewModel.ViewAction.PerformOptimize(appInfo))

@@ -36,7 +36,6 @@ import org.lsposed.npatch.ui.util.LocalSnackbarHost
 import org.lsposed.npatch.ui.util.backgroundAwareCardColors
 import org.lsposed.npatch.ui.viewmodel.manage.AppManageViewModel
 import org.lsposed.npatch.ui.viewmodel.manage.ModuleManageViewModel
-import rikka.shizuku.Shizuku
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -109,16 +108,18 @@ fun HomeScreen(navigator: Navigator) {
 
 private val listener: (Int, Int) -> Unit = { _, grantResult ->
     ShizukuApi.isPermissionGranted = grantResult == PackageManager.PERMISSION_GRANTED
+    ShizukuApi.refreshState()
 }
 
 @Composable
 private fun StatusCard() {
     LaunchedEffect(Unit) {
-        Shizuku.addRequestPermissionResultListener(listener)
+        ShizukuApi.refreshState()
+        ShizukuApi.addRequestPermissionResultListener(listener)
     }
     DisposableEffect(Unit) {
         onDispose {
-            Shizuku.removeRequestPermissionResultListener(listener)
+            ShizukuApi.removeRequestPermissionResultListener(listener)
         }
     }
 
@@ -147,7 +148,7 @@ private fun StatusCard() {
             colors = backgroundAwareCardColors(color = containerColor),
             onClick = {
                 if (ShizukuApi.isBinderAvailable && !isGranted) {
-                    Shizuku.requestPermission(114514)
+                    ShizukuApi.requestPermission()
                 }
             },
             showIndication = true,
@@ -182,7 +183,9 @@ private fun StatusCard() {
                     Spacer(Modifier.height(2.dp))
                     Text(
                         modifier = Modifier.fillMaxWidth(),
-                        text = if (isGranted) "API ${Shizuku.getVersion()}" else stringResource(R.string.home_shizuku_warning),
+                        text =
+                            ShizukuApi.getVersionOrNull()?.let { "API $it" }
+                                ?: stringResource(R.string.home_shizuku_warning),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
                         color = contentColor.copy(alpha = 0.8f)
