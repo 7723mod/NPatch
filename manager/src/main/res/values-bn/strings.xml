@@ -25,7 +25,7 @@
     <string name="home_info_copied">ক্লিপবোর্ডে কপি করা হয়েছে</string>
     <string name="home_support">সমর্থন</string>
     <string name="home_description">NPatch হল LSPosed কোরের উপর ভিত্তি করে একটি বিনামূল্যের নন-রুট Xposed ফ্রেমওয়ার্ক।</string>
-    <string name="home_view_source_code"><![CDATA[%1$s]]></string>
+    <string name="about_view_source_code"><![CDATA[%1$s]]></string>
     <!-- Manage Screen -->
     <string name="screen_manage">পরিচালনা করুন</string>
     <string name="manage_loading">লোড হচ্ছে</string>

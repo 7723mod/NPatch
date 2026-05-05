@@ -24,7 +24,7 @@
     <string name="home_info_copied">Kopierat till urklipp</string>
     <string name="home_support">Stöd</string>
     <string name="home_description">NPatch är ett gratis, icke-root Xposed-ramverk baserad på LSPosed-kärnan.</string>
-    <string name="home_view_source_code"><![CDATA[Visa källkoden på %1$s]]></string>
+    <string name="about_view_source_code"><![CDATA[Visa källkoden på %1$s]]></string>
     <!-- Manage Screen -->
     <string name="screen_manage">Hantera</string>
     <string name="manage_loading">Laddar</string>

@@ -24,7 +24,7 @@
     <string name="home_info_copied">S\'ha copiat al porta-retalls</string>
     <string name="home_support">Suport</string>
     <string name="home_description">NPatch és un marc Xposed gratuït no root basat en el nucli LSPosed.</string>
-    <string name="home_view_source_code"><![CDATA[Veure el codi font a %1$s]]></string>
+    <string name="about_view_source_code"><![CDATA[Veure el codi font a %1$s]]></string>
     <!-- Manage Screen -->
     <string name="screen_manage">Gestionar</string>
     <string name="manage_loading">Carregant</string>

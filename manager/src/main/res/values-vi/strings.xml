@@ -24,7 +24,7 @@
     <string name="home_info_copied">Sao chép vào clipboard</string>
     <string name="home_support">Hỗ trợ</string>
     <string name="home_description">NPatch là một khung công tác Xposed không gốc miễn phí dựa trên lõi LSPosed.</string>
-    <string name="home_view_source_code"><![CDATA[Xem mã nguồn tại %1$s]]></string>
+    <string name="about_view_source_code"><![CDATA[Xem mã nguồn tại %1$s]]></string>
     <!-- Manage Screen -->
     <string name="screen_manage">Quản lý</string>
     <string name="manage_loading">Đang tải</string>

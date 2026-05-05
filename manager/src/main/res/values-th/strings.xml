@@ -24,7 +24,7 @@
     <string name="home_info_copied">คัดลอกไปยังคลิปบอร์ดแล้ว</string>
     <string name="home_support">สนับสนุน</string>
     <string name="home_description">NPatch เป็นเฟรมเวิร์ก Xposed ที่ไม่ใช่รูทฟรีโดยอิงตามคอร์ LSPosed</string>
-    <string name="home_view_source_code"><![CDATA[ดูซอร์สโค้ดได้ที่ %1$s]]></string>
+    <string name="about_view_source_code"><![CDATA[ดูซอร์สโค้ดได้ที่ %1$s]]></string>
     <!-- Manage Screen -->
     <string name="screen_manage">จัดการ</string>
     <string name="manage_loading">กำลังโหลด</string>

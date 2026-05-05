@@ -24,7 +24,7 @@
     <string name="home_info_copied">Copiado para a área de transferência</string>
     <string name="home_support">Apoiar</string>
     <string name="home_description">NPatch é uma estrutura Xposed não raiz gratuita baseada no núcleo LSPosed.</string>
-    <string name="home_view_source_code"><![CDATA[Veja o código fonte em %1$s]]></string>
+    <string name="about_view_source_code"><![CDATA[Veja o código fonte em %1$s]]></string>
     <!-- Manage Screen -->
     <string name="screen_manage">Gerir</string>
     <string name="manage_loading">Carregando</string>

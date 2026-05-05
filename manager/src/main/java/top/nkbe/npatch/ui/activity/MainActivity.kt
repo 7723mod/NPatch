@@ -33,6 +33,7 @@ import coil.compose.AsyncImage
 import top.nkbe.npatch.LSPApplication
 import top.nkbe.npatch.config.ThemeConfig
 import top.nkbe.npatch.config.ThemeMode
+import top.nkbe.npatch.ui.page.AboutScreen
 import top.nkbe.npatch.ui.page.LocalNavigator
 import top.nkbe.npatch.ui.page.MainScreen
 import top.nkbe.npatch.ui.page.Navigator
@@ -149,6 +150,10 @@ class MainActivity : ComponentActivity() {
                                 onBack = { navigator.pop() },
                                 entryProvider = entryProvider {
                                     entry<Route.Main> { MainScreen(navigator) }
+
+                                    entry<Route.About> {
+                                        AboutScreen(onBack = { navigator.pop() })
+                                    }
 
                                     entry<Route.NewPatch> { route ->
                                         NewPatchScreen(id = route.id, data = route.data)

@@ -22,14 +22,30 @@
     <string name="home_framework_version">Framework Version</string>
     <string name="home_system_version">System Version</string>
     <string name="home_device">Device</string>
-    <string name="home_device_info">Equipment Information</string>
-    <string name="coming_soon">Stay tuned</string>
     <string name="home_system_abi">System ABI</string>
     <string name="home_info_copied">Copied to clipboard</string>
     <string name="home_support">Support</string>
     <string name="home_about">About NPatch</string>
-    <string name="home_description">NPatch is a free non-root Xposed framework based on Vector core.</string>
-    <string name="home_view_source_code"><![CDATA[View source code at %1$s]]></string>
+    <string name="home_description">NPatch is a free non-root Xposed framework based on Vector.</string>
+
+    <!-- About Screen -->
+    <string name="about_view_source_code"><![CDATA[View source code at %1$s]]></string>
+    <string name="about_author_summary">NPatch maintainer</string>
+    <string name="about_disclaimer_title">Disclaimer</string>
+    <string name="about_disclaimer_body">NPatch is provided only for learning, research, and legitimate app compatibility work. Please respect local laws, app terms, and the rights of original developers. You are responsible for how patched apps and modules are used on your device.</string>
+    <string name="about_links_title">Links</string>
+    <string name="about_official_website">Website</string>
+    <string name="about_link_website_summary">Visit the official NPatch site</string>
+    <string name="about_link_github_summary">View source code and releases</string>
+    <string name="about_link_telegram_summary">Subscribe to our channel</string>
+    <string name="about_acknowledgments_title">Special thanks (unordered)</string>
+    <string name="about_ack_rovo89_summary">Founder of the Xposed Framework; the originator and pioneer of the entire modular ecosystem.</string>
+    <string name="about_ack_lsposed_team_summary">With thanks to the LSPosed Team for their continuous contributions to the Xposed ecosystem and low-level injection techniques.</string>
+    <string name="about_ack_jingmatrix_summary">Author of Vector, whose outstanding framework architecture provided a vital foundation and inspiration for NPatch.</string>
+    <string name="about_ack_lspatch_summary">A pioneer in rootless patching solutions, proving the feasibility of dynamic Xposed environment loading via manager-side implementation.</string>
+    <string name="about_ack_libxposed_summary">The driving force behind Xposed API standardisation, bringing type safety and clear conventions to the module development world.</string>
+    <string name="about_ack_winter_summary">My very first financial supporter; thank you for such early and direct encouragement.</string>
+    <string name="about_ack_community_summary">Thanks to all users involved in testing, submitting PRs, and reporting issues to drive the project forward together.</string>
 
     <!-- Manage Screen -->
     <string name="screen_manage">Manage</string>

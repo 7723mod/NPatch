@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -25,7 +26,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import nkbe.util.ShizukuApi
@@ -100,7 +100,7 @@ fun HomeScreen(navigator: Navigator) {
             }
 
             item {
-                SupportCard()
+                SupportCard(navigator)
             }
         }
     }
@@ -355,8 +355,7 @@ private fun InfoCard() {
 }
 
 @Composable
-private fun SupportCard() {
-    val context = LocalContext.current
+private fun SupportCard(navigator: Navigator) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -366,27 +365,18 @@ private fun SupportCard() {
     ) {
         Column {
             ArrowPreference(
-                title = "About",
+                title = stringResource(R.string.home_about),
                 summary = stringResource(R.string.home_description),
+                startAction = {
+                    Icon(
+                        Icons.Outlined.Info,
+                        modifier = Modifier.padding(end = 6.dp),
+                        contentDescription = null,
+                        tint = MiuixTheme.colorScheme.onBackground
+                    )
+                },
                 onClick = {
-                    val intent = Intent(Intent.ACTION_VIEW, "https://www.nkbe.top".toUri())
-                    context.startActivity(intent)
-                }
-            )
-            ArrowPreference(
-                title = "GitHub",
-                summary = stringResource(R.string.home_view_source_code, "GitHub", ""),
-                onClick = {
-                    val intent = Intent(Intent.ACTION_VIEW, "https://github.com/7723mod/NPatch".toUri())
-                    context.startActivity(intent)
-                }
-            )
-            ArrowPreference(
-                title = "Telegram",
-                summary = "Subscribe to our channel",
-                onClick = {
-                    val intent = Intent(Intent.ACTION_VIEW, "https://t.me/NPatch".toUri())
-                    context.startActivity(intent)
+                    navigator.navigate(Route.About)
                 }
             )
         }

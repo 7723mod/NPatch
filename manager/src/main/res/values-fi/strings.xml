@@ -24,7 +24,7 @@
     <string name="home_info_copied">Kopioitu leikepöydälle</string>
     <string name="home_support">Tuki</string>
     <string name="home_description">NPatch on ilmainen ei-root Xposed -kehys, joka perustuu LSPosed-ytimeen.</string>
-    <string name="home_view_source_code"><![CDATA[Katso lähdekoodi osoitteessa %1$s]]></string>
+    <string name="about_view_source_code"><![CDATA[Katso lähdekoodi osoitteessa %1$s]]></string>
     <!-- Manage Screen -->
     <string name="screen_manage">Hallitse</string>
     <string name="manage_loading">Ladataan</string>

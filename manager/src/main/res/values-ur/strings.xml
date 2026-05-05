@@ -25,7 +25,7 @@
     <string name="home_info_copied">کلپ بورڈ پر کاپی ہو گیا۔</string>
     <string name="home_support">حمایت</string>
     <string name="home_description">NPatch LSPosed کور پر مبنی ایک مفت نان روٹ Xposed فریم ورک ہے۔</string>
-    <string name="home_view_source_code"><![CDATA[%1$s]]></string>
+    <string name="about_view_source_code"><![CDATA[%1$s]]></string>
     <!-- Manage Screen -->
     <string name="screen_manage">انتظام کریں۔</string>
     <string name="manage_loading">لوڈ ہو رہا ہے۔</string>

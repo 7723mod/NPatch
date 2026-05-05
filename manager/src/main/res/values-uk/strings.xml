@@ -25,7 +25,7 @@
     <string name="home_info_copied">Скопійовано в буфер обміну</string>
     <string name="home_support">Підтримка</string>
     <string name="home_description">NPatch — це безкоштовний некорневий фреймворк Xposed, заснований на ядрі LSPosed.</string>
-    <string name="home_view_source_code"><![CDATA[Перегляньте вихідний код на %1$s]]></string>
+    <string name="about_view_source_code"><![CDATA[Перегляньте вихідний код на %1$s]]></string>
     <!-- Manage Screen -->
     <string name="screen_manage">Керування</string>
     <string name="manage_loading">Завантаження</string>

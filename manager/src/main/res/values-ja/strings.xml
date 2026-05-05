@@ -25,7 +25,7 @@
     <string name="home_info_copied">クリップボードにコピーしました</string>
     <string name="home_support">サポート</string>
     <string name="home_description">NPatchは、LSPosedコアに基づく無料の非root環境向けXposedフレームワークです。</string>
-    <string name="home_view_source_code"><![CDATA[%1$sでソースコードを見る]]></string>
+    <string name="about_view_source_code"><![CDATA[%1$sでソースコードを見る]]></string>
     <!-- Manage Screen -->
     <string name="screen_manage">管理</string>
     <string name="manage_loading">読み込み中</string>

@@ -22,13 +22,11 @@
     <string name="home_framework_version">猫猫核心版本</string>
     <string name="home_system_version">猫窝系统版本</string>
     <string name="home_device">猫爬架型号</string>
-    <string name="home_device_info">爬架详细参数</string>
-    <string name="coming_soon">喵喵待命中...</string>
     <string name="home_system_abi">猫猫系统底层架构 (ABI)</string>
     <string name="home_info_copied">已揣入肉垫（剪贴板）</string>
     <string name="home_support">寻求投喂支持</string>
     <string name="home_description">NPatch 是一款免费且迭代于 LSPatch 的，基于 LSPosed 核心的免 Root 的 Xposed 框架喵。让你的猫猫无需 Root 也能玩出新花样！</string>
-    <string name="home_view_source_code"><![CDATA[偷看喵星源代码 %1$s]]></string>
+    <string name="about_view_source_code"><![CDATA[偷看喵星源代码 %1$s]]></string>
 
     <!-- Manage Screen -->
     <string name="screen_manage">巡视领地</string>

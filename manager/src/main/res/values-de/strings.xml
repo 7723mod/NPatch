@@ -24,7 +24,7 @@
     <string name="home_info_copied">In Zwischenablage kopiert</string>
     <string name="home_support">Unterstützung</string>
     <string name="home_description">NPatch ist ein kostenloses Xposed-Framework ohne Rootberechtigung, das auf den LSPosed-Kern basiert.</string>
-    <string name="home_view_source_code"><![CDATA[Quellcode unter %1$s anzeigen]]></string>
+    <string name="about_view_source_code"><![CDATA[Quellcode unter %1$s anzeigen]]></string>
     <!-- Manage Screen -->
     <string name="screen_manage">Verwalten</string>
     <string name="manage_loading">Laden</string>

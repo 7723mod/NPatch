@@ -24,7 +24,7 @@
     <string name="home_info_copied">Gekopieer na knipbord</string>
     <string name="home_support">Ondersteuning</string>
     <string name="home_description">NPatch is \'n gratis nie-wortel Xposed-raamwerk gebaseer op LSPosed-kern.</string>
-    <string name="home_view_source_code"><![CDATA[Bekyk bronkode by %1$s]]></string>
+    <string name="about_view_source_code"><![CDATA[Bekyk bronkode by %1$s]]></string>
     <!-- Manage Screen -->
     <string name="screen_manage">Bestuur</string>
     <string name="manage_loading">Laai tans</string>

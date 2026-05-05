@@ -24,7 +24,7 @@
     <string name="home_info_copied">Kopeeriti lõikelauale</string>
     <string name="home_support">Toetus</string>
     <string name="home_description">NPatch on tasuta mittejuur-Xposedi raamistik, mis põhineb LSPosedi tuumal.</string>
-    <string name="home_view_source_code"><![CDATA[Vaadake lähtekoodi aadressil %1$s]]></string>
+    <string name="about_view_source_code"><![CDATA[Vaadake lähtekoodi aadressil %1$s]]></string>
     <!-- Manage Screen -->
     <string name="screen_manage">Halda</string>
     <string name="manage_loading">Laadimine</string>

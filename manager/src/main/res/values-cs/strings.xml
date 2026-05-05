@@ -24,7 +24,7 @@
     <string name="home_info_copied">Zkopírováno do schránky</string>
     <string name="home_support">Podpěra, podpora</string>
     <string name="home_description">NPatch je bezplatný non-root Xposed framework založený na jádru LSPosed.</string>
-    <string name="home_view_source_code"><![CDATA[Zobrazit zdrojový kód na %1$s]]></string>
+    <string name="about_view_source_code"><![CDATA[Zobrazit zdrojový kód na %1$s]]></string>
     <!-- Manage Screen -->
     <string name="screen_manage">Správa</string>
     <string name="manage_loading">načítání</string>

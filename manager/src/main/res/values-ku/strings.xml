@@ -24,7 +24,7 @@
     <string name="home_info_copied">Li clipboardê hate kopî kirin</string>
     <string name="home_support">Alîkarî</string>
     <string name="home_description">NPatch çarçoveyek Xposed-a ne-root-a belaş e ku li ser bingeha LSPosed-ê ye.</string>
-    <string name="home_view_source_code"><![CDATA[Koda çavkaniyê li %1$s<br/>bibînin Tevlî %2$s kanala me bibin]]></string>
+    <string name="about_view_source_code"><![CDATA[Koda çavkaniyê li %1$s<br/>bibînin Tevlî %2$s kanala me bibin]]></string>
     <!-- Manage Screen -->
     <string name="screen_manage">Rêvebirin</string>
     <string name="manage_loading">Barkirin</string>

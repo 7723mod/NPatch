@@ -24,7 +24,7 @@
     <string name="home_info_copied">Nukopijuota į mainų sritį</string>
     <string name="home_support">Palaikymas</string>
     <string name="home_description">NPatch yra nemokama ne šakninė Xposed sistema, pagrįsta LSPosed branduoliu.</string>
-    <string name="home_view_source_code"><![CDATA[Peržiūrėkite šaltinio kodą %1$s]]></string>
+    <string name="about_view_source_code"><![CDATA[Peržiūrėkite šaltinio kodą %1$s]]></string>
     <!-- Manage Screen -->
     <string name="screen_manage">Tvarkykite</string>
     <string name="manage_loading">Įkeliama</string>

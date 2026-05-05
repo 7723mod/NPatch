@@ -25,7 +25,7 @@
     <string name="home_info_copied">क्लिपबोर्ड पर नकल</string>
     <string name="home_support">सहायता</string>
     <string name="home_description">NPatch LSPosed कोर पर आधारित एक निःशुल्क गैर-रूट Xposed ढांचा है।</string>
-    <string name="home_view_source_code"><![CDATA[%1$s]]></string>
+    <string name="about_view_source_code"><![CDATA[%1$s]]></string>
     <!-- Manage Screen -->
     <string name="screen_manage">प्रबंधित करना</string>
     <string name="manage_loading">लोड हो रहा है</string>

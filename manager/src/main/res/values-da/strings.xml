@@ -24,7 +24,7 @@
     <string name="home_info_copied">Kopieret til udklipsholder</string>
     <string name="home_support">Support</string>
     <string name="home_description">NPatch er en gratis ikke-root Xposed-ramme baseret på LSPosed-kerne.</string>
-    <string name="home_view_source_code"><![CDATA[Se kildekoden på %1$s]]></string>
+    <string name="about_view_source_code"><![CDATA[Se kildekoden på %1$s]]></string>
     <!-- Manage Screen -->
     <string name="screen_manage">Administrer</string>
     <string name="manage_loading">Indlæser</string>
