@@ -33,7 +33,8 @@ public class RemoteApplicationService implements ILSPApplicationService {
 
     private static final String TAG = "NPatch";
     private static final String MODULE_SERVICE = "org.lsposed.npatch.manager.ModuleService";
-    private static final int CONNECTION_TIMEOUT_SEC = 1;
+    private static final int CONNECTION_TIMEOUT_SEC = 2;
+    private static final int MAX_BIND_ATTEMPTS = 1;
 
     private volatile ILSPApplicationService service;
 
@@ -44,55 +45,83 @@ public class RemoteApplicationService implements ILSPApplicationService {
                     .setComponent(new ComponentName(Constants.MANAGER_PACKAGE_NAME, MODULE_SERVICE))
                     .putExtra("packageName", context.getPackageName());
 
-            CountDownLatch latch = new CountDownLatch(1);
+            Throwable lastError = null;
+            for (int attempt = 1; attempt <= MAX_BIND_ATTEMPTS && service == null; attempt++) {
+                CountDownLatch latch = new CountDownLatch(1);
+                ServiceConnection conn = new ServiceConnection() {
+                    @Override
+                    public void onServiceConnected(ComponentName name, IBinder binder) {
+                        Log.i(TAG, "Manager binder received");
+                        service = Stub.asInterface(binder);
+                        latch.countDown();
+                    }
 
-            ServiceConnection conn = new ServiceConnection() {
-                @Override
-                public void onServiceConnected(ComponentName name, IBinder binder) {
-                    Log.i(TAG, "Manager binder received");
-                    service = Stub.asInterface(binder);
-                    latch.countDown();
+                    @Override
+                    public void onServiceDisconnected(ComponentName name) {
+                        Log.e(TAG, "Manager service died");
+                        service = null;
+                    }
+                };
+
+                Log.i(TAG, "Requesting manager binder... attempt " + attempt + "/" + MAX_BIND_ATTEMPTS);
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        boolean bindOk = context.bindService(
+                                intent,
+                                Context.BIND_AUTO_CREATE,
+                                Executors.newSingleThreadExecutor(),
+                                conn
+                        );
+                        if (!bindOk) {
+                            throw new RemoteException("bindService returned false");
+                        }
+                    } else {
+                        HandlerThread handlerThread = new HandlerThread("RemoteApplicationService");
+                        handlerThread.start();
+                        Handler handler = new Handler(handlerThread.getLooper());
+
+                        Class<?> contextImplClass = context.getClass();
+                        Method getUserMethod = contextImplClass.getMethod("getUser");
+                        UserHandle userHandle = (UserHandle) getUserMethod.invoke(context);
+
+                        Method bindServiceAsUserMethod = contextImplClass.getDeclaredMethod(
+                                "bindServiceAsUser",
+                                Intent.class,
+                                ServiceConnection.class,
+                                int.class,
+                                Handler.class,
+                                UserHandle.class
+                        );
+
+                        bindServiceAsUserMethod.invoke(context, intent, conn, Context.BIND_AUTO_CREATE, handler, userHandle);
+                    }
+
+                    boolean success = latch.await(CONNECTION_TIMEOUT_SEC, TimeUnit.SECONDS);
+                    if (!success) {
+                        throw new TimeoutException("Bind service timeout");
+                    }
+                } catch (Exception e) {
+                    lastError = e;
+                    Log.w(TAG, "Manager bind attempt failed", e);
                 }
-
-                @Override
-                public void onServiceDisconnected(ComponentName name) {
-                    Log.e(TAG, "Manager service died");
-                    service = null;
-                }
-            };
-
-            Log.i(TAG, "Requesting manager binder...");
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                context.bindService(intent, Context.BIND_AUTO_CREATE, Executors.newSingleThreadExecutor(), conn);
-            } else {
-                HandlerThread handlerThread = new HandlerThread("RemoteApplicationService");
-                handlerThread.start();
-                Handler handler = new Handler(handlerThread.getLooper());
-
-                Class<?> contextImplClass = context.getClass();
-                Method getUserMethod = contextImplClass.getMethod("getUser");
-                UserHandle userHandle = (UserHandle) getUserMethod.invoke(context);
-
-                Method bindServiceAsUserMethod = contextImplClass.getDeclaredMethod(
-                        "bindServiceAsUser",
-                        Intent.class,
-                        ServiceConnection.class,
-                        int.class,
-                        Handler.class,
-                        UserHandle.class
-                );
-
-                bindServiceAsUserMethod.invoke(context, intent, conn, Context.BIND_AUTO_CREATE, handler, userHandle);
             }
 
-            boolean success = latch.await(CONNECTION_TIMEOUT_SEC, TimeUnit.SECONDS);
-            if (!success) {
-                throw new TimeoutException("Bind service timeout");
+            if (service == null) {
+                if (lastError != null) {
+                    if (lastError instanceof RemoteException) {
+                        throw (RemoteException) lastError;
+                    }
+                    RemoteException remoteException = new RemoteException("Failed to get manager binder");
+                    remoteException.initCause(lastError);
+                    throw remoteException;
+                }
+                throw new TimeoutException("Bind service failed after retries");
             }
 
-        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException |
-                 InterruptedException | TimeoutException e) {
-            
+        } catch (Throwable e) {
+            if (e instanceof RemoteException) {
+                throw (RemoteException) e;
+            }
             RemoteException remoteException = new RemoteException("Failed to get manager binder");
             remoteException.initCause(e);
             throw remoteException;

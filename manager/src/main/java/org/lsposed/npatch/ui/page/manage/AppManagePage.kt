@@ -20,7 +20,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardCapslock
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -105,7 +104,6 @@ fun AppManageBody(
         }
     }
 
-    var scopeApp by rememberSaveable { mutableStateOf("") }
     val uninstallSuccessfully = stringResource(R.string.manage_uninstall_successfully)
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
@@ -324,9 +322,9 @@ fun AppManageBody(
                             if (isLocal) {
                                 actions.add(stringResource(R.string.manage_module_scope) to {
                                     viewModel.viewModelScope.launch {
-                                        scopeApp = appInfo.app.packageName
+                                        val targetAppPkg = appInfo.app.packageName
                                         val activated = withContext(Dispatchers.IO) {
-                                            ConfigManager.getModulesForApp(scopeApp).map { it.pkgName }.toSet()
+                                            ConfigManager.getModulesForApp(targetAppPkg).map { it.pkgName }.toSet()
                                         }
 
                                         val initialSelected = NeoPackageManager.appList.mapNotNull {
@@ -337,12 +335,12 @@ fun AppManageBody(
                                         )
                                         if (result is SelectAppsResult.MultipleApps) {
                                             withContext(Dispatchers.IO) {
-                                                ConfigManager.getModulesForApp(scopeApp).forEach {
-                                                    ConfigManager.deactivateModule(scopeApp, it)
+                                                ConfigManager.getModulesForApp(targetAppPkg).forEach {
+                                                    ConfigManager.deactivateModule(targetAppPkg, it)
                                                 }
                                                 result.selected.forEach {
-                                                    Log.d(TAG, "Activate ${it.app.packageName} for $scopeApp")
-                                                    ConfigManager.activateModule(scopeApp, Module(it.app.packageName, it.app.sourceDir))
+                                                    Log.d(TAG, "Activate ${it.app.packageName} for $targetAppPkg")
+                                                    ConfigManager.activateModule(targetAppPkg, Module(it.app.packageName, it.app.sourceDir))
                                                 }
                                             }
                                             Toast.makeText(context, scopeUpdatedText, Toast.LENGTH_SHORT).show()
