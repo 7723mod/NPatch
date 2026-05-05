@@ -50,6 +50,12 @@ fun NewPatchScreen(
     val scope = rememberCoroutineScope()
     val errorUnknown = stringResource(R.string.error_unknown)
     val showSelectModuleDialog = remember { mutableStateOf(false) }
+    val apkMimeTypes = arrayOf(
+        "application/vnd.android.package-archive",
+        "application/zip",
+        "application/x-zip-compressed",
+        "application/octet-stream",
+    )
 
     // 從儲存空間選取 APK
     val storageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { apks ->
@@ -77,7 +83,7 @@ fun NewPatchScreen(
         NeoPackageManager.cleanTmpApkDir()
         when (id) {
             ACTION_STORAGE -> {
-                storageLauncher.launch(arrayOf("application/vnd.android.package-archive"))
+                storageLauncher.launch(apkMimeTypes)
                 viewModel.dispatch(ViewAction.DoneInit)
             }
             ACTION_APPLIST -> {

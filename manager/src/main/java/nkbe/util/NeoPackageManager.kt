@@ -31,6 +31,8 @@ import java.io.File
 import java.io.IOException
 import java.text.Collator
 import java.util.*
+import java.util.Collections
+import java.util.zip.ZipFile
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -197,31 +199,39 @@ object NeoPackageManager {
             runCatching {
                 var primary: ApplicationInfo? = null
                 val splits = mutableListOf<String>()
-                val appInfos = apks.mapNotNull { uri ->
+                val appInfos = mutableListOf<AppInfo>()
+
+                apks.forEachIndexed { index, uri ->
                     val src = DocumentFile.fromSingleUri(lspApp, uri)
                         ?: throw IOException("DocumentFile is null")
-                    val dst = lspApp.tmpApkDir.resolve(src.name!!)
-                    val input = lspApp.contentResolver.openInputStream(uri)
-                        ?: throw IOException("InputStream is null")
-                    input.use {
-                        dst.outputStream().use { output ->
-                            input.copyTo(output)
-                        }
+                    val srcName = src.name ?: "selected-$index.apk"
+                    val copiedName = if (isApksArchive(srcName)) {
+                        "$index-$srcName"
+                    } else {
+                        sanitizeVisibleFileName(srcName)
                     }
+                    val copiedFile = copyDocumentToTempFile(uri, copiedName)
+                    val candidates =
+                        if (isApksArchive(srcName)) extractApkArchive(copiedFile, srcName)
+                        else listOf(copiedFile)
 
-                    val appInfo = lspApp.packageManager.getPackageArchiveInfo(
-                        dst.absolutePath, PackageManager.GET_META_DATA
-                    )?.applicationInfo
-                    appInfo?.sourceDir = dst.absolutePath
-                    if (appInfo == null) {
-                        splits.add(dst.absolutePath)
-                        return@mapNotNull null
+                    var uriPrimary: ApplicationInfo? = null
+                    candidates.forEach { candidate ->
+                        val appInfo = lspApp.packageManager.getPackageArchiveInfo(
+                            candidate.absolutePath, PackageManager.GET_META_DATA
+                        )?.applicationInfo
+                        appInfo?.sourceDir = candidate.absolutePath
+                        if (appInfo == null || uriPrimary != null) {
+                            splits.add(candidate.absolutePath)
+                            return@forEach
+                        }
+                        uriPrimary = appInfo
+                        if (primary == null) primary = appInfo
+                        val label = lspApp.packageManager.getApplicationLabel(appInfo).toString()
+                        appInfos.add(AppInfo(appInfo, label))
                     }
-                    if (primary == null) primary = appInfo
-                    val label = lspApp.packageManager.getApplicationLabel(appInfo).toString()
-                    AppInfo(appInfo, label)
                 }
-                // TODO: Check selected apks are from the same app
+
                 primary?.splitSourceDirs = splits.toTypedArray()
                 if (appInfos.isEmpty()) throw IOException("No apks")
                 appInfos
@@ -231,6 +241,84 @@ object NeoPackageManager {
                 throw t
             }
         }
+    }
+
+    private fun copyDocumentToTempFile(uri: Uri, fileName: String): File {
+        val dst = uniqueTempFile(fileName)
+        lspApp.contentResolver.openInputStream(uri).use { input ->
+            if (input == null) throw IOException("InputStream is null")
+            dst.outputStream().use { output ->
+                input.copyTo(output)
+            }
+        }
+        return dst
+    }
+
+    private fun isApksArchive(fileName: String): Boolean {
+        val lower = fileName.lowercase(Locale.ROOT)
+        return lower.endsWith(".apks") || lower.endsWith(".xapk")
+    }
+
+    private fun extractApkArchive(archiveFile: File, archiveName: String): List<File> {
+        val extracted = mutableListOf<File>()
+        val prefix = sanitizeVisibleFileName(archiveName.substringBeforeLast('.', archiveName))
+            .ifEmpty { "archive" }
+
+        ZipFile(archiveFile).use { zipFile ->
+            val entries = Collections.list(zipFile.entries())
+                .filter { entry ->
+                    !entry.isDirectory && entry.name.lowercase(Locale.ROOT).endsWith(".apk")
+                }
+                .sortedWith(
+                    compareBy<java.util.zip.ZipEntry> { entry ->
+                        val name = entry.name.substringAfterLast('/').lowercase(Locale.ROOT)
+                        if (name == "base.apk") 0 else 1
+                    }.thenBy { entry -> entry.name.lowercase(Locale.ROOT) }
+                )
+            if (entries.isEmpty()) {
+                throw IOException("No APK entries found in archive: $archiveName")
+            }
+
+            entries.forEachIndexed { index, entry ->
+                val entryName = entry.name.substringAfterLast('/').ifEmpty { "part-$index.apk" }
+                val lowerName = entryName.lowercase(Locale.ROOT)
+                val outName = when {
+                    lowerName == "base.apk" -> "base_${prefix}.apk"
+                    lowerName.startsWith("split_") -> "split_${prefix}_${sanitizeVisibleFileName(entryName)}"
+                    else -> "split_${prefix}_${sanitizeVisibleFileName(entryName)}"
+                }
+                val dst = uniqueTempFile(outName)
+                zipFile.getInputStream(entry).use { input ->
+                    dst.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                extracted.add(dst)
+            }
+        }
+        archiveFile.delete()
+        return extracted
+    }
+
+    private fun sanitizeVisibleFileName(name: String): String {
+        val cleaned = name
+            .replace(Regex("[\\\\/:*?\"<>|]"), "_")
+            .replace(Regex("[\\p{Cntrl}]"), "")
+            .trim()
+        return cleaned.ifEmpty { "unnamed.apk" }
+    }
+
+    private fun uniqueTempFile(fileName: String): File {
+        val baseName = fileName.substringBeforeLast('.', fileName)
+        val ext = fileName.substringAfterLast('.', "")
+        var candidate = lspApp.tmpApkDir.resolve(fileName)
+        var index = 1
+        while (candidate.exists()) {
+            val nextName = if (ext.isEmpty()) "$baseName($index)" else "$baseName($index).$ext"
+            candidate = lspApp.tmpApkDir.resolve(nextName)
+            index++
+        }
+        return candidate
     }
 
     fun getLaunchIntentForPackage(packageName: String): Intent? {
