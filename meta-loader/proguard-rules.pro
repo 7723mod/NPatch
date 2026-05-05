@@ -1,4 +1,4 @@
--keep class org.lsposed.npatch.metaloader.LSPAppComponentFactoryStub {
+-keep class top.nkbe.npatch.metaloader.LSPAppComponentFactoryStub {
     public static byte[] dex;
     <init>();
 }

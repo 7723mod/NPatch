@@ -1,4 +1,4 @@
-package org.lsposed.npatch.util;
+package top.nkbe.npatch.util;
 
 import android.content.Context;
 import android.content.SharedPreferences;

@@ -23,10 +23,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.parcelize.Parcelize
 import me.zhanghai.android.appiconloader.AppIconLoader
-import org.lsposed.npatch.config.ConfigManager
-import org.lsposed.npatch.config.Configs
-import org.lsposed.npatch.lspApp
-import org.lsposed.npatch.share.Constants
+import top.nkbe.npatch.config.ConfigManager
+import top.nkbe.npatch.config.Configs
+import top.nkbe.npatch.lspApp
+import top.nkbe.npatch.share.Constants
 import java.io.File
 import java.io.IOException
 import java.text.Collator

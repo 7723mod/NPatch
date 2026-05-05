@@ -11,19 +11,19 @@
 -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
 -keep class com.beust.jcommander.** { *; }
 -keep interface com.beust.jcommander.** { *; }
--keep class org.lsposed.npatch.patch.NPatch { *; }
--keepclassmembers class org.lsposed.npatch.patch.NPatch {
+-keep class top.nkbe.npatch.patch.NPatch { *; }
+-keepclassmembers class top.nkbe.npatch.patch.NPatch {
     @com.beust.jcommander.Parameter <fields>;
 }
 
--keepclassmembers class org.lsposed.npatch.database.dao.** { *; }
--keep class org.lsposed.npatch.database.entity.** { *; }
--keep class org.lsposed.npatch.manager.ConfigProvider { *; }
--keep class org.lsposed.npatch.Patcher$Options { *; }
--keep class org.lsposed.npatch.share.LSPConfig { *; }
--keep class org.lsposed.npatch.share.PatchConfig { *; }
+-keepclassmembers class top.nkbe.npatch.database.dao.** { *; }
+-keep class top.nkbe.npatch.database.entity.** { *; }
+-keep class top.nkbe.npatch.manager.ConfigProvider { *; }
+-keep class top.nkbe.npatch.Patcher$Options { *; }
+-keep class top.nkbe.npatch.share.LSPConfig { *; }
+-keep class top.nkbe.npatch.share.PatchConfig { *; }
 -keep class org.lsposed.lspd.nativebridge.** { *; }
--keep class org.lsposed.npatch.loader.SigBypass { *; }
+-keep class top.nkbe.npatch.loader.SigBypass { *; }
 -dontwarn com.google.auto.value.AutoValue$Builder
 -dontwarn com.google.auto.value.AutoValue
 -dontwarn com.squareup.moshi.**

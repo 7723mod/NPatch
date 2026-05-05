@@ -93,7 +93,7 @@
 
         <provider
             android:name=".manager.ConfigProvider"
-            android:authorities="org.lsposed.npatch.manager.provider.config"
+            android:authorities="top.nkbe.npatch.manager.provider.config"
             android:exported="true"
             android:enabled="true" />
 

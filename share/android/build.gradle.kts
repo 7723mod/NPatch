@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "org.lsposed.npatch.share"
+    namespace = "top.nkbe.npatch.share"
 
     buildFeatures {
         androidResources = false

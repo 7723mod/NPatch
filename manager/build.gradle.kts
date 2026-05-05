@@ -62,7 +62,7 @@ android {
         kotlinCompilerExtensionVersion = "1.5.15"
     }
 
-    namespace = "org.lsposed.npatch"
+    namespace = "top.nkbe.npatch"
 
     applicationVariants.all {
         kotlin.sourceSets {

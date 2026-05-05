@@ -1,0 +1,394 @@
+package top.nkbe.npatch.ui.page
+
+import android.annotation.SuppressLint
+import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Warning
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
+import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
+import nkbe.util.ShizukuApi
+import top.nkbe.npatch.R
+import top.nkbe.npatch.share.LSPConfig
+import top.nkbe.npatch.ui.component.NPatchScaffold
+import top.nkbe.npatch.ui.util.LocalSnackbarHost
+import top.nkbe.npatch.ui.util.backgroundAwareCardColors
+import top.nkbe.npatch.ui.viewmodel.manage.AppManageViewModel
+import top.nkbe.npatch.ui.viewmodel.manage.ModuleManageViewModel
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.preference.ArrowPreference
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.utils.PressFeedbackType
+import top.yukonga.miuix.kmp.utils.overScrollVertical
+import top.yukonga.miuix.kmp.utils.scrollEndHaptic
+
+@SuppressLint("ContextCastToActivity")
+@Composable
+fun HomeScreen(navigator: Navigator) {
+    val scrollBehavior = MiuixScrollBehavior()
+    var isIntentLaunched by rememberSaveable { mutableStateOf(false) }
+    val activity = LocalContext.current as Activity
+    val intent = activity.intent
+
+    LaunchedEffect(Unit) {
+        if (!isIntentLaunched && intent.action == Intent.ACTION_VIEW && intent.hasCategory(Intent.CATEGORY_DEFAULT) && intent.type == "application/vnd.android.package-archive") {
+            isIntentLaunched = true
+            val uri = intent.data
+            if (uri != null) {
+                navigator.navigate(
+                    Route.NewPatch(
+                        id = ACTION_INTENT_INSTALL,
+                        data = uri.toString()
+                    )
+                )
+            }
+        }
+    }
+
+    NPatchScaffold(
+        topBar = {
+            TopAppBar(
+                color = Color.Transparent,
+                title = stringResource(R.string.app_name),
+                scrollBehavior = scrollBehavior
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .scrollEndHaptic()
+                .overScrollVertical()
+                .nestedScroll(scrollBehavior.nestedScrollConnection),
+            contentPadding = PaddingValues(
+                top = innerPadding.calculateTopPadding() + 12.dp,
+                bottom = innerPadding.calculateBottomPadding() + 24.dp
+            ),
+            overscrollEffect = null
+        ) {
+            item {
+                StatusCard()
+            }
+
+            item {
+                InfoCard()
+            }
+
+            item {
+                SupportCard()
+            }
+        }
+    }
+}
+
+private val listener: (Int, Int) -> Unit = { _, grantResult ->
+    ShizukuApi.isPermissionGranted = grantResult == PackageManager.PERMISSION_GRANTED
+    ShizukuApi.refreshState()
+}
+
+@Composable
+private fun StatusCard() {
+    LaunchedEffect(Unit) {
+        ShizukuApi.refreshState()
+        ShizukuApi.addRequestPermissionResultListener(listener)
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            ShizukuApi.removeRequestPermissionResultListener(listener)
+        }
+    }
+
+    val isGranted = ShizukuApi.isPermissionGranted
+    val containerColor = if (isGranted) MiuixTheme.colorScheme.primaryContainer else MiuixTheme.colorScheme.errorContainer
+    val contentColor = if (isGranted) MiuixTheme.colorScheme.onPrimaryContainer else MiuixTheme.colorScheme.onErrorContainer
+
+    val appViewModel = viewModel<AppManageViewModel>()
+    val moduleViewModel = viewModel<ModuleManageViewModel>()
+    val appsCount = appViewModel.appList.size
+    val modulesCount = moduleViewModel.appList.size
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp)
+            .padding(bottom = 12.dp)
+            .height(IntrinsicSize.Min), // 让左右两边高度完美对齐
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Card(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight(),
+            colors = backgroundAwareCardColors(color = containerColor),
+            onClick = {
+                if (ShizukuApi.isBinderAvailable && !isGranted) {
+                    ShizukuApi.requestPermission()
+                }
+            },
+            showIndication = true,
+            pressFeedbackType = PressFeedbackType.Tilt
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .offset(x = 38.dp, y = 45.dp),
+                    contentAlignment = Alignment.BottomEnd
+                ) {
+                    Icon(
+                        modifier = Modifier.size(170.dp),
+                        imageVector = if (isGranted) Icons.Outlined.CheckCircle else Icons.Outlined.Warning,
+                        tint = contentColor.copy(alpha = 0.2f),
+                        contentDescription = null
+                    )
+                }
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(all = 16.dp)
+                ) {
+                    Text(
+                        modifier = Modifier.fillMaxWidth(),
+                        text = stringResource(if (isGranted) R.string.shizuku_available else R.string.shizuku_unavailable),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = contentColor
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        modifier = Modifier.fillMaxWidth(),
+                        text =
+                            ShizukuApi.getVersionOrNull()?.let { "API $it" }
+                                ?: stringResource(R.string.home_shizuku_warning),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = contentColor.copy(alpha = 0.8f)
+                    )
+                }
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                colors = backgroundAwareCardColors(),
+                insideMargin = PaddingValues(16.dp),
+                showIndication = false,
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    Text(
+                        modifier = Modifier.fillMaxWidth(),
+                        text = stringResource(R.string.apps),
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 15.sp,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    )
+                    Text(
+                        modifier = Modifier.fillMaxWidth(),
+                        text = appsCount.toString(),
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MiuixTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                colors = backgroundAwareCardColors(),
+                insideMargin = PaddingValues(16.dp),
+                showIndication = false,
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    Text(
+                        modifier = Modifier.fillMaxWidth(),
+                        text = stringResource(R.string.modules),
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 15.sp,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    )
+                    Text(
+                        modifier = Modifier.fillMaxWidth(),
+                        text = modulesCount.toString(),
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MiuixTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun InfoText(title: String, content: String, bottomPadding: Dp = 10.dp) {
+    Text(
+        text = title,
+        fontSize = MiuixTheme.textStyles.headline1.fontSize,
+        color = MiuixTheme.colorScheme.onSurface,
+        fontWeight = FontWeight.Medium,
+    )
+    Text(
+        text = content,
+        fontSize = MiuixTheme.textStyles.body2.fontSize,
+        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+        modifier = Modifier.padding(top = 2.dp, bottom = bottomPadding)
+    )
+}
+
+@Composable
+private fun InfoCard() {
+    val context = LocalContext.current
+    val snackbarHost = LocalSnackbarHost.current
+    val scope = rememberCoroutineScope()
+
+    val apiVersion = if (Build.VERSION.PREVIEW_SDK_INT != 0) {
+        "${Build.VERSION.CODENAME} Preview (API ${Build.VERSION.PREVIEW_SDK_INT})"
+    } else {
+        "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})"
+    }
+
+    val deviceName = buildString {
+        append(Build.MANUFACTURER.replaceFirstChar { it.uppercase() })
+        if (Build.BRAND != Build.MANUFACTURER) {
+            append(" " + Build.BRAND.replaceFirstChar { it.uppercase() })
+        }
+        append(" " + Build.MODEL)
+    }
+
+    val copySuccessMessage = stringResource(R.string.home_info_copied)
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp)
+            .padding(bottom = 12.dp),
+        colors = backgroundAwareCardColors(),
+        onClick = {
+            val contentString = listOf(
+                "API Version: ${LSPConfig.instance.API_CODE}",
+                "NPatch Version: ${LSPConfig.instance.VERSION_NAME} (${LSPConfig.instance.VERSION_CODE})",
+                "Framework Version: ${LSPConfig.instance.CORE_VERSION_NAME} (${LSPConfig.instance.CORE_VERSION_CODE})",
+                "System Version: $apiVersion",
+                "Device: $deviceName",
+                "System ABI: ${Build.SUPPORTED_ABIS[0]}"
+            ).joinToString("\n")
+            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            cm.setPrimaryClip(ClipData.newPlainText("NPatch Info", contentString))
+            scope.launch { snackbarHost.showSnackbar(copySuccessMessage) }
+        },
+        showIndication = true,
+        pressFeedbackType = PressFeedbackType.Sink
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            InfoText(
+                title = stringResource(R.string.home_api_version),
+                content = "${LSPConfig.instance.API_CODE}"
+            )
+            InfoText(
+                title = stringResource(R.string.home_npatch_version),
+                content = "${LSPConfig.instance.VERSION_NAME} (${LSPConfig.instance.VERSION_CODE})"
+            )
+            InfoText(
+                title = stringResource(R.string.home_framework_version),
+                content = "${LSPConfig.instance.CORE_VERSION_NAME} (${LSPConfig.instance.CORE_VERSION_CODE})"
+            )
+            InfoText(
+                title = stringResource(R.string.home_system_version),
+                content = apiVersion
+            )
+            InfoText(
+                title = stringResource(R.string.home_device),
+                content = deviceName
+            )
+            InfoText(
+                title = stringResource(R.string.home_system_abi),
+                content = Build.SUPPORTED_ABIS[0],
+                bottomPadding = 0.dp
+            )
+        }
+    }
+}
+
+@Composable
+private fun SupportCard() {
+    val context = LocalContext.current
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp)
+            .padding(bottom = 12.dp),
+        colors = backgroundAwareCardColors(),
+    ) {
+        Column {
+            ArrowPreference(
+                title = "About",
+                summary = stringResource(R.string.home_description),
+                onClick = {
+                    val intent = Intent(Intent.ACTION_VIEW, "https://www.nkbe.top".toUri())
+                    context.startActivity(intent)
+                }
+            )
+            ArrowPreference(
+                title = "GitHub",
+                summary = stringResource(R.string.home_view_source_code, "GitHub", ""),
+                onClick = {
+                    val intent = Intent(Intent.ACTION_VIEW, "https://github.com/7723mod/NPatch".toUri())
+                    context.startActivity(intent)
+                }
+            )
+            ArrowPreference(
+                title = "Telegram",
+                summary = "Subscribe to our channel",
+                onClick = {
+                    val intent = Intent(Intent.ACTION_VIEW, "https://t.me/NPatch".toUri())
+                    context.startActivity(intent)
+                }
+            )
+        }
+    }
+}

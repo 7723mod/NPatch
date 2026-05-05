@@ -42,7 +42,7 @@ val (coreCommitCount, coreLatestTag) = runCatching {
 }.getOrNull() ?: (3045 to "2.0")
 
 // sync from https://github.com/JingMartix/LSPosed/blob/master/build.gradle.kts
-val defaultManagerPackageName by extra("org.lsposed.npatch")
+val defaultManagerPackageName by extra("top.nkbe.npatch")
 val apiCode by extra(101)
 val verCode by extra(commitCount)
 val verName by extra("1.0.5")
