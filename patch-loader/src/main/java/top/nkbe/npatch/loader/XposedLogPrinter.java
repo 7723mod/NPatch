@@ -43,6 +43,7 @@ public class XposedLogPrinter extends LogPrinter {
             }
             out.write(text.getBytes());
             out.write("\n".getBytes());
+            out.flush();
         }catch (Exception ignored){ }
     }
 }

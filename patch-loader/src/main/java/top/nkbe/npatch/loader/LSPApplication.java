@@ -10,10 +10,13 @@ import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.res.CompatibilityInfo;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.RemoteException;
 import android.os.Process;
 import android.system.Os;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.google.gson.Gson;
 
@@ -68,6 +71,7 @@ public class LSPApplication {
     private static ActivityThread activityThread;
     private static LoadedApk stubLoadedApk;
     private static LoadedApk appLoadedApk;
+    private static Thread.UncaughtExceptionHandler previousUncaughtExceptionHandler;
 
     private static PatchConfig config;
 
@@ -167,6 +171,7 @@ public class LSPApplication {
 
         if (config.outputLog) {
             XposedBridge.setLogPrinter(new XposedLogPrinter(0, "NPatch"));
+            installCrashInterceptor(context);
         }
         logInfo("Load modules");
         LSPLoader.initModules(appLoadedApk);
@@ -181,6 +186,31 @@ public class LSPApplication {
         }
 
         logInfo("NPatch bootstrap completed");
+    }
+
+    private static void installCrashInterceptor(Context context) {
+        if (previousUncaughtExceptionHandler != null) {
+            return;
+        }
+
+        previousUncaughtExceptionHandler = Thread.getDefaultUncaughtExceptionHandler();
+        Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
+            try {
+                XLog.e(TAG, "Uncaught exception in " + thread.getName(), throwable);
+                new Handler(Looper.getMainLooper()).post(() ->
+                        Toast.makeText(
+                                context.getApplicationContext(),
+                                "Crash log saved to Media directory",
+                                Toast.LENGTH_LONG
+                        ).show()
+                );
+            } catch (Throwable ignored) {
+            }
+
+            if (previousUncaughtExceptionHandler != null) {
+                previousUncaughtExceptionHandler.uncaughtException(thread, throwable);
+            }
+        });
     }
 
     private static Context createLoadedApkWithContext() {
