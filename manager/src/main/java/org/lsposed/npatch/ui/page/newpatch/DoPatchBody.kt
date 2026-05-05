@@ -205,7 +205,18 @@ fun DoPatchBody(modifier: Modifier, navigator: Navigator) {
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(bottom = 12.dp),
+                .padding(bottom = 12.dp)
+                .combinedClickable(
+                    onClick = {},
+                    onLongClick = {
+                        val joinedLogs = viewModel.logs.joinToString(separator = "\n") { it.second }
+                        if (joinedLogs.isNotEmpty()) {
+                            val cm = lspApp.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            cm.setPrimaryClip(ClipData.newPlainText("NPatch Log", joinedLogs))
+                            scope.launch { snackbarHost.showSnackbar(context.getString(R.string.home_info_copied)) }
+                        }
+                    }
+                ),
             colors = backgroundAwareCardColors(),
         ) {
             ShimmerAnimation(enabled = viewModel.patchState == PatchState.PATCHING) {
@@ -223,20 +234,11 @@ fun DoPatchBody(modifier: Modifier, navigator: Navigator) {
                     ) {
                         items(viewModel.logs) {
                             val line = it.second
-                            val copySuccessMessage = stringResource(R.string.home_info_copied)
                             when (it.first) {
                                 Log.DEBUG, Log.INFO -> Text(
                                     text = line,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .combinedClickable(
-                                            onClick = {},
-                                            onLongClick = {
-                                                val cm = lspApp.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                                cm.setPrimaryClip(ClipData.newPlainText("NPatch Log", line))
-                                                scope.launch { snackbarHost.showSnackbar(copySuccessMessage) }
-                                            }
-                                        )
                                         .padding(vertical = 4.dp)
                                 )
                                 Log.ERROR -> Text(
@@ -244,14 +246,6 @@ fun DoPatchBody(modifier: Modifier, navigator: Navigator) {
                                     color = MiuixTheme.colorScheme.error,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .combinedClickable(
-                                            onClick = {},
-                                            onLongClick = {
-                                                val cm = lspApp.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                                cm.setPrimaryClip(ClipData.newPlainText("NPatch Log", line))
-                                                scope.launch { snackbarHost.showSnackbar(copySuccessMessage) }
-                                            }
-                                        )
                                         .padding(vertical = 4.dp)
                                 )
                             }
