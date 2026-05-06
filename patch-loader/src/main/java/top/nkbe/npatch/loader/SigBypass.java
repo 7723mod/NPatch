@@ -8,6 +8,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageParser;
 import android.content.pm.Signature;
+import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.util.Base64;
@@ -42,6 +43,12 @@ public class SigBypass {
     private static final Map<String, String> signatures = new HashMap<>();
     private static String cachedOriginalApkPath;
     private static String cachedOriginalFactory = null;
+    private static int activeSigBypassLevel;
+    private static boolean packageParserHooked;
+    private static boolean packageInfoCreatorProxied;
+    private static boolean javaIoHooked;
+    private static boolean nativeOpenatEnabled;
+    private static boolean svcRedirectEnabled;
 
     private static void replaceSignature(Context context, PackageInfo packageInfo) {
         boolean hasSignature = (packageInfo.signatures != null && packageInfo.signatures.length != 0) || packageInfo.signingInfo != null;
@@ -133,7 +140,9 @@ public class SigBypass {
         }
     }
 
-    private static void hookPackageParser(Context context, int sigBypassLevel) {
+    private static void hookPackageParser(Context context) {
+        // 同一個目標進程可能重複初始化 loader，hook 只需要安裝一次。
+        if (packageParserHooked) return;
         XposedBridge.hookAllMethods(PackageParser.class, "generatePackageInfo", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
@@ -141,14 +150,17 @@ public class SigBypass {
                 if (packageInfo == null) return;
                 replaceSignature(context, packageInfo);
 
-                if (sigBypassLevel >= 3 && cachedOriginalApkPath != null) {
+                if (activeSigBypassLevel >= Constants.SIGBYPASS_LV_PATH_REDIR && cachedOriginalApkPath != null) {
                     replacePackageInfoPath(packageInfo, cachedOriginalApkPath);
                 }
             }
         });
+        packageParserHooked = true;
     }
 
-    private static void proxyPackageInfoCreator(Context context, int sigBypassLevel) {
+    private static void proxyPackageInfoCreator(Context context) {
+        // PackageInfo.CREATOR 是全域靜態物件，重複代理會讓 Parcel 邏輯變得不可預期。
+        if (packageInfoCreatorProxied) return;
         Parcelable.Creator<PackageInfo> originalCreator = PackageInfo.CREATOR;
         Parcelable.Creator<PackageInfo> proxiedCreator = new Parcelable.Creator<>() {
             @Override
@@ -161,7 +173,7 @@ public class SigBypass {
                     spoofApplicationInfo(packageInfo.applicationInfo);
                 }
 
-                if (sigBypassLevel >= Constants.SIGBYPASS_LV_PATH_REDIR && cachedOriginalApkPath != null) {
+                if (activeSigBypassLevel >= Constants.SIGBYPASS_LV_PATH_REDIR && cachedOriginalApkPath != null) {
                     replacePackageInfoPath(packageInfo, cachedOriginalApkPath);
                 }
                 return packageInfo;
@@ -187,6 +199,7 @@ public class SigBypass {
         } catch (Throwable e) {
             Log.w(TAG, "fail to clear Parcel.sPairedCreators", e);
         }
+        packageInfoCreatorProxied = true;
     }
 
     public static void replaceApplication(String packageName, String sourceDir, String resourcesDir) throws IOException {
@@ -217,9 +230,22 @@ public class SigBypass {
         }
     }
 
+    private static boolean isArm64Runtime() {
+        // SVC 依賴 ARM64 SIGSYS/ucontext 暫存器佈局，其他 ABI 直接跳過比較穩。
+        for (String abi : Build.SUPPORTED_ABIS) {
+            if ("arm64-v8a".equals(abi)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static String extractOriginalApk(Context context) {
         File cacheDir = new File(context.getCacheDir(), "npatch/origin");
-        if (!cacheDir.exists()) cacheDir.mkdirs();
+        if (!cacheDir.exists() && !cacheDir.mkdirs()) {
+            Log.e(TAG, "Failed to create original APK cache directory: " + cacheDir);
+            return null;
+        }
 
         try (ZipFile sourceFile = new ZipFile(context.getPackageResourcePath())) {
             ZipEntry entry = sourceFile.getEntry(ORIGINAL_APK_ASSET_PATH);
@@ -230,7 +256,8 @@ public class SigBypass {
 
             File targetFile = new File(cacheDir, entry.getCrc() + ".apk");
             if (targetFile.exists() && targetFile.length() == entry.getSize()) {
-                return targetFile.getAbsolutePath();
+                cachedOriginalApkPath = targetFile.getAbsolutePath();
+                return cachedOriginalApkPath;
             }
 
             try (InputStream is = sourceFile.getInputStream(entry);
@@ -241,7 +268,8 @@ public class SigBypass {
                     fos.write(buffer, 0, length);
                 }
             }
-            return targetFile.getAbsolutePath();
+            cachedOriginalApkPath = targetFile.getAbsolutePath();
+            return cachedOriginalApkPath;
         } catch (IOException e) {
             Log.e(TAG, "Failed to extract original APK", e);
             return null;
@@ -249,6 +277,8 @@ public class SigBypass {
     }
 
     private static void hookJavaIO(String currentApkPath, String originalApkPath) {
+        // Java IO 先覆蓋常見讀 APK 路徑，native SVC 只補更底層的 openat。
+        if (javaIoHooked) return;
         XC_MethodHook redirectHook = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
@@ -271,29 +301,35 @@ public class SigBypass {
         try {
             XposedBridge.hookAllConstructors(FileInputStream.class, redirectHook);
         } catch (Throwable ignored) {}
+        javaIoHooked = true;
     }
 
     static void doSigBypass(Context context, int sigBypassLevel) throws IOException {
+        // hook 回呼會讀這個等級，確保後續升級等級時既有 hook 也能套用新行為。
+        activeSigBypassLevel = Math.max(activeSigBypassLevel, sigBypassLevel);
         String currentApkPath = context.getPackageResourcePath();
-        if (sigBypassLevel >= 2) {
+        if (sigBypassLevel >= Constants.SIGBYPASS_LV_PM_OPENAT && cachedOriginalApkPath == null) {
             cachedOriginalApkPath = extractOriginalApk(context);
         }
 
         // Java PMS Hook
         if (sigBypassLevel >= 1) {
-            hookPackageParser(context, sigBypassLevel);
-            proxyPackageInfoCreator(context, sigBypassLevel);
+            hookPackageParser(context);
+            proxyPackageInfoCreator(context);
         }
 
-        if (sigBypassLevel >= 2 && cachedOriginalApkPath != null) {
+        if (sigBypassLevel >= Constants.SIGBYPASS_LV_PM_OPENAT && cachedOriginalApkPath != null) {
             // 1. Java Core IO stability
             hookJavaIO(currentApkPath, cachedOriginalApkPath);
             // 2. Native OpenAt Hook
-            org.lsposed.lspd.nativebridge.SigBypass.enableOpenatHook(
-                    currentApkPath,
-                    cachedOriginalApkPath,
-                    context.getPackageName()
-            );
+            if (!nativeOpenatEnabled) {
+                org.lsposed.lspd.nativebridge.SigBypass.enableOpenatHook(
+                        currentApkPath,
+                        cachedOriginalApkPath,
+                        context.getPackageName()
+                );
+                nativeOpenatEnabled = true;
+            }
 
             // 路徑重定向 (Path Redirection)
             if (sigBypassLevel >= 3) {
@@ -308,18 +344,23 @@ public class SigBypass {
             }
 
             // SVC (Seccomp) Hook
-            if (sigBypassLevel >= 4) {
-                if (SvcBypass.initSvcHook()) {
+            if (sigBypassLevel >= Constants.SIGBYPASS_LV_SVC && !svcRedirectEnabled) {
+                if (!isArm64Runtime()) {
+                    XLog.w(TAG, "SVC Hook skipped on non-arm64 runtime");
+                } else if (SvcBypass.initSvcHook()) {
                     SvcBypass.enableSvcRedirect(
                             currentApkPath,
                             cachedOriginalApkPath,
                             context.getPackageName()
                     );
+                    svcRedirectEnabled = true;
                     XLog.i(TAG, "SVC Hook enabled");
                 } else {
                     XLog.w(TAG, "SVC Hook failed to init");
                 }
             }
+        } else if (sigBypassLevel >= Constants.SIGBYPASS_LV_PM_OPENAT) {
+            XLog.w(TAG, "Original APK unavailable, native signature bypass disabled");
         }
     }
 }

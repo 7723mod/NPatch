@@ -116,6 +116,14 @@ public class NPatch {
     private String packageName;
 
     private static final String ANDROID_MANIFEST_XML = "AndroidManifest.xml";
+    private static final String META_INF_PREFIX = "META-INF/";
+    private static final String META_INF_MANIFEST = "META-INF/MANIFEST.MF";
+    private static final HashSet<String> APK_SIGNATURE_EXTENSIONS = new HashSet<>(Arrays.asList(
+            ".SF",
+            ".RSA",
+            ".DSA",
+            ".EC"
+    ));
     private static final HashSet<String> ARCHES = new HashSet<>(Arrays.asList(
             "arm64-v8a",
             "x86_64"
@@ -278,7 +286,7 @@ public class NPatch {
                 for (StoredEntry entry : srcZFile.entries()) {
                     String name = entry.getCentralDirectoryHeader().getName();
                     if (dstZFile.get(name) != null) continue;
-                    if (name.startsWith("META-INF") && (name.endsWith(".SF") || name.endsWith(".MF") || name.endsWith(".RSA")))
+                    if (isApkSignatureEntry(name))
                         continue;
                     if (srcZFile instanceof NestedZip) {
                         ((NestedZip) srcZFile).addFileLink(name, name);
@@ -375,7 +383,7 @@ public class NPatch {
                 if (dstZFile.get(name) != null) continue;
                 if (embedOriginal && name.startsWith("classes") && name.endsWith(".dex")) continue;
                 if (name.equals("AndroidManifest.xml")) continue;
-                if (name.startsWith("META-INF") && (name.endsWith(".SF") || name.endsWith(".MF") || name.endsWith(".RSA")))
+                if (isApkSignatureEntry(name))
                     continue;
 
                 boolean linked = false;
@@ -404,6 +412,26 @@ public class NPatch {
             logger.i("Writing apk...");
         }
         logger.i("Done. Output APK: " + outputFile.getAbsolutePath());
+    }
+
+    private static boolean isApkSignatureEntry(String name) {
+        if (name == null || !name.startsWith(META_INF_PREFIX)) {
+            return false;
+        }
+        String upperName = name.toUpperCase(Locale.ROOT);
+        // v1 簽名的 Manifest 只能移除固定檔名，避免誤刪其他 .MF 資源。
+        if (META_INF_MANIFEST.equals(upperName)) {
+            return true;
+        }
+        int fileNameStart = upperName.lastIndexOf('/') + 1;
+        if (fileNameStart >= upperName.length()) {
+            return false;
+        }
+        String fileName = upperName.substring(fileNameStart);
+        int extensionStart = fileName.lastIndexOf('.');
+        // 只看 META-INF 下的實際檔名副檔名，避免子路徑或目錄名稱誤判。
+        return extensionStart > 0
+                && APK_SIGNATURE_EXTENSIONS.contains(fileName.substring(extensionStart));
     }
 
     private void embedModules(ZFile zFile) {

@@ -3,7 +3,7 @@ package org.lsposed.lspd.nativebridge;
 public class SvcBypass {
     // 核心功能方法
     public static native boolean initSvcHook();
-    public static native void enableSvcRedirect(String path, String orig, String pkg);
+    public static native void enableSvcRedirect(String currentPath, String originalPath, String packageName);
     public static native void disableSvcRedirect();
 
     // 狀態檢查與除錯方法
