@@ -90,10 +90,16 @@ fun Project.configureBaseExtension() {
             versionName = verName
 
             signingConfigs.create("config") {
-                val androidStoreFile = project.findProperty("androidStoreFile")?.toString()?.takeIf { it.isNotBlank() }
-                val androidStorePassword = project.findProperty("androidStorePassword")?.toString()
-                val androidKeyAlias = project.findProperty("androidKeyAlias")?.toString()
-                val androidKeyPassword = project.findProperty("androidKeyPassword")?.toString()
+                val androidStoreFile = (
+                    System.getenv("ANDROID_STORE_FILE")
+                        ?: project.findProperty("androidStoreFile")?.toString()
+                    )?.takeIf { it.isNotBlank() }
+                val androidStorePassword = System.getenv("ANDROID_STORE_PASSWORD")
+                    ?: project.findProperty("androidStorePassword")?.toString()
+                val androidKeyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                    ?: project.findProperty("androidKeyAlias")?.toString()
+                val androidKeyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+                    ?: project.findProperty("androidKeyPassword")?.toString()
 
                 if (androidStoreFile != null && androidStorePassword != null && androidKeyAlias != null && androidKeyPassword != null) {
                     storeFile = rootProject.file(androidStoreFile)

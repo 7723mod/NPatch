@@ -14,6 +14,7 @@ import android.util.Log;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import top.nkbe.npatch.loader.util.XLog;
 import top.nkbe.npatch.util.LocalInjectedModuleService;
 import top.nkbe.npatch.util.ModuleLoader;
 import org.lsposed.lspd.models.Module;
@@ -35,10 +36,10 @@ public class NeoLocalApplicationService extends ILSPApplicationService.Stub {
     public NeoLocalApplicationService(Context context) {
         legacyModules = Collections.synchronizedList(new ArrayList<>());
         modernModules = Collections.synchronizedList(new ArrayList<>());
-        loadModulesFromProvider(context);
+        boolean providerAvailable = loadModulesFromProvider(context);
 
-        if (legacyModules.isEmpty() && modernModules.isEmpty()) {
-            Log.w(TAG, "NeoLocal: Provider returned empty, falling back to local cache.");
+        if (!providerAvailable && legacyModules.isEmpty() && modernModules.isEmpty()) {
+            Log.w(TAG, "NeoLocal: Provider unavailable, falling back to local cache.");
             loadModulesFromCache(context);
         }
     }
@@ -92,9 +93,10 @@ public class NeoLocalApplicationService extends ILSPApplicationService.Stub {
         }
     }
 
-    private void loadModulesFromProvider(Context context) {
+    private boolean loadModulesFromProvider(Context context) {
         PackageManager pm = context.getPackageManager();
         String myPackageName = context.getPackageName();
+        JSONArray cacheArray = new JSONArray();
 
         Uri queryUri = PROVIDER_URI.buildUpon()
                 .appendQueryParameter("package", myPackageName)
@@ -103,21 +105,31 @@ public class NeoLocalApplicationService extends ILSPApplicationService.Stub {
         try (Cursor cursor = context.getContentResolver().query(queryUri, null, null, null, null)) {
             if (cursor == null) {
                 Log.w(TAG, "NeoLocal: Cannot reach Manager Provider.");
-                return;
+                return false;
             }
 
             while (cursor.moveToNext()) {
                 int colIndex = cursor.getColumnIndex("packageName");
                 if (colIndex != -1) {
-                    loadSingleModule(context, pm, cursor.getString(colIndex));
+                    String packageName = cursor.getString(colIndex);
+                    String apkPath = loadSingleModule(context, pm, packageName);
+                    if (apkPath != null) {
+                        JSONObject moduleObj = new JSONObject();
+                        moduleObj.put("path", apkPath);
+                        moduleObj.put("packageName", packageName);
+                        cacheArray.put(moduleObj);
+                    }
                 }
             }
+            updateModulesCache(context, cacheArray);
+            return true;
         } catch (Exception e) {
             Log.e(TAG, "NeoLocal: Provider query failed", e);
+            return false;
         }
     }
 
-    private void loadSingleModule(Context context, PackageManager pm, String pkgName) {
+    private String loadSingleModule(Context context, PackageManager pm, String pkgName) {
         try {
             ApplicationInfo appInfo = pm.getApplicationInfo(pkgName, 0);
             Module m = new Module();
@@ -129,7 +141,7 @@ public class NeoLocalApplicationService extends ILSPApplicationService.Stub {
                 m.file = ModuleLoader.loadModule(m.apkPath, readLegacyMinApiVersion(m.applicationInfo));
                 if (m.file == null) {
                     Log.w(TAG, "NeoLocal: Skipping unsupported module " + pkgName);
-                    return;
+                    return null;
                 }
                 m.appId = appInfo.uid;
                 m.service = new LocalInjectedModuleService(context, m.packageName);
@@ -139,9 +151,21 @@ public class NeoLocalApplicationService extends ILSPApplicationService.Stub {
                     modernModules.add(m);
                 }
                 Log.i(TAG, "NeoLocal: Loaded module " + pkgName);
+                return m.apkPath;
             }
         } catch (Throwable e) {
             Log.e(TAG, "NeoLocal: Failed to load " + pkgName, e);
+        }
+        return null;
+    }
+
+    private void updateModulesCache(Context context, JSONArray modules) {
+        try {
+            SharedPreferences shared = context.getSharedPreferences("npatch", Context.MODE_PRIVATE);
+            shared.edit().putString("modules", modules.toString()).apply();
+            XLog.i(TAG, "NeoLocal: Updated local modules cache: " + modules);
+        } catch (Throwable e) {
+            XLog.e(TAG, "NeoLocal: Failed to update local modules cache", e);
         }
     }
 
