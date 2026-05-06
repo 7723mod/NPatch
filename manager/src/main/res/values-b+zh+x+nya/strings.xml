@@ -25,12 +25,33 @@
     <string name="home_system_abi">猫猫系统底层架构 (ABI)</string>
     <string name="home_info_copied">已揣入肉垫（剪贴板）</string>
     <string name="home_support">寻求投喂支持</string>
-    <string name="home_description">NPatch 是一款免费且迭代于 LSPatch 的，基于 LSPosed 核心的免 Root 的 Xposed 框架喵。让你的猫猫无需 Root 也能玩出新花样！</string>
-    <string name="about_view_source_code"><![CDATA[偷看喵星源代码 %1$s]]></string>
+    <string name="home_about">关于 NPatch大猫猫</string>
+    <string name="home_description">NPatch 是一款免费且迭代于 LSPatch 的，基于 Vector 核心的免 Root 的 Xposed 框架喵。</string>
+
+    <!-- About Screen -->
+    <string name="about_view_source_code"><![CDATA[窥视喵星源码 %1$s]]></string>
+    <string name="about_author_summary">NPatch大猫猫的育猫师</string>
+    <string name="about_disclaimer_title">猫咪条约</string>
+    <string name="about_disclaimer_body">NPatch 仅供学习、研究以及合法的应用兼容性工作使用喵。请尊重当地法律、应用条款以及原开发者的权益。在你的猫爬架上运行修补 App 和挂件的后果需由你自己承担喵，开发者不负责任何猫窝坍塌、小鱼干数据丢失或其他意外伤害喵。</string>
+    <string name="about_links_title">喵星传送门</string>
+    <string name="about_official_website">猫爬架官网</string>
+    <string name="about_link_website_summary">传送到官方据点</string>
+    <string name="about_link_github_summary">去 GitHub 翻找源码和罐罐</string>
+    <string name="about_link_telegram_summary">订阅喵星频道，掌握第一手动向</string>
+    <string name="about_acknowledgments_title">全宇宙致谢（挨个蹭蹭）</string>
+    <string name="about_ack_rovo89_summary">Xposed 框架创始人，一切模块化生态的起源与奠基者。</string>
+    <string name="about_ack_jingmatrix_summary">Vector 作者，其优秀的框架工作为 NPatch 的持续迭代提供了重要基础与启发。</string>
+    <string name="about_ack_lsposed_team_summary">感谢 LSPosed 团队，是打造现代化 Xposed 钢筋骨架的顶级猫工匠。</string>
+    <string name="about_ack_lspatch_summary">感谢 LSPatch 先行者，你们开辟了不用 Root 也能玩乐的领地。</string>
+    <string name="about_ack_libxposed_summary">感谢 LibXposed，为开发者的猫爪带来了秩序与类型安全。</string>
+    <string name="about_ack_winter_summary">首位打赏我的喵粉喵，感谢这份很早、也很直接的鼓励喵。</string>
+    <string name="about_ack_community_summary">蹭蹭所有参与测试、提交 PR 与回报 Issue 的猫友们，大家一起把窝建得更好喵！</string>
 
     <!-- Manage Screen -->
     <string name="screen_manage">巡视领地</string>
     <string name="manage_loading">喵喵祈祷中...</string>
+    <string name="manage_search">搜索小猫猫</string>
+    <string name="manage_no_search_results">找不到欸</string>
     <string name="manage_no_apps">猫窝里还没修补过 Apps 喵</string>
     <string name="manage_rolling">打个滚儿</string>
     <string name="manage_update_loader">升级猫猫加载器</string>
@@ -41,9 +62,9 @@
     <string name="manage_optimize">F5喵</string>
     <string name="manage_optimize_successfully">优化成功！</string>
     <string name="manage_optimize_failed">卡————住————了... 优化失败</string>
-    <string name="manage_force_stop">绝对降伏</string>
-    <string name="manage_force_stop_successfully">按住了，抓捕成功喵！</string>
-    <string name="manage_force_stop_failed">没按住，溜掉了喵呜...</string>
+    <string name="manage_force_stop">敲晕大猫猫和小猫猫</string>
+    <string name="manage_force_stop_successfully">敲晕哩</string>
+    <string name="manage_force_stop_failed">被打哩</string>
     <string name="manage_uninstall_successfully">成功扔出猫窝！</string>
     <string name="manage_no_modules">这里连个 Modules 都没有喵</string>
     <string name="manage_module_settings">配置小鱼干挂件</string>
@@ -64,7 +85,7 @@
     <string name="patch_mode">打包套路</string>
     <string name="patch_local">居家模式</string>
     <string name="patch_local_desc">不把挂件塞进去。想来就来想走就走喵，无需重新制作。\n但这只猫只能在有NPatch大猫猫的爬架上撒欢喵。</string>
-    <string name="patch_integrated">合体模式 (集成)</string>
+    <string name="patch_integrated">合体模式</string>
     <string name="patch_integrated_desc">直接把挂件缝进App里。离了管理器也能跑，但没法随时调教配置喵。\n适合送去没有猫猫的陌生人家里住。</string>
     <string name="patch_embed_modules">缝入挂件</string>
     <string name="patch_advanced">高阶喵技</string>
@@ -118,7 +139,14 @@
     <string name="settings_storage_directory">挪动藏宝处</string>
     <string name="settings_appearance_theme">毛色与梳妆</string>
     <string name="settings_other_settings">喵喵杂项</string>
-    <string name="settings_monet_dynamic_color">Monet 魔法</string>
+    <string name="settings_theme_mode">猫猫主题</string>
+    <string name="settings_theme_mode_system">跟随超级猫猫</string>
+    <string name="settings_theme_mode_system_summary">自动配合超级猫猫的亮色与暗色外观</string>
+    <string name="settings_theme_mode_light">亮光喵</string>
+    <string name="settings_theme_mode_light_summary">始终使用明亮界面喵</string>
+    <string name="settings_theme_mode_dark">暗黑喵</string>
+    <string name="settings_theme_mode_dark_summary">始终使用深色界面喵</string>
+    <string name="settings_monet_dynamic_color">Monet魔法</string>
     <string name="settings_monet_dynamic_color_summary">毛色随喵喵壁纸而变 (Android 12+)</string>
     <string name="settings_custom_background_image">换张图喵</string>
     <string name="settings_clear">丢弃喵</string>
@@ -127,12 +155,12 @@
     <string name="settings_color_fresh_green">嫩草薄荷绿</string>
     <string name="settings_color_elegant_purple">高冷贵族紫</string>
     <string name="settings_color_vibrant_orange">元气大橘橙</string>
+    <string name="settings_color_cyan">天青喵</string>
     <string name="settings_color_mint_green">猫薄荷綠</string>
     <string name="settings_color_pink">柔粉紅</string>
     <string name="settings_color_deep_pink">喵桃红</string>
     <string name="settings_color_ice_blue">蓝蓝猫</string>
     <string name="settings_color_rose">蔷薇猫</string>
-
 
     <!-- Modules Repo-->
     <string name="sort_by_name">按 App 昵称排排坐</string>
@@ -177,4 +205,10 @@
         <item quantity="other">被叼走 %d 次</item>
     </plurals>
     <string name="download_asset">叼走它</string>
+    <string name="package_name">唯一喵喵名称</string>
+    <string name="author">制作者</string>
+    <string name="time_just_now">现在</string>
+    <string name="time_minutes_ago">%d分钟前喵</string>
+    <string name="time_hours_ago">%d小时前喵</string>
+    <string name="time_days_ago">%d天前喵</string>
 </resources>

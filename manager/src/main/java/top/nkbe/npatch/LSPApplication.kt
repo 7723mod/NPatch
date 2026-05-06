@@ -17,6 +17,7 @@ import top.nkbe.npatch.manager.AppBroadcastReceiver
 import nkbe.util.NeoPackageManager
 import nkbe.util.ShizukuApi
 import java.io.File
+import java.security.MessageDigest
 
 lateinit var lspApp: LSPApplication
 
@@ -63,9 +64,15 @@ class LSPApplication : Application() {
             val signatures = signingInfo?.apkContentsSigners
 
             if (signatures != null && signatures.isNotEmpty()) {
-                val currentHash = signatures[0].hashCode()
-                val targetHash = 0x0293FA43
-                if (currentHash != targetHash) {
+                val allowlist = setOf(
+                    "DB73788534AFFC4BFA3AE16040A2D3A2C2B63EDEA1E07F3A1CF9AFF4DD0995A8"
+                )
+                val matched = signatures.any { signature ->
+                    val sha256 = MessageDigest.getInstance("SHA-256").digest(signature.toByteArray())
+                        .joinToString("") { "%02X".format(it) }
+                    allowlist.contains(sha256)
+                }
+                if (!matched) {
                     killApp()
                 }
             } else {

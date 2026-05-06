@@ -107,6 +107,11 @@ fun Project.configureBaseExtension() {
                     keyAlias = androidKeyAlias
                     keyPassword = androidKeyPassword
                 }
+
+                if (this is com.android.build.api.dsl.ApkSigningConfig) {
+                    enableV2Signing = true
+                    enableV3Signing = true
+                }
             }
 
             externalNativeBuild {
@@ -162,7 +167,7 @@ fun Project.configureBaseExtension() {
                 }
             }
             named("release") {
-                signingConfig = null
+                signingConfig = if (signingConfigs["config"].storeFile != null) signingConfigs["config"] else signingConfigs["debug"]
                 externalNativeBuild {
                     cmake {
                         val flags = arrayOf(

@@ -26,7 +26,6 @@
     <string name="home_info_copied">已复制到剪贴板</string>
     <string name="home_support">支持</string>
     <string name="home_about">关于 NPatch</string>
-    <string name="home_about_summary">了解 NPatch 是什么以及它如何工作</string>
     <string name="home_description">NPatch 是一款免费且迭代于 LSPatch 的，基于 Vector 核心的免 Root 的 Xposed 框架。</string>
 
     <!-- About Screen -->
@@ -36,7 +35,7 @@
     <string name="about_disclaimer_body">NPatch 仅供学习、研究以及合法的应用兼容性工作使用。请尊重当地法律、应用条款以及原开发者的权益。您需自行承担在设备上使用修补应用与模块的全部责任，开发者不对任何直接或间接的设备故障、数据丢失或其他损失承担责任。</string>
     <string name="about_links_title">相关链接</string>
     <string name="about_official_website">官方网站</string>
-    <string name="about_link_website_summary">访问 NPatch 官方网站</string>
+    <string name="about_link_website_summary">访问 NkBe 的官方网站</string>
     <string name="about_link_github_summary">查看源代码与发布版本</string>
     <string name="about_link_telegram_summary">订阅我们的频道</string>
     <string name="about_acknowledgments_title">特别鸣谢（排名不分先后）</string>
@@ -45,7 +44,7 @@
     <string name="about_ack_lsposed_team_summary">感谢 LSPosed 团队在现代化 Xposed 生态与底层注入技术上的持续贡献。</string>
     <string name="about_ack_lspatch_summary">免 Root 修补方案的先行者，证明了在管理器侧动态加载 Xposed 环境的可行性。</string>
     <string name="about_ack_libxposed_summary">现代 Xposed API 标准化推手，为模块开发带来了类型安全与更清晰的秩序。</string>
-    <string name="about_ack_winter_summary">首位打赏 NPatch 的支持者，感谢这份在开发初期最直接的鼓励与认可。</string>
+    <string name="about_ack_winter_summary">首位打赏我的支持者，感谢这份很早、也很直接的鼓励。</string>
     <string name="about_ack_community_summary">感谢所有参与测试、提交 PR 与回报 Issue 的用户，共同推动项目前进。</string>
 
     <!-- Manage Screen -->

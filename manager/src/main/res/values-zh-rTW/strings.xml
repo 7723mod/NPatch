@@ -35,7 +35,7 @@
     <string name="about_disclaimer_body">NPatch 僅供學習、研究以及合法的應用程式相容性工作使用。請尊重當地法律、應用程式條款與原開發者權益。您需自行承擔在裝置上使用修補應用與模組的責任。</string>
     <string name="about_links_title">相關連結</string>
     <string name="about_official_website">官方網站</string>
-    <string name="about_link_website_summary">前往 NPatch 官方網站</string>
+    <string name="about_link_website_summary">前往 NkBe 的官方網站</string>
     <string name="about_link_github_summary">查看原始碼與發布版本</string>
     <string name="about_link_telegram_summary">訂閱我們的頻道</string>
     <string name="about_acknowledgments_title">特別鳴謝（排名不分先後）</string>
@@ -44,7 +44,7 @@
     <string name="about_ack_lsposed_team_summary">感謝 LSPosed 團隊在現代化 Xposed 生態與底層注入技術上的持續貢獻。</string>
     <string name="about_ack_lspatch_summary">免 Root 修補方案的先行者，證明了在管理器側動態加載 Xposed 環境的可行性。</string>
     <string name="about_ack_libxposed_summary">現代 Xposed API 標準化推手，為模組開發帶來了型別安全與更清晰的秩序。</string>
-    <string name="about_ack_winter_summary">首位打赏 NPatch 的支持者，感谢这份在开发初期最直接的鼓励与认可。</string>
+    <string name="about_ack_winter_summary">首位打赏我的支持者，感谢这份很早、也很直接的鼓励。</string>
     <string name="about_ack_community_summary">感謝所有參與測試、提交 PR 與回報 Issue 的用戶，共同推動專案前進。</string>
 
     <!-- Manage Screen -->
