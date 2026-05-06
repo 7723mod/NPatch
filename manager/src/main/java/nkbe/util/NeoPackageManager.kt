@@ -8,6 +8,7 @@ import android.content.pm.PackageInstaller
 import android.content.pm.PackageInstallerHidden.SessionParamsHidden
 import android.content.pm.PackageManager
 import android.content.pm.PackageManagerHidden
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Parcelable
 import android.util.Log
@@ -58,13 +59,14 @@ object NeoPackageManager {
 
     @SuppressLint("StaticFieldLeak")
     private val iconLoader = AppIconLoader(lspApp.resources.getDimensionPixelSize(R.dimen.app_icon_size), false, lspApp)
-    private val appIcon = mutableMapOf<String, ImageBitmap>()
+    private val appIcon = Collections.synchronizedMap(mutableMapOf<String, ImageBitmap>())
 
 
     suspend fun fetchAppList() {
-        withContext(Dispatchers.IO) {
+        val result = withContext(Dispatchers.IO) {
             val pm = lspApp.packageManager
             val collection = mutableListOf<AppInfo>()
+            val icons = mutableMapOf<String, ImageBitmap>()
             val applicationList: List<ApplicationInfo>
 
             if (ShizukuApi.isReady) {
@@ -86,7 +88,7 @@ object NeoPackageManager {
                     ModuleMetadataReader.read(it, pm)
                 }.getOrNull()
                 collection.add(AppInfo(it, label.toString(), moduleMetadata))
-                appIcon[it.packageName] = iconLoader.loadIcon(it).asImageBitmap()
+                icons[it.packageName] = loadIconBitmap(it)
             }
 
             collection.sortWith(compareBy(Collator.getInstance(Locale.getDefault()), AppInfo::label))
@@ -94,11 +96,26 @@ object NeoPackageManager {
                 collection.forEach { if (it.isXposedModule) put(it.app.packageName, it.app.sourceDir) }
             }
             ConfigManager.updateModules(modules)
+            collection to icons
+        }
+        withContext(Dispatchers.Main.immediate) {
+            val (collection, icons) = result
+            appIcon.clear()
+            appIcon.putAll(icons)
             appList = collection
         }
     }
 
-    fun getIcon(appInfo: AppInfo) = appIcon[appInfo.app.packageName]!!
+    fun getIcon(appInfo: AppInfo): ImageBitmap =
+        appIcon[appInfo.app.packageName] ?: loadIconBitmap(appInfo.app).also {
+            appIcon[appInfo.app.packageName] = it
+        }
+
+    private fun loadIconBitmap(appInfo: ApplicationInfo): ImageBitmap =
+        runCatching { iconLoader.loadIcon(appInfo).asImageBitmap() }.getOrElse {
+            Log.w(TAG, "Failed to load icon for ${appInfo.packageName}", it)
+            Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888).asImageBitmap()
+        }
 
     suspend fun cleanTmpApkDir() {
         withContext(Dispatchers.IO) {

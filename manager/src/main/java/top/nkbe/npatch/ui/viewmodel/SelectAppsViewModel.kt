@@ -37,6 +37,11 @@ class SelectAppsViewModel : ViewModel() {
                 isRefreshing = false
             }
             filteredList = NeoPackageManager.appList.filter(filter)
+            if (multiSelected.isNotEmpty()) {
+                val selectedPackages = multiSelected.map { it.app.packageName }.toSet()
+                multiSelected.clear()
+                multiSelected.addAll(NeoPackageManager.appList.filter { it.app.packageName in selectedPackages })
+            }
             Log.d(TAG, "Filtered ${filteredList.size} apps")
         }
     }

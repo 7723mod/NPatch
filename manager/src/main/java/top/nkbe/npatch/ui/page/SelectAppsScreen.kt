@@ -136,7 +136,7 @@ fun SelectAppsScreen(
         },
         floatingActionButton = {
             if (multiSelect) MultiSelectFab {
-                navigator.setResultAndBack(SelectAppsResult.MultipleApps(viewModel.multiSelected))
+                navigator.setResultAndBack(SelectAppsResult.MultipleApps(viewModel.multiSelected.toList()))
             }
         },
         popupHost = {
@@ -232,13 +232,17 @@ private fun SelectAppsList(
                 items = viewModel.filteredList,
                 key = { it.app.packageName }
             ) { appInfo ->
-                val checked = if (multiSelect) viewModel.multiSelected.contains(appInfo) else false
+                val checked = if (multiSelect) {
+                    viewModel.multiSelected.any { it.app.packageName == appInfo.app.packageName }
+                } else {
+                    false
+                }
 
                 AppItem(
                     modifier = Modifier.animateItem(spring(stiffness = Spring.StiffnessLow)),
                     onClick = {
                         if (multiSelect) {
-                            if (checked) viewModel.multiSelected.remove(appInfo)
+                            if (checked) viewModel.multiSelected.removeAll { it.app.packageName == appInfo.app.packageName }
                             else viewModel.multiSelected.add(appInfo)
                         } else {
                             onSingleSelect(appInfo)
