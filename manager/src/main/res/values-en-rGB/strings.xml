@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="welcome_version">Version %1$s</string>
+    <string name="welcome_intro_content">A modernised rootless Xposed framework manager and APK patching utility.</string>
+    <string name="welcome_intro_detail">NPatch helps you patch APKs, attach Xposed modules, manage module scopes, and keep runtime logs without requiring a rooted device. Local mode is designed for apps managed on this device, while integrated mode can package modules into a patched app for devices without the manager.</string>
+    <string name="welcome_basic_settings_title">Basic preferences</string>
+    <string name="welcome_permission_title">Initial Authorisation</string>
+    <string name="welcome_permission_summary">Please configure the necessary system permissions to ensure NPatch functions correctly.</string>
+    <string name="welcome_permission_storage_title">Storage Access</string>
+    <string name="welcome_permission_storage_summary">Required for reading source APKs and exporting patched binaries to your device.</string>
+    <string name="welcome_permission_applist_title">Package Query</string>
+    <string name="welcome_permission_applist_summary">Allows NPatch to retrieve installed applications for accurate patching target selection.</string>
+    <string name="welcome_permission_granted">Authorised</string>
+    <string name="welcome_permission_authorize">Grant access</string>
+    <string name="welcome_disclaimer_title">Terms and Accountability</string>
+    <string name="welcome_disclaimer_summary">Review these operational risks before patching applications or loading modules.</string>
+    <string name="welcome_disclaimer_content">Patching applications may lead to instability, data corruption, or compatibility failures. Ensure critical data is backed up. You are solely responsible for the conduct of patched apps and modules on your device.</string>
+    <string name="welcome_gpl_content">NPatch is open-source software released under the GNU General Public Licence v3.0. Please adhere to the licence terms when using, modifying, or redistributing this software.</string>
+    <string name="welcome_btn_next">Next</string>
+    <string name="welcome_btn_skip">Skip setup</string>
+    <string name="welcome_btn_finish">Get started</string>
+    <string name="welcome_btn_return">Return</string>
+    <string name="settings_view_welcome">View guide</string>
+    <string name="settings_view_welcome_summary">Review the welcome and permission guide</string>
+</resources>

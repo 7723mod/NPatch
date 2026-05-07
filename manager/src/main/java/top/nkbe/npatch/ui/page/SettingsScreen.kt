@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.SettingsBrightness
@@ -117,9 +118,10 @@ fun SettingsScreen() {
                 modifier = Modifier.fillMaxWidth(),
                 colors = backgroundAwareCardColors(),
             ) {
-                Language()
+                LanguagePreference()
                 KeyStore()
                 DetailPatchLogs()
+                WelcomeGuide()
                 StorageDirectory()
             }
             Spacer(Modifier.height(24.dp))
@@ -128,7 +130,7 @@ fun SettingsScreen() {
 }
 
 @Composable
-private fun AppearanceSettings() {
+fun AppearanceSettings() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val themeState by ThemeConfig.getThemeFlow(context).collectAsState(
@@ -369,7 +371,7 @@ private val LANGUAGE_ENTRIES = listOf(
 )
 
 @Composable
-private fun Language() {
+fun LanguagePreference() {
     val context = LocalContext.current
     val systemLabel = stringResource(R.string.settings_language_system)
     val languageLabels = remember(systemLabel) {
@@ -605,7 +607,25 @@ private fun DetailPatchLogs() {
 }
 
 @Composable
-private fun StorageDirectory() {
+private fun WelcomeGuide() {
+    val navigator = LocalNavigator.current
+    ArrowPreference(
+        title = stringResource(R.string.settings_view_welcome),
+        summary = stringResource(R.string.settings_view_welcome_summary),
+        startAction = {
+            Icon(
+                Icons.Outlined.Info,
+                modifier = Modifier.padding(end = 6.dp),
+                contentDescription = null,
+                tint = MiuixTheme.colorScheme.onBackground
+            )
+        },
+        onClick = { navigator.push(Route.Welcome(reviewMode = true)) }
+    )
+}
+
+@Composable
+fun StorageDirectory() {
     val context = LocalContext.current
     val snackbarHost = LocalSnackbarHost.current
     val scope = rememberCoroutineScope()

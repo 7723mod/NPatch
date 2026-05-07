@@ -1,14 +1,8 @@
 package top.nkbe.npatch.ui.activity
 
-import android.Manifest
 import android.content.Context
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
-import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -18,21 +12,27 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.*
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.app.ActivityCompat
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
 import coil.compose.AsyncImage
 import top.nkbe.npatch.LSPApplication
+import top.nkbe.npatch.config.Configs
 import top.nkbe.npatch.config.ThemeConfig
 import top.nkbe.npatch.config.ThemeMode
+import top.nkbe.npatch.config.ThemeSettings
 import top.nkbe.npatch.ui.page.AboutScreen
 import top.nkbe.npatch.ui.page.LocalNavigator
 import top.nkbe.npatch.ui.page.MainScreen
@@ -41,6 +41,7 @@ import top.nkbe.npatch.ui.page.NewPatchScreen
 import top.nkbe.npatch.ui.page.RepositoryDetailScreen
 import top.nkbe.npatch.ui.page.Route
 import top.nkbe.npatch.ui.page.SelectAppsScreen
+import top.nkbe.npatch.ui.page.WelcomeScreen
 import top.nkbe.npatch.ui.theme.LSPTheme
 import top.nkbe.npatch.ui.util.LocalBackgroundImagePath
 import top.nkbe.npatch.ui.util.LocalSnackbarHost
@@ -69,14 +70,12 @@ class MainActivity : ComponentActivity() {
             ) { false }
         )
 
-        checkAndRequestPermissions()
-
         setContent {
             val systemIsDark = isSystemInDarkTheme()
             val context = LocalContext.current
 
             val themeState by ThemeConfig.getThemeFlow(context).collectAsState(
-                initial = top.nkbe.npatch.config.ThemeSettings(
+                initial = ThemeSettings(
                     backgroundImageUri = "",
                     useMonet = false,
                     customColor = 0xFF007AFF.toInt(),
@@ -138,7 +137,10 @@ class MainActivity : ComponentActivity() {
                         }
 
                         val snackbarHostState = remember { SnackbarHostState() }
-                        val backStack = remember { mutableStateListOf<NavKey>(Route.Main) }
+                        val startRoute = remember {
+                            if (Configs.welcomeSeen) Route.Main else Route.Welcome()
+                        }
+                        val backStack = remember { mutableStateListOf<NavKey>(startRoute) }
                         val navigator = remember { Navigator(backStack) }
 
                         CompositionLocalProvider(
@@ -153,6 +155,17 @@ class MainActivity : ComponentActivity() {
 
                                     entry<Route.About> {
                                         AboutScreen(onBack = { navigator.pop() })
+                                    }
+
+                                    entry<Route.Welcome> { route ->
+                                        WelcomeScreen(
+                                            reviewMode = route.reviewMode,
+                                            onFinish = {
+                                                backStack.clear()
+                                                backStack.add(Route.Main)
+                                            },
+                                            onReturn = { navigator.pop() }
+                                        )
                                     }
 
                                     entry<Route.NewPatch> { route ->
@@ -177,35 +190,6 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
-            }
-        }
-    }
-
-    private fun checkAndRequestPermissions() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            // Android 11 (SDK 30) 以上請求 "所有檔案存取權"
-            if (!Environment.isExternalStorageManager()) {
-                try {
-                    val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-                    intent.addCategory("android.intent.category.DEFAULT")
-                    intent.data = Uri.parse("package:$packageName")
-                    startActivity(intent)
-                } catch (e: Exception) {
-                    val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-                    startActivity(intent)
-                }
-            }
-        } else {
-            // Android 10 以下請求傳統讀寫權限
-            if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(
-                        Manifest.permission.READ_EXTERNAL_STORAGE,
-                        Manifest.permission.WRITE_EXTERNAL_STORAGE
-                    ),
-                    1001
-                )
             }
         }
     }

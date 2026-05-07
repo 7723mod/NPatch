@@ -13,6 +13,7 @@ object Configs {
     private const val PREFS_STORAGE_DIRECTORY = "storage_directory"
     private const val PREFS_DETAIL_PATCH_LOGS = "detail_patch_logs"
     private const val PREFS_LANGUAGE = "language"
+    private const val PREFS_welcome_skip = "welcome_skip"
 
     var language by delegateStateOf(lspApp.prefs.getString(PREFS_LANGUAGE, "")!!) {
         lspApp.prefs.edit().putString(PREFS_LANGUAGE, it).apply()
@@ -36,5 +37,9 @@ object Configs {
 
     var detailPatchLogs by delegateStateOf(lspApp.prefs.getBoolean(PREFS_DETAIL_PATCH_LOGS, true)) {
         lspApp.prefs.edit().putBoolean(PREFS_DETAIL_PATCH_LOGS, it).apply()
+    }
+
+    var welcomeSeen by delegateStateOf(lspApp.prefs.getBoolean(PREFS_welcome_skip, false)) {
+        lspApp.prefs.edit().putBoolean(PREFS_welcome_skip, it).apply()
     }
 }

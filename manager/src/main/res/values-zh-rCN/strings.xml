@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="app_name">NPatch</string>
     <string name="add">添加</string>
     <string name="install">安装</string>
     <string name="installing">安装中</string>
@@ -119,6 +120,28 @@
     <string name="screen_select_apps">选择应用程序</string>
     <string name="screen_select_modules">选择 Xposed 模组</string>
 
+    <!-- Welcome Screen -->
+    <string name="welcome_version">版本 %1$s</string>
+    <string name="welcome_intro_content">专为免 Root 环境设计的现代化 Xposed 模块注入与应用修补工具。</string>
+    <string name="welcome_intro_detail">NPatch 能在免 Root 环境中，通过修改 APK 文件注入 Xposed 加载器。本地模式需搭配管理器动态加载并管理模块与作用域，但使用时无需保持管理器处于后台运行；集成模式则将模块直接内嵌至目标应用中，适合无管理器的设备独立执行。</string>
+    <string name="welcome_permission_title">配置必要权限</string>
+    <string name="welcome_permission_summary">开始体验前，请先授予基本访问权限以确保核心功能运行。</string>
+    <string name="welcome_permission_storage_title">存储空间访问</string>
+    <string name="welcome_permission_storage_summary">用于选取本机 APK 文件进行修补，并将输出结果保存至外部存储空间。</string>
+    <string name="welcome_permission_applist_title">读取应用程序列表</string>
+    <string name="welcome_permission_applist_summary">用于获取已安装的应用程序，以便您精确选取修补目标。</string>
+    <string name="welcome_permission_granted">已授予</string>
+    <string name="welcome_permission_authorize">前往授权</string>
+
+    <string name="welcome_disclaimer_title">使用须知与免责声明</string>
+    <string name="welcome_disclaimer_summary">在修补应用或加载 Xposed 模块之前，请务必了解以下操作风险。</string>
+    <string name="welcome_disclaimer_content">修改与修补应用程序可能导致其闪退、无法启动或数据丢失。请务必在操作前备份重要数据。使用者需自行承担修补后应用及模块在设备上运行的一切风险与后果。</string>
+    <string name="welcome_basic_settings_title">基础设置</string>
+    <string name="welcome_btn_next">下一步</string>
+    <string name="welcome_btn_skip">跳过导览</string>
+    <string name="welcome_btn_finish">开始体验</string>
+    <string name="welcome_btn_return">返回</string>
+
     <!-- Settings Screen -->
     <string name="screen_settings">设置</string>
     <string name="settings_language">语言</string>
@@ -136,6 +159,8 @@
     <string name="settings_keystore_wrong_alias">别名错误</string>
     <string name="settings_keystore_wrong_alias_password">别名密码错误</string>
     <string name="settings_detail_patch_logs">详细修补日志</string>
+    <string name="settings_view_welcome">查看导览界面</string>
+    <string name="settings_view_welcome_summary">重新查看欢迎与权限导览</string>
     <string name="settings_storage_directory">变更存储目录</string>
     <string name="settings_appearance_theme">外观与主题</string>
     <string name="settings_other_settings">其他设置</string>

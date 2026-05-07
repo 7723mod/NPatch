@@ -122,6 +122,27 @@
     <string name="screen_select_apps">Select apps</string>
     <string name="screen_select_modules">Select Xposed modules</string>
 
+    <!-- Welcome Screen -->
+    <string name="welcome_version">Version %1$s</string>
+    <string name="welcome_intro_content">A modern Xposed module injection and APK patching tool designed for rootless environments.</string>
+    <string name="welcome_intro_detail">NPatch injects the Xposed loader by modifying APK files. Local mode works with the manager to load modules and manage scopes dynamically, without keeping the manager running in the background. Integrated mode embeds modules directly into the target app for standalone use on devices without the manager.</string>
+    <string name="welcome_permission_title">Configure Required Permissions</string>
+    <string name="welcome_permission_summary">Before getting started, grant basic access permissions to keep core features working.</string>
+    <string name="welcome_permission_storage_title">Storage Access</string>
+    <string name="welcome_permission_storage_summary">Used to select local APK files for patching and save output results to external storage.</string>
+    <string name="welcome_permission_applist_title">Read App List</string>
+    <string name="welcome_permission_applist_summary">Used to read installed apps so you can choose patch targets accurately.</string>
+    <string name="welcome_permission_granted">Granted</string>
+    <string name="welcome_permission_authorize">Grant access</string>
+    <string name="welcome_disclaimer_title">Usage Notes and Disclaimer</string>
+    <string name="welcome_disclaimer_summary">Before patching apps or loading Xposed modules, make sure you understand the following risks.</string>
+    <string name="welcome_disclaimer_content">Modifying and patching apps may cause crashes, startup failures, or data loss. Back up important data before operating. Users are responsible for all risks and consequences of running patched apps and modules on their devices.</string>
+    <string name="welcome_basic_settings_title">Basic settings</string>
+    <string name="welcome_btn_next">Next</string>
+    <string name="welcome_btn_skip">Skip guide</string>
+    <string name="welcome_btn_finish">Get started</string>
+    <string name="welcome_btn_return">Return</string>
+
     <!-- Settings Screen -->
     <string name="screen_settings">Settings</string>
     <string name="settings_language">Language</string>
@@ -141,6 +162,8 @@
     <string name="settings_keystore_wrong_alias_password">Wrong alias password</string>
     <string name="settings_storage_directory">change storage directory</string>
     <string name="settings_detail_patch_logs">Detail patch logs</string>
+    <string name="settings_view_welcome">View guide</string>
+    <string name="settings_view_welcome_summary">Review the welcome and permission guide</string>
     <string name="settings_appearance_theme">Appearance &amp; Theme</string>
     <string name="settings_other_settings">Other Settings</string>
     <string name="settings_theme_mode">Theme Mode</string>

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="app_name">NyaPatch</string>
     <string name="add">收入爪下</string>
     <string name="install">塞进窝里</string>
     <string name="installing">正在努力踩奶...</string>
@@ -119,6 +120,28 @@
     <string name="screen_select_apps">选择 Apps</string>
     <string name="screen_select_modules">选择 Xposed 模组</string>
 
+    <!-- Welcome Screen -->
+    <string name="welcome_version">喵喵版本 %1$s</string>
+    <string name="welcome_intro_content">专为免 Root 环境设计的现代化 Xposed 模组注入与应用修补小窝喵。</string>
+    <string name="welcome_intro_detail">NyaPatch 能在免 Root 环境中，透过修改 APK 档案注入 Xposed 载入器。居家模式需搭配管理器动态载入并管理模组与作用域，但使用时无需保持管理器处于背景运行；合体模式则将模组直接内嵌至目标应用中，适合无管理器的装置独立执行喵。</string>
+    <string name="welcome_permission_title">配置必要权限喵</string>
+    <string name="welcome_permission_summary">开始体验前，请先授予基本存取权限以确保核心功能运作喵。</string>
+    <string name="welcome_permission_storage_title">储存空间存取喵</string>
+    <string name="welcome_permission_storage_summary">用于选取本机 APK 档案进行修补，并将输出结果储存至外部储存空间喵。</string>
+    <string name="welcome_permission_applist_title">读取应用程式清单喵</string>
+    <string name="welcome_permission_applist_summary">用于获取已安装的应用程式，以便您精确选取修补目标喵。</string>
+    <string name="welcome_permission_granted">已授予喵</string>
+    <string name="welcome_permission_authorize">前往授权喵</string>
+
+    <string name="welcome_disclaimer_title">使用须知与免责声明喵</string>
+    <string name="welcome_disclaimer_summary">在修补应用或载入 Xposed 模组之前，请务必了解以下操作风险喵。</string>
+    <string name="welcome_disclaimer_content">修改与修补应用程式可能导致其闪退、无法启动或资料遗失。请务必在操作前备份重要资料。使用者需自行承担修补后应用及模组在装置上执行的一切风险与后果喵。</string>
+    <string name="welcome_basic_settings_title">基础设定喵</string>
+    <string name="welcome_btn_next">下一步喵</string>
+    <string name="welcome_btn_skip">略过导览喵</string>
+    <string name="welcome_btn_finish">开始体验喵</string>
+    <string name="welcome_btn_return">返回喵</string>
+
     <!-- Settings Screen -->
     <string name="screen_settings">猫咪偏好</string>
     <string name="settings_language">喵语选择</string>
@@ -136,6 +159,8 @@
     <string name="settings_keystore_wrong_alias">这个名字没听过喵</string>
     <string name="settings_keystore_wrong_alias_password">别名暗号不对喵</string>
     <string name="settings_detail_patch_logs">编写小秘密(不要偷看喵!)</string>
+    <string name="settings_view_welcome">查看导览喵</string>
+    <string name="settings_view_welcome_summary">重新查看欢迎与权限导览喵</string>
     <string name="settings_storage_directory">挪动藏宝处</string>
     <string name="settings_appearance_theme">毛色与梳妆</string>
     <string name="settings_other_settings">喵喵杂项</string>
