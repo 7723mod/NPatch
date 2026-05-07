@@ -237,8 +237,12 @@ public class LSPApplication {
 
             if (config.sigBypassLevel >= Constants.SIGBYPASS_LV_PM_OPENAT) {
                 Path cacheApkPath = OriginApkHelper.prepareOriginApk(appInfo, baseClassLoader);
+                Path nativeLibraryDir = OriginApkHelper.prepareNativeLibraryDir(appInfo, cacheApkPath);
                 appInfo.sourceDir = cacheApkPath.toString();
                 appInfo.publicSourceDir = cacheApkPath.toString();
+                if (nativeLibraryDir != null) {
+                    appInfo.nativeLibraryDir = nativeLibraryDir.toString();
+                }
             }
             appInfo.appComponentFactory = config.appComponentFactory;
 
