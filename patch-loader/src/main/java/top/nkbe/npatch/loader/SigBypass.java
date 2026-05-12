@@ -11,6 +11,7 @@ import android.content.pm.Signature;
 import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.os.Process;
 import android.util.Base64;
 import android.util.Log;
 
@@ -28,6 +29,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -43,6 +45,8 @@ import de.robv.android.xposed.XposedHelpers;
 public class SigBypass {
 
     private static final String TAG = "NPatch-SigBypass";
+    private static final int CERT_INPUT_RAW_X509 = 0;
+    private static final int CERT_INPUT_SHA256 = 1;
     private static final Map<String, String> signatures = new HashMap<>();
     private static final Set<String> moduleCallerPrefixes = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
@@ -54,6 +58,8 @@ public class SigBypass {
     private static boolean packageParserHooked;
     private static boolean packageInfoCreatorProxied;
     private static boolean applicationInfoHooked;
+    private static boolean packageArchiveInfoHooked;
+    private static boolean hasSigningCertificateHooked;
     private static boolean javaIoHooked;
     private static boolean nativeOpenatEnabled;
     private static boolean svcRedirectEnabled;
@@ -146,16 +152,43 @@ public class SigBypass {
 
         if (replacement == null) return;
 
+        Signature replacementSignature = new Signature(replacement);
         if (packageInfo.signatures != null && packageInfo.signatures.length > 0) {
             XLog.d(TAG, "Replace signature info for `" + packageName + "` (method 1)");
-            packageInfo.signatures[0] = new Signature(replacement);
+            packageInfo.signatures[0] = replacementSignature;
         }
         if (packageInfo.signingInfo != null) {
             XLog.d(TAG, "Replace signature info for `" + packageName + "` (method 2)");
             Signature[] signaturesArray = packageInfo.signingInfo.getApkContentsSigners();
             if (signaturesArray != null && signaturesArray.length > 0) {
-                signaturesArray[0] = new Signature(replacement);
+                signaturesArray[0] = replacementSignature;
             }
+            if (activeSigBypassLevel >= 3) {
+                replaceSigningInfoFields(packageInfo.signingInfo, replacementSignature);
+            }
+        }
+    }
+
+    private static void replaceSigningInfoFields(Object signingInfo, Signature replacement) {
+        try {
+            Object signingDetails = XposedHelpers.getObjectField(signingInfo, "mSigningDetails");
+            if (signingDetails == null) return;
+            Signature[] replacements = new Signature[]{replacement};
+            setFieldIfExists(signingDetails, "signatures", replacements);
+            setFieldIfExists(signingDetails, "mSignatures", replacements);
+            setFieldIfExists(signingDetails, "pastSigningCertificates", replacements);
+            setFieldIfExists(signingDetails, "mPastSigningCertificates", replacements);
+        } catch (Throwable e) {
+            Log.w(TAG, "fail to replace SigningInfo internals", e);
+        }
+    }
+
+    private static void setFieldIfExists(Object target, String fieldName, Object value) {
+        try {
+            XposedHelpers.setObjectField(target, fieldName, value);
+        } catch (NoSuchFieldError ignored) {
+        } catch (Throwable e) {
+            Log.w(TAG, "fail to replace field " + fieldName, e);
         }
     }
 
@@ -171,6 +204,34 @@ public class SigBypass {
         if (visibleApkPath == null) return;
         packageInfo.applicationInfo.sourceDir = visibleApkPath;
         packageInfo.applicationInfo.publicSourceDir = visibleApkPath;
+    }
+
+    private static Signature getOriginalSignature(String packageName) {
+        String replacement = signatures.get(packageName);
+        if (replacement == null || replacement.isEmpty()) return null;
+        try {
+            return new Signature(replacement);
+        } catch (Throwable e) {
+            Log.w(TAG, "fail to construct original signature for " + packageName, e);
+            return null;
+        }
+    }
+
+    private static boolean matchesOriginalCertificate(Signature signature, byte[] certificate, int type) {
+        if (signature == null || certificate == null) return false;
+        try {
+            byte[] raw = signature.toByteArray();
+            if (type == CERT_INPUT_RAW_X509) {
+                return MessageDigest.isEqual(raw, certificate);
+            }
+            if (type == CERT_INPUT_SHA256) {
+                byte[] digest = MessageDigest.getInstance("SHA-256").digest(raw);
+                return MessageDigest.isEqual(digest, certificate);
+            }
+        } catch (Throwable e) {
+            Log.w(TAG, "fail to compare signature certificate", e);
+        }
+        return false;
     }
 
     private static void hookPackageParser(Context context) {
@@ -249,6 +310,88 @@ public class SigBypass {
             applicationInfoHooked = true;
         } catch (Throwable e) {
             Log.w(TAG, "fail to replace getApplicationInfo", e);
+        }
+    }
+
+    private static void hookPackageArchiveInfo(Context context) {
+        if (packageArchiveInfoHooked) return;
+        try {
+            XC_MethodHook hook = new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) {
+                    if (isModuleCaller() || cachedOriginalApkPath == null) return;
+                    Object apkPath = param.args.length == 0 ? null : param.args[0];
+                    if (apkPath instanceof String path && path.equals(cachedPatchedApkPath)) {
+                        param.args[0] = cachedOriginalApkPath;
+                    }
+                }
+
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) {
+                    PackageInfo packageInfo = (PackageInfo) param.getResult();
+                    if (packageInfo == null) return;
+                    replaceSignature(context, packageInfo);
+                    if (packageInfo.applicationInfo != null) {
+                        spoofApplicationInfo(packageInfo.applicationInfo);
+                    }
+                    replacePackageInfoPath(packageInfo);
+                }
+            };
+            hookPackageArchiveInfoMethods(PackageManager.class, hook);
+            try {
+                hookPackageArchiveInfoMethods(Class.forName("android.app.ApplicationPackageManager"), hook);
+            } catch (Throwable ignored) {
+            }
+            packageArchiveInfoHooked = true;
+        } catch (Throwable e) {
+            Log.w(TAG, "fail to replace getPackageArchiveInfo", e);
+        }
+    }
+
+    private static void hookHasSigningCertificate(Context context) {
+        if (hasSigningCertificateHooked) return;
+        try {
+            XC_MethodHook hook = new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) {
+                    if (isModuleCaller()) return;
+                    if (param.args.length < 3) return;
+                    Object packageNameArg = param.args[0];
+                    Object certificateArg = param.args[1];
+                    Object typeArg = param.args[2];
+                    if (!(certificateArg instanceof byte[] certificate)
+                            || !(typeArg instanceof Integer type)) {
+                        return;
+                    }
+                    String packageName = null;
+                    if (packageNameArg instanceof String str) {
+                        packageName = str;
+                    } else if (packageNameArg instanceof Integer uid && uid == Process.myUid()) {
+                        packageName = context.getPackageName();
+                    }
+                    if (packageName == null) return;
+                    Signature originalSignature = getOriginalSignature(packageName);
+                    if (originalSignature == null) return;
+                    if (matchesOriginalCertificate(originalSignature, certificate, type)) {
+                        param.setResult(true);
+                    }
+                }
+            };
+            XposedBridge.hookAllMethods(PackageManager.class, "hasSigningCertificate", hook);
+            try {
+                XposedBridge.hookAllMethods(Class.forName("android.app.ApplicationPackageManager"), "hasSigningCertificate", hook);
+            } catch (Throwable ignored) {
+            }
+            hasSigningCertificateHooked = true;
+        } catch (Throwable e) {
+            Log.w(TAG, "fail to hook hasSigningCertificate", e);
+        }
+    }
+
+    private static void hookPackageArchiveInfoMethods(Class<?> clazz, XC_MethodHook hook) {
+        try {
+            XposedBridge.hookAllMethods(clazz, "getPackageArchiveInfo", hook);
+        } catch (NoSuchMethodError ignored) {
         }
     }
 
@@ -346,16 +489,9 @@ public class SigBypass {
                 nativeOpenatEnabled = true;
             }
 
-            // 路徑重定向 (Path Redirection)
             if (sigBypassLevel >= 3) {
-                try {
-                    replaceApplication(context.getPackageName(), cachedOriginalApkPath, cachedOriginalApkPath);
-
-                    spoofContextInternalFields(context, cachedOriginalApkPath);
-                    XLog.i(TAG, "Path Redirection (LV3) enabled");
-                } catch (Throwable t) {
-                    Log.w(TAG, "Failed to apply path redirection", t);
-                }
+                hookPackageArchiveInfo(context);
+                hookHasSigningCertificate(context);
             }
 
             // SVC (Seccomp) Hook

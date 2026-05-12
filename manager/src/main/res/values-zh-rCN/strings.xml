@@ -95,7 +95,7 @@
     <string name="patch_sigbypasslv0">lv0: 关闭</string>
     <string name="patch_sigbypasslv1">lv1: 绕过 PM</string>
     <string name="patch_sigbypasslv2">lv2: 绕过 PM + openat(libc)</string>
-    <string name="patch_sigbypasslv3">lv3: 绕过 PM + openat(libc) + 路径重定向</string>
+    <string name="patch_sigbypasslv3">lv3: 绕过 PM + openat(libc) + 套件本地解析</string>
     <string name="patch_sigbypasslv4">lv4: 绕过 PM + openat(libc) + SVC (仅 64 位)</string>
     <string name="patch_override_version_code">覆写版本号</string>
     <string name="patch_override_version_code_desc">将修补的 App 版本号重写为 1\n这将允许后续降级安装，并且通常来说这不会影响应用实际感知到的版本号</string>

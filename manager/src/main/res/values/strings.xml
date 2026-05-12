@@ -97,7 +97,7 @@
     <string name="patch_sigbypasslv0">lv0: Off</string>
     <string name="patch_sigbypasslv1">lv1: Bypass PM</string>
     <string name="patch_sigbypasslv2">lv2: Bypass PM + openat(libc)</string>
-    <string name="patch_sigbypasslv3">lv3: Bypass PM + openat(libc) + IO Redirection</string>
+    <string name="patch_sigbypasslv3">lv3: Bypass PM + openat(libc) + Local Archive Parsing</string>
     <string name="patch_sigbypasslv4">lv4: Bypass PM + openat(libc) + SVC (64-bit only)</string>
     <string name="patch_new_package">Patch New PackageName</string>
     <string name="hint_patch_new_package">Input a new package for app</string>

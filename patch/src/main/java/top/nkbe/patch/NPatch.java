@@ -80,7 +80,7 @@ public class NPatch {
     @Parameter(names = {"-d", "--debuggable"}, description = "Set app to be debuggable")
     private boolean debuggableFlag = false;
 
-    @Parameter(names = {"-l", "--sigbypasslv"}, description = "Signature bypass level. 0 (disable), 1 (pm), 2 (pm+openat), 3 (pm+openat+IO Redirection), 4 (pm+openat+SVC). default 1")
+    @Parameter(names = {"-l", "--sigbypasslv"}, description = "Signature bypass level. 0 (disable), 1 (pm), 2 (pm+openat), 3 (pm+openat+Local Archive Parsing), 4 (pm+openat+SVC). default 1")
     private int sigbypassLevel = 1;
 
     @Parameter(names = {"--injectdex"}, description = "Inject directly the loader dex file into the original application package")

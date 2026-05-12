@@ -95,7 +95,7 @@
     <string name="patch_sigbypasslv0">lv0: 乖乖睡觉</string>
     <string name="patch_sigbypasslv1">lv1: 瞒过 PM 警卫</string>
     <string name="patch_sigbypasslv2">lv2: 瞒过 PM + openat(libc) 陷阱</string>
-    <string name="patch_sigbypasslv3">lv3: 瞒过 PM + openat(libc) + 路径幻术</string>
+    <string name="patch_sigbypasslv3">lv3: 瞒过 PM + openat(libc) + 套件本地解析</string>
     <string name="patch_sigbypasslv4">lv4: 瞒过 PM + openat(libc) + SVC 瞬移 (仅 64 位)</string>
     <string name="patch_override_version_code">改写喵龄</string>
     <string name="patch_override_version_code_desc">把喵龄改成 1。这样就算它“老了”也能强行塞回去，App通常察觉不到喵。</string>
