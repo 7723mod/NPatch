@@ -73,7 +73,7 @@ public class OriginApkHelper {
         return internalCacheApk;
     }
 
-    public static Path prepareNativeLibraryDir(ApplicationInfo appInfo, Path originApkPath) throws IOException {
+    public static Path prepareNativeLibraryDir(ApplicationInfo appInfo, Path originApkPath, String patchedApkPath) throws IOException {
         Path nativeRoot = Paths.get(appInfo.dataDir, "cache/npatch/native/");
         List<String> apkPaths = new ArrayList<>();
         apkPaths.add(originApkPath.toString());
@@ -83,6 +83,11 @@ public class OriginApkHelper {
                     apkPaths.add(splitSourceDir);
                 }
             }
+        }
+        if (patchedApkPath != null
+                && !patchedApkPath.isEmpty()
+                && !patchedApkPath.equals(originApkPath.toString())) {
+            apkPaths.add(patchedApkPath);
         }
 
         String stamp = buildNativeLibraryStamp(apkPaths);

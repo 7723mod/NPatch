@@ -23,13 +23,16 @@ import top.nkbe.npatch.loader.util.XLog;
 import top.nkbe.npatch.share.Constants;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.FileInputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -41,117 +44,145 @@ public class SigBypass {
 
     private static final String TAG = "NPatch-SigBypass";
     private static final Map<String, String> signatures = new HashMap<>();
+    private static final Set<String> moduleCallerPrefixes = Collections.newSetFromMap(new ConcurrentHashMap<>());
+
     private static String cachedOriginalApkPath;
-    private static String cachedOriginalFactory = null;
+    private static String cachedPatchedApkPath;
+    private static String cachedOriginalFactory;
+
     private static int activeSigBypassLevel;
     private static boolean packageParserHooked;
     private static boolean packageInfoCreatorProxied;
+    private static boolean applicationInfoHooked;
     private static boolean javaIoHooked;
     private static boolean nativeOpenatEnabled;
     private static boolean svcRedirectEnabled;
 
-    private static void replaceSignature(Context context, PackageInfo packageInfo) {
-        boolean hasSignature = (packageInfo.signatures != null && packageInfo.signatures.length != 0) || packageInfo.signingInfo != null;
-        if (hasSignature) {
-            String packageName = packageInfo.packageName;
-            String replacement = signatures.get(packageName);
-            if (replacement == null && !signatures.containsKey(packageName)) {
-                try {
-                    var metaData = context.getPackageManager().getApplicationInfo(packageName, PackageManager.GET_META_DATA).metaData;
-                    String encoded = null;
-                    if (metaData != null) encoded = metaData.getString("npatch");
-                    if (encoded != null) {
-                        var json = new String(Base64.decode(encoded, Base64.DEFAULT), StandardCharsets.UTF_8);
-                        try {
-                            var patchConfig = new JSONObject(json);
-                            replacement = patchConfig.getString("originalSignature");
-                            if (patchConfig.has("appComponentFactory")) {
-                                cachedOriginalFactory = patchConfig.optString("appComponentFactory", null);
-                            }
-                        } catch (JSONException e) {
-                            Log.w(TAG, "fail to get originalSignature or factory", e);
-                        }
-                    }
-                } catch (PackageManager.NameNotFoundException | JsonSyntaxException ignored) {
-                }
-                signatures.put(packageName, replacement);
-            }
-            if (replacement != null) {
-                if (packageInfo.signatures != null && packageInfo.signatures.length > 0) {
-                    XLog.d(TAG, "Replace signature info for `" + packageName + "` (method 1)");
-                    packageInfo.signatures[0] = new Signature(replacement);
-                }
-                if (packageInfo.signingInfo != null) {
-                    XLog.d(TAG, "Replace signature info for `" + packageName + "` (method 2)");
-                    Signature[] signaturesArray = packageInfo.signingInfo.getApkContentsSigners();
-                    if (signaturesArray != null && signaturesArray.length > 0) {
-                        signaturesArray[0] = new Signature(replacement);
-                    }
-                }
-            }
+    static {
+        moduleCallerPrefixes.add("top.nkbe.npatch.");
+        moduleCallerPrefixes.add("org.matrix.vector.");
+        moduleCallerPrefixes.add("de.robv.android.xposed.");
+        moduleCallerPrefixes.add("io.github.libxposed.");
+        moduleCallerPrefixes.add("org.lsposed.");
+    }
+
+    public static void registerModuleCallerPrefix(String prefix) {
+        if (prefix != null && !prefix.isEmpty()) {
+            moduleCallerPrefixes.add(prefix);
         }
     }
 
-    // 移植自 SRPatch
-    private static void spoofContextInternalFields(Context context, String fakeApkPath) {
-        try {
-            Context baseContext = context;
-            while (baseContext instanceof android.content.ContextWrapper) {
-                baseContext = ((android.content.ContextWrapper) baseContext).getBaseContext();
+    public static void setPaths(String originalApkPath, String patchedApkPath) {
+        cachedOriginalApkPath = originalApkPath;
+        cachedPatchedApkPath = patchedApkPath;
+    }
+
+    private static boolean isModuleCaller() {
+        StackTraceElement[] stack = Thread.currentThread().getStackTrace();
+        for (StackTraceElement element : stack) {
+            String className = element.getClassName();
+            for (String prefix : moduleCallerPrefixes) {
+                if (className.startsWith(prefix)) {
+                    return true;
+                }
             }
-            java.lang.reflect.Field packageInfoField = baseContext.getClass().getDeclaredField("mPackageInfo");
-            packageInfoField.setAccessible(true);
-            Object packageInfoObject = packageInfoField.get(baseContext);
+        }
+        return false;
+    }
 
-            if (packageInfoObject != null) {
-                // mAppDir
-                java.lang.reflect.Field appDirField = packageInfoObject.getClass().getDeclaredField("mAppDir");
-                appDirField.setAccessible(true);
-                appDirField.set(packageInfoObject, fakeApkPath);
-
-                // mResDir
-                java.lang.reflect.Field resDirField = packageInfoObject.getClass().getDeclaredField("mResDir");
-                resDirField.setAccessible(true);
-                resDirField.set(packageInfoObject, fakeApkPath);
+    private static boolean isSignatureSensitiveCaller() {
+        StackTraceElement[] stack = Thread.currentThread().getStackTrace();
+        for (StackTraceElement element : stack) {
+            String className = element.getClassName();
+            if (className.startsWith("android.content.pm.PackageParser")
+                    || className.startsWith("android.content.pm.parsing.")
+                    || className.startsWith("android.util.apk.")
+                    || className.startsWith("java.util.jar.")
+                    || className.startsWith("sun.security.pkcs.")
+                    || className.startsWith("sun.security.util.")
+                    || className.startsWith("org.apache.harmony.security.")) {
+                return true;
             }
+        }
+        return false;
+    }
 
-            // 同步修改當前 Context 的 ApplicationInfo
-            ApplicationInfo currentAppInfo = context.getApplicationInfo();
-            currentAppInfo.sourceDir = fakeApkPath;
-            currentAppInfo.publicSourceDir = fakeApkPath;
+    private static String visibleApkPathForCaller() {
+        if (isModuleCaller() && cachedPatchedApkPath != null) {
+            return cachedPatchedApkPath;
+        }
+        return cachedOriginalApkPath != null ? cachedOriginalApkPath : cachedPatchedApkPath;
+    }
 
-        } catch (Throwable t) {
-            Log.w(TAG, "Failed to spoof Context internal fields", t);
+    private static void replaceSignature(Context context, PackageInfo packageInfo) {
+        boolean hasSignature = (packageInfo.signatures != null && packageInfo.signatures.length != 0)
+                || packageInfo.signingInfo != null;
+        if (!hasSignature) return;
+
+        String packageName = packageInfo.packageName;
+        String replacement = signatures.get(packageName);
+        if (replacement == null && !signatures.containsKey(packageName)) {
+            try {
+                var metaData = context.getPackageManager()
+                        .getApplicationInfo(packageName, PackageManager.GET_META_DATA)
+                        .metaData;
+                String encoded = metaData == null ? null : metaData.getString("npatch");
+                if (encoded != null) {
+                    var json = new String(Base64.decode(encoded, Base64.DEFAULT), StandardCharsets.UTF_8);
+                    try {
+                        var patchConfig = new JSONObject(json);
+                        replacement = patchConfig.getString("originalSignature");
+                        if (patchConfig.has("appComponentFactory")) {
+                            cachedOriginalFactory = patchConfig.optString("appComponentFactory", null);
+                        }
+                    } catch (JSONException e) {
+                        Log.w(TAG, "fail to get originalSignature or factory", e);
+                    }
+                }
+            } catch (PackageManager.NameNotFoundException | JsonSyntaxException ignored) {
+            }
+            signatures.put(packageName, replacement);
+        }
+
+        if (replacement == null) return;
+
+        if (packageInfo.signatures != null && packageInfo.signatures.length > 0) {
+            XLog.d(TAG, "Replace signature info for `" + packageName + "` (method 1)");
+            packageInfo.signatures[0] = new Signature(replacement);
+        }
+        if (packageInfo.signingInfo != null) {
+            XLog.d(TAG, "Replace signature info for `" + packageName + "` (method 2)");
+            Signature[] signaturesArray = packageInfo.signingInfo.getApkContentsSigners();
+            if (signaturesArray != null && signaturesArray.length > 0) {
+                signaturesArray[0] = new Signature(replacement);
+            }
         }
     }
 
     private static void spoofApplicationInfo(ApplicationInfo appInfo) {
-        if (appInfo != null) {
-            if (cachedOriginalFactory != null && !cachedOriginalFactory.isEmpty()) {
-                appInfo.appComponentFactory = cachedOriginalFactory;
-            }
+        if (appInfo != null && cachedOriginalFactory != null && !cachedOriginalFactory.isEmpty()) {
+            appInfo.appComponentFactory = cachedOriginalFactory;
         }
     }
 
-    private static void replacePackageInfoPath(PackageInfo packageInfo, String fakeApkPath) {
-        if (packageInfo != null && packageInfo.applicationInfo != null && fakeApkPath != null) {
-            packageInfo.applicationInfo.sourceDir = fakeApkPath;
-            packageInfo.applicationInfo.publicSourceDir = fakeApkPath;
-        }
+    private static void replacePackageInfoPath(PackageInfo packageInfo) {
+        if (packageInfo == null || packageInfo.applicationInfo == null) return;
+        String visibleApkPath = visibleApkPathForCaller();
+        if (visibleApkPath == null) return;
+        packageInfo.applicationInfo.sourceDir = visibleApkPath;
+        packageInfo.applicationInfo.publicSourceDir = visibleApkPath;
     }
 
     private static void hookPackageParser(Context context) {
-        // 同一個目標進程可能重複初始化 loader，hook 只需要安裝一次。
         if (packageParserHooked) return;
         XposedBridge.hookAllMethods(PackageParser.class, "generatePackageInfo", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
-                var packageInfo = (PackageInfo) param.getResult();
+                PackageInfo packageInfo = (PackageInfo) param.getResult();
                 if (packageInfo == null) return;
                 replaceSignature(context, packageInfo);
-
-                if (activeSigBypassLevel >= Constants.SIGBYPASS_LV_PATH_REDIR && cachedOriginalApkPath != null) {
-                    replacePackageInfoPath(packageInfo, cachedOriginalApkPath);
+                if (activeSigBypassLevel >= Constants.SIGBYPASS_LV_PM_OPENAT) {
+                    replacePackageInfoPath(packageInfo);
                 }
             }
         });
@@ -159,7 +190,6 @@ public class SigBypass {
     }
 
     private static void proxyPackageInfoCreator(Context context) {
-        // PackageInfo.CREATOR 是全域靜態物件，重複代理會讓 Parcel 邏輯變得不可預期。
         if (packageInfoCreatorProxied) return;
         Parcelable.Creator<PackageInfo> originalCreator = PackageInfo.CREATOR;
         Parcelable.Creator<PackageInfo> proxiedCreator = new Parcelable.Creator<>() {
@@ -167,14 +197,11 @@ public class SigBypass {
             public PackageInfo createFromParcel(Parcel source) {
                 PackageInfo packageInfo = originalCreator.createFromParcel(source);
                 replaceSignature(context, packageInfo);
-
-                // 還原 appComponentFactory
                 if (packageInfo.applicationInfo != null) {
                     spoofApplicationInfo(packageInfo.applicationInfo);
                 }
-
-                if (activeSigBypassLevel >= Constants.SIGBYPASS_LV_PATH_REDIR && cachedOriginalApkPath != null) {
-                    replacePackageInfoPath(packageInfo, cachedOriginalApkPath);
+                if (activeSigBypassLevel >= Constants.SIGBYPASS_LV_PM_OPENAT) {
+                    replacePackageInfoPath(packageInfo);
                 }
                 return packageInfo;
             }
@@ -202,29 +229,24 @@ public class SigBypass {
         packageInfoCreatorProxied = true;
     }
 
-    public static void replaceApplication(String packageName, String sourceDir, String resourcesDir) throws IOException {
+    private static void replaceApplication(String packageName) {
+        if (applicationInfoHooked) return;
         try {
-            Log.i(TAG, "Start Replace application info for `" + packageName + "`");
-            XposedBridge.hookAllMethods(Class.forName("android.app.ApplicationPackageManager"), "getApplicationInfo", new XC_MethodHook() {
+            XC_MethodHook hook = new XC_MethodHook() {
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                    if (packageName.equals(param.args[0])) {
-                        ApplicationInfo info = (ApplicationInfo) param.getResult();
-                        info.sourceDir = sourceDir;
-                        info.publicSourceDir = sourceDir;
-                    }
+                protected void afterHookedMethod(MethodHookParam param) {
+                    if (!packageName.equals(param.args[0])) return;
+                    ApplicationInfo info = (ApplicationInfo) param.getResult();
+                    if (info == null) return;
+                    String visibleApkPath = visibleApkPathForCaller();
+                    if (visibleApkPath == null) return;
+                    info.sourceDir = visibleApkPath;
+                    info.publicSourceDir = visibleApkPath;
                 }
-            });
-            XposedBridge.hookAllMethods(Class.forName("android.app.ApplicationPackageManager"), "getApplicationInfoAsUser", new XC_MethodHook() {
-                @Override
-                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                    if (packageName.equals(param.args[0])) {
-                        ApplicationInfo info = (ApplicationInfo) param.getResult();
-                        info.sourceDir = sourceDir;
-                        info.publicSourceDir = sourceDir;
-                    }
-                }
-            });
+            };
+            XposedBridge.hookAllMethods(Class.forName("android.app.ApplicationPackageManager"), "getApplicationInfo", hook);
+            XposedBridge.hookAllMethods(Class.forName("android.app.ApplicationPackageManager"), "getApplicationInfoAsUser", hook);
+            applicationInfoHooked = true;
         } catch (Throwable e) {
             Log.w(TAG, "fail to replace getApplicationInfo", e);
         }
@@ -276,52 +298,45 @@ public class SigBypass {
         }
     }
 
-    private static void hookJavaIO(String currentApkPath, String originalApkPath) {
-        // Java IO 先覆蓋常見讀 APK 路徑，native SVC 只補更底層的 openat。
+    private static void hookJavaIO(String patchedApkPath, String originalApkPath) {
         if (javaIoHooked) return;
         XC_MethodHook redirectHook = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
-                if (param.args.length > 0) {
-                    if (param.args[0] instanceof String) {
-                        String path = (String) param.args[0];
-                        if (path.equals(currentApkPath)) {
-                            param.args[0] = originalApkPath;
-                        }
-                    } else if (param.args[0] instanceof File) {
-                        File file = (File) param.args[0];
-                        if (file.getPath().equals(currentApkPath)) {
-                            param.args[0] = new File(originalApkPath);
-                        }
-                    }
+                if (!isSignatureSensitiveCaller() || isModuleCaller()) {
+                    return;
+                }
+                Object arg0 = param.args[0];
+                if (arg0 instanceof String path && path.equals(patchedApkPath)) {
+                    param.args[0] = originalApkPath;
+                } else if (arg0 instanceof File file && file.getPath().equals(patchedApkPath)) {
+                    param.args[0] = new File(originalApkPath);
                 }
             }
         };
         XposedBridge.hookAllConstructors(ZipFile.class, redirectHook);
         try {
             XposedBridge.hookAllConstructors(FileInputStream.class, redirectHook);
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+        }
         javaIoHooked = true;
     }
 
     static void doSigBypass(Context context, int sigBypassLevel) throws IOException {
-        // hook 回呼會讀這個等級，確保後續升級等級時既有 hook 也能套用新行為。
         activeSigBypassLevel = Math.max(activeSigBypassLevel, sigBypassLevel);
-        String currentApkPath = context.getPackageResourcePath();
+        String currentApkPath = cachedPatchedApkPath != null ? cachedPatchedApkPath : context.getPackageResourcePath();
         if (sigBypassLevel >= Constants.SIGBYPASS_LV_PM_OPENAT && cachedOriginalApkPath == null) {
             cachedOriginalApkPath = extractOriginalApk(context);
         }
 
-        // Java PMS Hook
-        if (sigBypassLevel >= 1) {
+        if (sigBypassLevel >= Constants.SIGBYPASS_LV_PM) {
             hookPackageParser(context);
             proxyPackageInfoCreator(context);
         }
 
         if (sigBypassLevel >= Constants.SIGBYPASS_LV_PM_OPENAT && cachedOriginalApkPath != null) {
-            // 1. Java Core IO stability
+            replaceApplication(context.getPackageName());
             hookJavaIO(currentApkPath, cachedOriginalApkPath);
-            // 2. Native OpenAt Hook
             if (!nativeOpenatEnabled) {
                 org.lsposed.lspd.nativebridge.SigBypass.enableOpenatHook(
                         currentApkPath,

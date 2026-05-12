@@ -96,6 +96,31 @@ public class LSPApplication {
         }
     }
 
+    private static void registerModuleCallerPrefixes(ILSPApplicationService service) {
+        if (service == null) return;
+        try {
+            registerModuleCallerPrefixes(service.getLegacyModulesList());
+            registerModuleCallerPrefixes(service.getModulesList());
+        } catch (Throwable e) {
+            Log.w(TAG, "Failed to register module caller prefixes", e);
+        }
+    }
+
+    private static void registerModuleCallerPrefixes(List<Module> modules) {
+        if (modules == null) return;
+        for (Module module : modules) {
+            if (module == null) continue;
+            SigBypass.registerModuleCallerPrefix(module.packageName);
+            if (module.file == null || module.file.moduleClassNames == null) continue;
+            for (String className : module.file.moduleClassNames) {
+                int lastDot = className == null ? -1 : className.lastIndexOf('.');
+                if (lastDot > 0) {
+                    SigBypass.registerModuleCallerPrefix(className.substring(0, lastDot));
+                }
+            }
+        }
+    }
+
     public static void onLoad() throws RemoteException, IOException {
         if (isIsolated()) {
             XLog.d(TAG, "Skip isolated process");
@@ -162,6 +187,7 @@ public class LSPApplication {
             }
         }
 
+        registerModuleCallerPrefixes(service);
         disableProfile(context);
         Startup.initXposed(false, ActivityThread.currentProcessName(), context.getApplicationInfo().dataDir, service);
         Startup.bootstrapXposed(false);
@@ -222,6 +248,7 @@ public class LSPApplication {
             var appInfo = (ApplicationInfo) XposedHelpers.getObjectField(mBoundApplication, "appInfo");
             var compatInfo = (CompatibilityInfo) XposedHelpers.getObjectField(mBoundApplication, "compatInfo");
             var baseClassLoader = stubLoadedApk.getClassLoader();
+            String patchedApkPath = appInfo.sourceDir;
 
             try (var is = baseClassLoader.getResourceAsStream(CONFIG_ASSET_PATH)) {
                 if (is == null) throw new IOException("Config file not found in assets");
@@ -235,11 +262,12 @@ public class LSPApplication {
             Log.i(TAG, "Use manager: " + config.useManager);
             Log.i(TAG, "Signature bypass level: " + config.sigBypassLevel);
 
+            String loadedApkSourceDir = patchedApkPath;
             if (config.sigBypassLevel >= Constants.SIGBYPASS_LV_PM_OPENAT) {
                 Path cacheApkPath = OriginApkHelper.prepareOriginApk(appInfo, baseClassLoader);
-                Path nativeLibraryDir = OriginApkHelper.prepareNativeLibraryDir(appInfo, cacheApkPath);
-                appInfo.sourceDir = cacheApkPath.toString();
-                appInfo.publicSourceDir = cacheApkPath.toString();
+                Path nativeLibraryDir = OriginApkHelper.prepareNativeLibraryDir(appInfo, cacheApkPath, patchedApkPath);
+                SigBypass.setPaths(cacheApkPath.toString(), patchedApkPath);
+                loadedApkSourceDir = cacheApkPath.toString();
                 if (nativeLibraryDir != null) {
                     appInfo.nativeLibraryDir = nativeLibraryDir.toString();
                 }
@@ -269,6 +297,8 @@ public class LSPApplication {
 
             var mPackages = (Map<?, ?>) XposedHelpers.getObjectField(activityThread, "mPackages");
             mPackages.remove(appInfo.packageName);
+            appInfo.sourceDir = loadedApkSourceDir;
+            appInfo.publicSourceDir = loadedApkSourceDir;
             appLoadedApk = activityThread.getPackageInfoNoCheck(appInfo, compatInfo);
 
             if (config.injectProvider && providerPath != null) {
@@ -315,7 +345,7 @@ public class LSPApplication {
             }
             Log.i(TAG, "hooked app initialized: " + appLoadedApk);
 
-            var context = (Context) XposedHelpers.callStaticMethod(Class.forName("android.app.ContextImpl"), "createAppContext", activityThread, stubLoadedApk);
+            var context = (Context) XposedHelpers.callStaticMethod(Class.forName("android.app.ContextImpl"), "createAppContext", activityThread, appLoadedApk);
             if (config.appComponentFactory != null) {
                 try {
                     context.getClassLoader().loadClass(config.appComponentFactory);
@@ -325,8 +355,8 @@ public class LSPApplication {
                 }
             }
             Log.i(TAG, "createLoadedApkWithContext cost: " + (System.currentTimeMillis() - timeStart) + "ms");
-
-            SigBypass.replaceApplication(appInfo.packageName, appInfo.sourceDir, appInfo.publicSourceDir);
+            appInfo.sourceDir = patchedApkPath;
+            appInfo.publicSourceDir = patchedApkPath;
             return context;
         } catch (Throwable e) {
             Log.e(TAG, "createLoadedApk", e);
