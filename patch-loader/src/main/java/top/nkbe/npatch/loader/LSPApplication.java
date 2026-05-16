@@ -300,6 +300,7 @@ public class LSPApplication {
             appInfo.sourceDir = loadedApkSourceDir;
             appInfo.publicSourceDir = loadedApkSourceDir;
             appLoadedApk = activityThread.getPackageInfoNoCheck(appInfo, compatInfo);
+            appLoadedApk.getClassLoader();
 
             if (config.injectProvider && providerPath != null) {
                 try {
@@ -345,10 +346,10 @@ public class LSPApplication {
             }
             Log.i(TAG, "hooked app initialized: " + appLoadedApk);
 
-            var context = (Context) XposedHelpers.callStaticMethod(Class.forName("android.app.ContextImpl"), "createAppContext", activityThread, appLoadedApk);
+            var context = (Context) XposedHelpers.callStaticMethod(Class.forName("android.app.ContextImpl"), "createAppContext", activityThread, stubLoadedApk);
             if (config.appComponentFactory != null) {
                 try {
-                    context.getClassLoader().loadClass(config.appComponentFactory);
+                    appLoadedApk.getClassLoader().loadClass(config.appComponentFactory);
                 } catch (Throwable e) {
                     Log.w(TAG, "Original AppComponentFactory not found: " + config.appComponentFactory, e);
                     appInfo.appComponentFactory = null;
