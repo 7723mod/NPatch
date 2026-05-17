@@ -6,6 +6,7 @@ val verCode: Int by rootProject.extra
 val verName: String by rootProject.extra
 val coreVerCode: Int by rootProject.extra
 val coreVerName: String by rootProject.extra
+val miuixVersion = npatch.versions.miuix.get()
 
 plugins {
     alias(libs.plugins.agp.app)
@@ -137,9 +138,11 @@ dependencies {
 
     // MiuiX & Haze
     implementation(npatch.haze)
-    implementation("top.yukonga.miuix.kmp:miuix-ui:0.9.0")
-    implementation("top.yukonga.miuix.kmp:miuix-preference:0.9.0")
-    implementation("top.yukonga.miuix.kmp:miuix-icons:0.9.0")
+    implementation(npatch.hazeBlur)
+    implementation(npatch.backdrop)
+    implementation("top.yukonga.miuix.kmp:miuix-ui:$miuixVersion")
+    implementation("top.yukonga.miuix.kmp:miuix-preference:$miuixVersion")
+    implementation("top.yukonga.miuix.kmp:miuix-icons:$miuixVersion")
     implementation(npatch.androidx.webkit)
 
 

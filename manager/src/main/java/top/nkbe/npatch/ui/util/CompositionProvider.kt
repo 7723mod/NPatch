@@ -3,8 +3,8 @@ package top.nkbe.npatch.ui.util
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.HazeColorEffect
 import top.yukonga.miuix.kmp.basic.CardColors
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.SnackbarHostState
@@ -19,6 +19,10 @@ val LocalSnackbarHost = compositionLocalOf<SnackbarHostState> {
 }
 
 val LocalBackgroundImagePath = compositionLocalOf { "" }
+
+val LocalFloatingGlassBottomBar = compositionLocalOf { false }
+
+val LocalFloatingGlassBottomBarBlur = compositionLocalOf { true }
 
 @Composable
 fun backgroundAwareCardColors(
@@ -39,11 +43,10 @@ fun backgroundAwareCardColors(
 @Composable
 fun backgroundAwareHazeStyle(
     surfaceColor: Color = MiuixTheme.colorScheme.surface,
-): HazeStyle {
+): HazeBlurStyle {
     val hasBackground = LocalBackgroundImagePath.current.isNotEmpty()
-    return HazeStyle(
+    return HazeBlurStyle(
         backgroundColor = if (hasBackground) Color.Transparent else surfaceColor,
-        tint = HazeTint(surfaceColor.copy(alpha = if (hasBackground) BG_SURFACE_ALPHA else HAZE_TINT_ALPHA))
+        colorEffect = HazeColorEffect.tint(surfaceColor.copy(alpha = if (hasBackground) BG_SURFACE_ALPHA else HAZE_TINT_ALPHA))
     )
 }
-

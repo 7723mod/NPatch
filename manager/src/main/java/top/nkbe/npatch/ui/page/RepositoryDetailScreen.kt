@@ -76,10 +76,12 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.HazeColorEffect
+import dev.chrisbanes.haze.blur.blurEffect
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -166,10 +168,10 @@ fun RepositoryDetailScreen(
 
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val scrollBehavior: ScrollBehavior = MiuixScrollBehavior()
-    val hazeState = remember { HazeState() }
-    val hazeStyle = HazeStyle(
+    val hazeState = rememberHazeState()
+    val hazeStyle = HazeBlurStyle(
         backgroundColor = colorScheme.surface,
-        tint = HazeTint(colorScheme.surface.copy(0.8f))
+        colorEffect = HazeColorEffect.tint(colorScheme.surface.copy(0.8f))
     )
 
     val msgUnknownAuthor = stringResource(R.string.unknown_author)
@@ -186,9 +188,11 @@ fun RepositoryDetailScreen(
         topBar = {
             TopAppBar(
                 modifier = Modifier.hazeEffect(hazeState) {
-                    style = hazeStyle
-                    blurRadius = 30.dp
-                    noiseFactor = 0f
+                    blurEffect {
+                        style = hazeStyle
+                        blurRadius = 30.dp
+                        noiseFactor = 0f
+                    }
                 },
                 color = Color.Transparent,
                 title = stringResource(R.string.module_app_info),
@@ -292,9 +296,11 @@ fun RepositoryDetailScreen(
                         end = innerPadding.calculateEndPadding(layoutDirection)
                     )
                     .hazeEffect(hazeState) {
-                        style = hazeStyle
-                        blurRadius = 30.dp
-                        noiseFactor = 0f
+                        blurEffect {
+                            style = hazeStyle
+                            blurRadius = 30.dp
+                            noiseFactor = 0f
+                        }
                     }
                     .padding(bottom = 6.dp)
                     .onGloballyPositioned {

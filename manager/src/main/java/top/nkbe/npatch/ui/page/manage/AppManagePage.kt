@@ -407,7 +407,10 @@ fun AppManageBody(
 }
 
 @Composable
-fun AppManageFab(navigator: Navigator) {
+fun AppManageFab(
+    navigator: Navigator,
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val shouldSelectDirectory = remember { mutableStateOf(false) }
@@ -495,6 +498,7 @@ fun AppManageFab(navigator: Navigator) {
     }
 
     FloatingActionButton(
+        modifier = modifier,
         onClick = {
             val uri = Configs.storageDirectory?.toUri()
             if (uri == null) {

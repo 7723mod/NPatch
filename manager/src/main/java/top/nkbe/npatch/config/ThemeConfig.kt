@@ -24,6 +24,8 @@ data class ThemeSettings(
     val useMonet: Boolean,
     val customColor: Int,
     val themeMode: ThemeMode,
+    val useFloatingGlassBottomBar: Boolean,
+    val useFloatingGlassBottomBarBlur: Boolean,
 )
 
 object ThemeConfig {
@@ -31,6 +33,8 @@ object ThemeConfig {
     val USE_MONET = booleanPreferencesKey("use_monet")
     val CUSTOM_COLOR = intPreferencesKey("custom_color")
     val THEME_MODE = intPreferencesKey("theme_mode")
+    val USE_FLOATING_GLASS_BOTTOM_BAR = booleanPreferencesKey("use_floating_glass_bottom_bar")
+    val USE_FLOATING_GLASS_BOTTOM_BAR_BLUR = booleanPreferencesKey("use_floating_glass_bottom_bar_blur")
 
     fun getThemeFlow(context: Context) = context.dataStore.data.map { prefs ->
         ThemeSettings(
@@ -38,6 +42,8 @@ object ThemeConfig {
             useMonet = prefs[USE_MONET] ?: false,
             customColor = prefs[CUSTOM_COLOR] ?: 0xFF007AFF.toInt(),
             themeMode = ThemeMode.fromValue(prefs[THEME_MODE] ?: ThemeMode.SYSTEM.value),
+            useFloatingGlassBottomBar = prefs[USE_FLOATING_GLASS_BOTTOM_BAR] ?: false,
+            useFloatingGlassBottomBarBlur = prefs[USE_FLOATING_GLASS_BOTTOM_BAR_BLUR] ?: true,
         )
     }
 }

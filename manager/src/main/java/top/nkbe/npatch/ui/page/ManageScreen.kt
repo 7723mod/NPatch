@@ -2,8 +2,11 @@ package top.nkbe.npatch.ui.page
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
@@ -16,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.launch
 import top.nkbe.npatch.R
 import top.nkbe.npatch.ui.component.SearchBar
@@ -27,6 +31,7 @@ import top.nkbe.npatch.ui.component.SearchBox
 import top.nkbe.npatch.ui.component.SearchPager
 import top.nkbe.npatch.ui.component.SearchStatus
 import top.nkbe.npatch.ui.component.NPatchScaffold
+import top.nkbe.npatch.ui.util.LocalFloatingGlassBottomBar
 import top.nkbe.npatch.ui.util.backgroundAwareHazeStyle
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
@@ -38,18 +43,20 @@ import top.yukonga.miuix.kmp.basic.TabRowDefaults
 fun ManageScreen(navigator: Navigator) {
     val scope = rememberCoroutineScope()
     val tabTitles = listOf(stringResource(R.string.apps), stringResource(R.string.modules))
+    val useFloatingGlassBottomBar = LocalFloatingGlassBottomBar.current
 
     val pagerState = rememberPagerState(pageCount = { tabTitles.size })
     val scrollBehavior = MiuixScrollBehavior()
 
     val manageSearchLabel = stringResource(R.string.manage_search)
     val searchStatus = remember(manageSearchLabel) { SearchStatus(manageSearchLabel) }
-    val hazeState = remember { HazeState() }
+    val hazeState = rememberHazeState()
     val hazeStyle = backgroundAwareHazeStyle()
 
     val dynamicTopPadding by remember {
         derivedStateOf { 12.dp * (1f - scrollBehavior.state.collapsedFraction) }
     }
+    val floatingFabBottomPadding = rememberFloatingBottomBarFabPadding()
 
     NPatchScaffold(
         topBar = {
@@ -62,7 +69,16 @@ fun ManageScreen(navigator: Navigator) {
             }
         },
         floatingActionButton = {
-            if (pagerState.currentPage == 0) AppManageFab(navigator)
+            if (pagerState.currentPage == 0) {
+                AppManageFab(
+                    navigator = navigator,
+                    modifier = if (useFloatingGlassBottomBar) {
+                        Modifier.padding(bottom = floatingFabBottomPadding)
+                    } else {
+                        Modifier
+                    }
+                )
+            }
         },
         popupHost = {
             searchStatus.SearchPager(
@@ -128,3 +144,7 @@ fun ManageScreen(navigator: Navigator) {
         }
     }
 }
+
+@Composable
+private fun rememberFloatingBottomBarFabPadding() =
+    68.dp + 12.dp + 8.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()

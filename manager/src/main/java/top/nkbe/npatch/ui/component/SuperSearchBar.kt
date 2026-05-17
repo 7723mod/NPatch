@@ -72,7 +72,8 @@ import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.blurEffect
 import dev.chrisbanes.haze.hazeEffect
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.InputField
@@ -118,7 +119,7 @@ class SearchStatus(val label: String) {
         modifier: Modifier = Modifier,
         visible: Boolean = shouldCollapsed(),
         hazeState: HazeState? = null,
-        hazeStyle: HazeStyle? = null,
+        hazeStyle: HazeBlurStyle? = null,
         content: @Composable () -> Unit
     ) {
         val hasBackgroundImage = LocalBackgroundImagePath.current.isNotEmpty()
@@ -133,9 +134,11 @@ class SearchStatus(val label: String) {
                     .then(
                         if (hazeState != null && hazeStyle != null) {
                             Modifier.hazeEffect(hazeState) {
-                                style = hazeStyle
-                                blurRadius = 30.dp
-                                noiseFactor = 0f
+                                blurEffect {
+                                    style = hazeStyle
+                                    blurRadius = 30.dp
+                                    noiseFactor = 0f
+                                }
                             }
                         } else {
                             if (hasBackgroundImage) {
@@ -166,7 +169,7 @@ fun SearchStatus.SearchBox(
     searchBarTopPadding: Dp = 12.dp,
     contentPadding: PaddingValues = PaddingValues(0.dp),
     hazeState: HazeState,
-    hazeStyle: HazeStyle,
+    hazeStyle: HazeBlurStyle,
     content: @Composable (MutableState<Dp>) -> Unit
 ) {
     val searchStatus = this
@@ -196,9 +199,11 @@ fun SearchStatus.SearchBox(
                 detectTapGestures { searchStatus.current = SearchStatus.Status.EXPANDING }
             }
             .hazeEffect(hazeState) {
-                style = hazeStyle
-                blurRadius = 30.dp
-                noiseFactor = 0f
+                blurEffect {
+                    style = hazeStyle
+                    blurRadius = 30.dp
+                    noiseFactor = 0f
+                }
             }
     ) {
         collapseBar(searchStatus, searchBarTopPadding, contentPadding)

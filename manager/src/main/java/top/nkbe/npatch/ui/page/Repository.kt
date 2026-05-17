@@ -37,6 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import top.nkbe.npatch.R
 import top.nkbe.npatch.ui.component.SearchBarFake
 import top.nkbe.npatch.ui.component.SearchBox
@@ -99,7 +100,7 @@ fun RepositoryScreen(
         derivedStateOf { 12.dp * (1f - scrollBehavior.state.collapsedFraction) }
     }
 
-    val hazeState = remember { HazeState() }
+    val hazeState = rememberHazeState()
     val hazeStyle = backgroundAwareHazeStyle()
 
     val showSortMenu = remember { mutableStateOf(false) }

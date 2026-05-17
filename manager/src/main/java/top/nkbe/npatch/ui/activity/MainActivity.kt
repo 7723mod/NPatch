@@ -44,6 +44,8 @@ import top.nkbe.npatch.ui.page.SelectAppsScreen
 import top.nkbe.npatch.ui.page.WelcomeScreen
 import top.nkbe.npatch.ui.theme.LSPTheme
 import top.nkbe.npatch.ui.util.LocalBackgroundImagePath
+import top.nkbe.npatch.ui.util.LocalFloatingGlassBottomBar
+import top.nkbe.npatch.ui.util.LocalFloatingGlassBottomBarBlur
 import top.nkbe.npatch.ui.util.LocalSnackbarHost
 import top.yukonga.miuix.kmp.basic.SnackbarHostState
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -79,7 +81,9 @@ class MainActivity : ComponentActivity() {
                     backgroundImageUri = "",
                     useMonet = false,
                     customColor = 0xFF007AFF.toInt(),
-                    themeMode = ThemeMode.SYSTEM
+                    themeMode = ThemeMode.SYSTEM,
+                    useFloatingGlassBottomBar = false,
+                    useFloatingGlassBottomBarBlur = true,
                 )
             )
             val isDark = when (themeState.themeMode) {
@@ -110,7 +114,11 @@ class MainActivity : ComponentActivity() {
                 useMonet = themeState.useMonet,
                 customColor = themeState.customColor
             ) {
-                CompositionLocalProvider(LocalBackgroundImagePath provides themeState.backgroundImageUri) {
+                CompositionLocalProvider(
+                    LocalBackgroundImagePath provides themeState.backgroundImageUri,
+                    LocalFloatingGlassBottomBar provides themeState.useFloatingGlassBottomBar,
+                    LocalFloatingGlassBottomBarBlur provides themeState.useFloatingGlassBottomBarBlur,
+                ) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         Crossfade(targetState = themeState.backgroundImageUri, label = "global_background") { path ->
                             if (path.isNotEmpty()) {

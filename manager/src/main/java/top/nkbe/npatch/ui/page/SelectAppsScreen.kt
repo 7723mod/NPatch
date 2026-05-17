@@ -44,6 +44,7 @@ import top.nkbe.npatch.ui.util.backgroundAwareHazeStyle
 import top.nkbe.npatch.ui.viewmodel.SelectAppsViewModel
 import androidx.compose.ui.state.ToggleableState
 import top.yukonga.miuix.kmp.basic.Checkbox
+import dev.chrisbanes.haze.rememberHazeState
 import top.yukonga.miuix.kmp.basic.FloatingActionButton
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -84,7 +85,7 @@ fun SelectAppsScreen(
 
     val title = if (multiSelect) stringResource(R.string.screen_select_modules) else stringResource(R.string.screen_select_apps)
     val searchStatus = remember(multiSelect, title) { SearchStatus(title) }
-    val hazeState = remember { HazeState() }
+    val hazeState = rememberHazeState()
     val hazeStyle = backgroundAwareHazeStyle()
 
     val scrollBehavior = MiuixScrollBehavior()

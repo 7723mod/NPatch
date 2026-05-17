@@ -138,12 +138,16 @@ fun AppearanceSettings() {
             backgroundImageUri = "",
             useMonet = false,
             customColor = 0xFF007AFF.toInt(),
-            themeMode = ThemeMode.SYSTEM
+            themeMode = ThemeMode.SYSTEM,
+            useFloatingGlassBottomBar = false,
+            useFloatingGlassBottomBarBlur = true,
         )
     )
     val bgImageUri = themeState.backgroundImageUri
     val useMonet = themeState.useMonet
     val customColor = themeState.customColor
+    val useFloatingGlassBottomBar = themeState.useFloatingGlassBottomBar
+    val useFloatingGlassBottomBarBlur = themeState.useFloatingGlassBottomBarBlur
     val scrollState = rememberScrollState()
     val snackbarHost = LocalSnackbarHost.current
     val unknownErrorText = stringResource(R.string.error_unknown)
@@ -212,6 +216,42 @@ fun AppearanceSettings() {
             )
         }
     )
+
+    SwitchPreference(
+        title = stringResource(R.string.settings_floating_glass_bottom_bar),
+        summary = stringResource(R.string.settings_floating_glass_bottom_bar_summary),
+        checked = useFloatingGlassBottomBar,
+        onCheckedChange = { isChecked ->
+            scope.launch { context.dataStore.edit { it[ThemeConfig.USE_FLOATING_GLASS_BOTTOM_BAR] = isChecked } }
+        },
+        startAction = {
+            Icon(
+                Icons.Outlined.Palette,
+                modifier = Modifier.padding(end = 6.dp),
+                contentDescription = null,
+                tint = MiuixTheme.colorScheme.onBackground
+            )
+        }
+    )
+
+    AnimatedVisibility(visible = useFloatingGlassBottomBar) {
+        SwitchPreference(
+            title = stringResource(R.string.settings_floating_glass_bottom_bar_blur),
+            summary = stringResource(R.string.settings_floating_glass_bottom_bar_blur_summary),
+            checked = useFloatingGlassBottomBarBlur,
+            onCheckedChange = { isChecked ->
+                scope.launch { context.dataStore.edit { it[ThemeConfig.USE_FLOATING_GLASS_BOTTOM_BAR_BLUR] = isChecked } }
+            },
+            startAction = {
+                Icon(
+                    Icons.Outlined.Palette,
+                    modifier = Modifier.padding(end = 6.dp),
+                    contentDescription = null,
+                    tint = MiuixTheme.colorScheme.onBackground
+                )
+            }
+        )
+    }
 
     Row(
         modifier = Modifier

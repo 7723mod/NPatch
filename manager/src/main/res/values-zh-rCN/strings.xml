@@ -173,6 +173,10 @@
     <string name="settings_theme_mode_dark_summary">始终使用深色界面</string>
     <string name="settings_monet_dynamic_color">Monet 动态取色</string>
     <string name="settings_monet_dynamic_color_summary">跟随系统壁纸颜色 (Android 12+)</string>
+    <string name="settings_floating_glass_bottom_bar">悬浮玻璃底栏</string>
+    <string name="settings_floating_glass_bottom_bar_summary">在主界面使用悬浮分页底栏</string>
+    <string name="settings_floating_glass_bottom_bar_blur">液态玻璃底栏</string>
+    <string name="settings_floating_glass_bottom_bar_blur_summary">为悬浮底栏启用模糊、鲜明、透镜与高光效果</string>
     <string name="settings_custom_background_image">自定义背景图片</string>
     <string name="settings_clear">清除</string>
     <string name="settings_builtin_theme_color">内置主題色</string>

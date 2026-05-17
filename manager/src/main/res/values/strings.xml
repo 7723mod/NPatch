@@ -175,6 +175,10 @@
     <string name="settings_theme_mode_dark_summary">Use a dark interface all the time</string>
     <string name="settings_monet_dynamic_color">Monet Dynamic Color</string>
     <string name="settings_monet_dynamic_color_summary">Follow system wallpaper color (Android 12+ only)</string>
+    <string name="settings_floating_glass_bottom_bar">Floating glass bottom bar</string>
+    <string name="settings_floating_glass_bottom_bar_summary">Use a floating tab bar on the main screen</string>
+    <string name="settings_floating_glass_bottom_bar_blur">Liquid glass bottom bar</string>
+    <string name="settings_floating_glass_bottom_bar_blur_summary">Enable blur, vibrancy, lens and highlight effects for the floating bottom bar</string>
     <string name="settings_custom_background_image">Custom Background Image</string>
     <string name="settings_clear">Clear</string>
     <string name="settings_builtin_theme_color">Built-in Theme Color</string>
