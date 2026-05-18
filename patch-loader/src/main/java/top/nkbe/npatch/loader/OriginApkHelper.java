@@ -34,35 +34,21 @@ public class OriginApkHelper {
 
         Path internalCacheApk = internalOriginDir.resolve(sourceCrc + ".apk");
 
-        int userId = appInfo.uid / PER_USER_RANGE;
-        Path externalOriginPath = Paths.get("/storage/emulated/" + userId + "/Android/data/" + appInfo.packageName + "/cache/npatch/origin/origin.apk");
-
-        Log.d(TAG, "Checking external APK at: " + externalOriginPath);
-
         if (!Files.exists(internalOriginDir)) {
             Files.createDirectories(internalOriginDir);
         }
 
-        boolean externalExists = Files.exists(externalOriginPath);
+        if (!Files.exists(internalCacheApk)) {
+            Log.i(TAG, "Extracting origin.apk from assets.");
+            FileUtils.deleteFolderIfExists(internalOriginDir);
+            Files.createDirectories(internalOriginDir);
 
-        if (externalExists) {
-            Log.i(TAG, "External origin.apk found! Overwriting internal cache.");
-            try (InputStream in = Files.newInputStream(externalOriginPath)) {
-                Files.copy(in, internalCacheApk, StandardCopyOption.REPLACE_EXISTING);
+            try (InputStream is = baseClassLoader.getResourceAsStream(ORIGINAL_APK_ASSET_PATH)) {
+                if (is == null) throw new IOException("Original APK not found in assets");
+                Files.copy(is, internalCacheApk);
             }
         } else {
-            if (!Files.exists(internalCacheApk)) {
-                Log.i(TAG, "Extracting origin.apk from assets.");
-                FileUtils.deleteFolderIfExists(internalOriginDir);
-                Files.createDirectories(internalOriginDir);
-
-                try (InputStream is = baseClassLoader.getResourceAsStream(ORIGINAL_APK_ASSET_PATH)) {
-                    if (is == null) throw new IOException("Original APK not found in assets");
-                    Files.copy(is, internalCacheApk);
-                }
-            } else {
-                Log.d(TAG, "Internal cache hit: " + internalCacheApk);
-            }
+            Log.d(TAG, "Internal cache hit: " + internalCacheApk);
         }
 
         try {

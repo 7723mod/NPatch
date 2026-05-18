@@ -349,15 +349,13 @@ public class LSPApplication {
             var context = (Context) XposedHelpers.callStaticMethod(Class.forName("android.app.ContextImpl"), "createAppContext", activityThread, stubLoadedApk);
             if (config.appComponentFactory != null) {
                 try {
-                    appLoadedApk.getClassLoader().loadClass(config.appComponentFactory);
+                    context.getClassLoader().loadClass(config.appComponentFactory);
                 } catch (Throwable e) {
                     Log.w(TAG, "Original AppComponentFactory not found: " + config.appComponentFactory, e);
                     appInfo.appComponentFactory = null;
                 }
             }
             Log.i(TAG, "createLoadedApkWithContext cost: " + (System.currentTimeMillis() - timeStart) + "ms");
-            appInfo.sourceDir = patchedApkPath;
-            appInfo.publicSourceDir = patchedApkPath;
             return context;
         } catch (Throwable e) {
             Log.e(TAG, "createLoadedApk", e);

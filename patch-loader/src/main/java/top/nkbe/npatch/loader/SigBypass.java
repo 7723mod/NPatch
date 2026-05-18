@@ -52,8 +52,6 @@ public class SigBypass {
 
     private static String cachedOriginalApkPath;
     private static String cachedPatchedApkPath;
-    private static String cachedOriginalFactory;
-
     private static int activeSigBypassLevel;
     private static boolean packageParserHooked;
     private static boolean packageInfoCreatorProxied;
@@ -138,9 +136,6 @@ public class SigBypass {
                     try {
                         var patchConfig = new JSONObject(json);
                         replacement = patchConfig.getString("originalSignature");
-                        if (patchConfig.has("appComponentFactory")) {
-                            cachedOriginalFactory = patchConfig.optString("appComponentFactory", null);
-                        }
                     } catch (JSONException e) {
                         Log.w(TAG, "fail to get originalSignature or factory", e);
                     }
@@ -192,20 +187,6 @@ public class SigBypass {
         }
     }
 
-    private static void spoofApplicationInfo(ApplicationInfo appInfo) {
-        if (appInfo != null && cachedOriginalFactory != null && !cachedOriginalFactory.isEmpty()) {
-            appInfo.appComponentFactory = cachedOriginalFactory;
-        }
-    }
-
-    private static void replacePackageInfoPath(PackageInfo packageInfo) {
-        if (packageInfo == null || packageInfo.applicationInfo == null) return;
-        String visibleApkPath = visibleApkPathForCaller();
-        if (visibleApkPath == null) return;
-        packageInfo.applicationInfo.sourceDir = visibleApkPath;
-        packageInfo.applicationInfo.publicSourceDir = visibleApkPath;
-    }
-
     private static Signature getOriginalSignature(String packageName) {
         String replacement = signatures.get(packageName);
         if (replacement == null || replacement.isEmpty()) return null;
@@ -242,9 +223,6 @@ public class SigBypass {
                 PackageInfo packageInfo = (PackageInfo) param.getResult();
                 if (packageInfo == null) return;
                 replaceSignature(context, packageInfo);
-                if (activeSigBypassLevel >= Constants.SIGBYPASS_LV_PM_OPENAT) {
-                    replacePackageInfoPath(packageInfo);
-                }
             }
         });
         packageParserHooked = true;
@@ -258,12 +236,6 @@ public class SigBypass {
             public PackageInfo createFromParcel(Parcel source) {
                 PackageInfo packageInfo = originalCreator.createFromParcel(source);
                 replaceSignature(context, packageInfo);
-                if (packageInfo.applicationInfo != null) {
-                    spoofApplicationInfo(packageInfo.applicationInfo);
-                }
-                if (activeSigBypassLevel >= Constants.SIGBYPASS_LV_PM_OPENAT) {
-                    replacePackageInfoPath(packageInfo);
-                }
                 return packageInfo;
             }
 
@@ -299,10 +271,6 @@ public class SigBypass {
                     if (!packageName.equals(param.args[0])) return;
                     ApplicationInfo info = (ApplicationInfo) param.getResult();
                     if (info == null) return;
-                    String visibleApkPath = visibleApkPathForCaller();
-                    if (visibleApkPath == null) return;
-                    info.sourceDir = visibleApkPath;
-                    info.publicSourceDir = visibleApkPath;
                 }
             };
             XposedBridge.hookAllMethods(Class.forName("android.app.ApplicationPackageManager"), "getApplicationInfo", hook);
@@ -331,10 +299,6 @@ public class SigBypass {
                     PackageInfo packageInfo = (PackageInfo) param.getResult();
                     if (packageInfo == null) return;
                     replaceSignature(context, packageInfo);
-                    if (packageInfo.applicationInfo != null) {
-                        spoofApplicationInfo(packageInfo.applicationInfo);
-                    }
-                    replacePackageInfoPath(packageInfo);
                 }
             };
             hookPackageArchiveInfoMethods(PackageManager.class, hook);
@@ -478,7 +442,6 @@ public class SigBypass {
         }
 
         if (sigBypassLevel >= Constants.SIGBYPASS_LV_PM_OPENAT && cachedOriginalApkPath != null) {
-            replaceApplication(context.getPackageName());
             hookJavaIO(currentApkPath, cachedOriginalApkPath);
             if (!nativeOpenatEnabled) {
                 org.lsposed.lspd.nativebridge.SigBypass.enableOpenatHook(
