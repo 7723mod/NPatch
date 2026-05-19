@@ -300,10 +300,21 @@ public final class ModuleMetadataParser {
             return null;
         }
         try {
-            return Integer.parseInt(trimmed);
+            return parseLeadingInt(trimmed);
         } catch (NumberFormatException ignored) {
             return null;
         }
+    }
+
+    private Integer parseLeadingInt(String value) {
+        int end = 0;
+        while (end < value.length() && Character.isDigit(value.charAt(end))) {
+            end++;
+        }
+        if (end == 0) {
+            throw new NumberFormatException("No leading digits: " + value);
+        }
+        return Integer.parseInt(value.substring(0, end));
     }
 
     private String firstNonEmpty(String... values) {

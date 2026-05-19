@@ -175,7 +175,7 @@
     <string name="settings_theme_mode_dark_summary">始終使用深色介面</string>
     <string name="settings_monet_dynamic_color">Monet 動態取色</string>
     <string name="settings_monet_dynamic_color_summary">跟隨系統桌布顏色 (Android 12+)</string>
-    <string name="settings_floating_glass_bottom_bar">懸浮玻璃底欄</string>
+    <string name="settings_floating_glass_bottom_bar">懸浮分頁底欄</string>
     <string name="settings_floating_glass_bottom_bar_summary">在主畫面使用懸浮分頁底欄</string>
     <string name="settings_floating_glass_bottom_bar_blur">液態玻璃底欄</string>
     <string name="settings_floating_glass_bottom_bar_blur_summary">為懸浮底欄啟用模糊、鮮明、透鏡與高光效果</string>

@@ -120,7 +120,26 @@ public class ModuleLoader {
 
     private static int readInt(Properties properties, String key, int fallback) {
         var value = properties.getProperty(key);
-        return value == null ? fallback : Integer.parseInt(value.trim());
+        var parsed = parseLeadingInt(value);
+        return parsed == null ? fallback : parsed;
+    }
+
+    private static Integer parseLeadingInt(String value) {
+        if (value == null) {
+            return null;
+        }
+        var trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        int end = 0;
+        while (end < trimmed.length() && Character.isDigit(trimmed.charAt(end))) {
+            end++;
+        }
+        if (end == 0) {
+            return null;
+        }
+        return Integer.parseInt(trimmed.substring(0, end));
     }
 
     private static ModulePipeline determinePipeline(ZipFile apkFile, int fallbackMinApiVersion) {

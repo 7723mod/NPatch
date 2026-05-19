@@ -183,6 +183,7 @@ public class LSPLoader {
             }
             if (nativeDir != null) {
                 moduleAppInfo.nativeLibraryDir = nativeDir.getAbsolutePath();
+                moduleAppInfo.flags |= ApplicationInfo.FLAG_HAS_CODE | (1 << 26);
             }
 
             VectorContext vectorContext = new VectorContext(
@@ -266,6 +267,7 @@ public class LSPLoader {
                                 int len;
                                 while ((len = is.read(buffer)) > 0) os.write(buffer, 0, len);
                             }
+                            outFile.setExecutable(true, false);
                             extractedAny = true;
                         }
                     }

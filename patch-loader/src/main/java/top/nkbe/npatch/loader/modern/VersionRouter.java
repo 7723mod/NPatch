@@ -9,11 +9,7 @@ public final class VersionRouter {
         if (metadata == null) {
             return ModulePipeline.UNSUPPORTED;
         }
-        return determinePipeline(
-                metadata.getMinApiVersion(),
-                metadata.getTargetApiVersion(),
-                true,
-                true);
+        return metadata.getPipeline();
     }
 
     public ModulePipeline determinePipeline(int minApiVersion) {

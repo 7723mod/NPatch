@@ -106,10 +106,16 @@ object ConfigManager {
         }
 
     private fun readLegacyMinApiVersion(appInfo: android.content.pm.ApplicationInfo?): Int {
-        val value = appInfo?.metaData?.get("xposedminversion") ?: return 0
-        return when (value) {
-            is Number -> value.toInt()
-            else -> value.toString().trim().toIntOrNull() ?: 0
+        val metadata = appInfo?.metaData ?: return 0
+        if (!metadata.containsKey("xposedminversion")) {
+            return 0
         }
+
+        val intValue = metadata.getInt("xposedminversion", Int.MIN_VALUE)
+        if (intValue != Int.MIN_VALUE) {
+            return intValue
+        }
+
+        return metadata.getString("xposedminversion")?.trim()?.toIntOrNull() ?: 0
     }
 }
