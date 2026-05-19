@@ -19,6 +19,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -41,6 +42,8 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
@@ -92,7 +95,7 @@ fun HomeScreen(navigator: Navigator) {
             overscrollEffect = null
         ) {
             item {
-                StatusCard()
+                StatusCard(navigator)
             }
 
             item {
@@ -112,7 +115,7 @@ private val listener: (Int, Int) -> Unit = { _, grantResult ->
 }
 
 @Composable
-private fun StatusCard() {
+private fun StatusCard(navigator: Navigator) {
     LaunchedEffect(Unit) {
         ShizukuApi.refreshState()
         ShizukuApi.addRequestPermissionResultListener(listener)
@@ -204,26 +207,48 @@ private fun StatusCard() {
                     .fillMaxWidth()
                     .weight(1f),
                 colors = backgroundAwareCardColors(),
-                insideMargin = PaddingValues(16.dp),
-                showIndication = false,
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.Start
-                ) {
-                    Text(
-                        modifier = Modifier.fillMaxWidth(),
-                        text = stringResource(R.string.apps),
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 15.sp,
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                onClick = {
+                    navigator.replace(
+                        Route.Main(
+                            initialTab = MainTab.Manage.ordinal,
+                            initialManageTab = 0
+                        )
                     )
-                    Text(
-                        modifier = Modifier.fillMaxWidth(),
-                        text = appsCount.toString(),
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MiuixTheme.colorScheme.onSurface,
+                },
+                insideMargin = PaddingValues(16.dp),
+                showIndication = true,
+                pressFeedbackType = PressFeedbackType.Sink,
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.Start
+                    ) {
+                        Text(
+                            modifier = Modifier.fillMaxWidth(),
+                            text = stringResource(R.string.apps),
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 15.sp,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        )
+                        Text(
+                            modifier = Modifier.fillMaxWidth(),
+                            text = appsCount.toString(),
+                            fontSize = 26.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MiuixTheme.colorScheme.onSurface,
+                        )
+                    }
+                    Icon(
+                        imageVector = MiuixIcons.Regular.Back,
+                        contentDescription = null,
+                        tint = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                        modifier = Modifier
+                            .graphicsLayer(rotationZ = 180f)
+                            .size(18.dp)
                     )
                 }
             }
@@ -233,26 +258,48 @@ private fun StatusCard() {
                     .fillMaxWidth()
                     .weight(1f),
                 colors = backgroundAwareCardColors(),
-                insideMargin = PaddingValues(16.dp),
-                showIndication = false,
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.Start
-                ) {
-                    Text(
-                        modifier = Modifier.fillMaxWidth(),
-                        text = stringResource(R.string.modules),
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 15.sp,
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                onClick = {
+                    navigator.replace(
+                        Route.Main(
+                            initialTab = MainTab.Manage.ordinal,
+                            initialManageTab = 1
+                        )
                     )
-                    Text(
-                        modifier = Modifier.fillMaxWidth(),
-                        text = modulesCount.toString(),
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MiuixTheme.colorScheme.onSurface,
+                },
+                insideMargin = PaddingValues(16.dp),
+                showIndication = true,
+                pressFeedbackType = PressFeedbackType.Sink,
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.Start
+                    ) {
+                        Text(
+                            modifier = Modifier.fillMaxWidth(),
+                            text = stringResource(R.string.modules),
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 15.sp,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        )
+                        Text(
+                            modifier = Modifier.fillMaxWidth(),
+                            text = modulesCount.toString(),
+                            fontSize = 26.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MiuixTheme.colorScheme.onSurface,
+                        )
+                    }
+                    Icon(
+                        imageVector = MiuixIcons.Regular.Back,
+                        contentDescription = null,
+                        tint = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                        modifier = Modifier
+                            .graphicsLayer(rotationZ = 180f)
+                            .size(18.dp)
                     )
                 }
             }

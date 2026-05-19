@@ -20,13 +20,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.Security
-import androidx.compose.material.icons.outlined.Send
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -45,10 +44,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import top.nkbe.npatch.R
 import top.nkbe.npatch.ui.component.NPatchScaffold
 import top.nkbe.npatch.ui.util.backgroundAwareCardColors
@@ -62,6 +59,7 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.utils.PressFeedbackType
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
@@ -80,23 +78,6 @@ fun AboutScreen(onBack: () -> Unit) {
     val scrollBehavior = MiuixScrollBehavior()
     val showTopBarContent by remember {
         derivedStateOf { scrollBehavior.state.collapsedFraction == 0f }
-    }
-
-    DisposableEffect(context) {
-        val activity = context.findActivity()
-        val window = activity?.window
-        if (window == null) {
-            onDispose {}
-        } else {
-            val controller = WindowCompat.getInsetsController(window, window.decorView)
-            val previousBehavior = controller.systemBarsBehavior
-            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            controller.hide(WindowInsetsCompat.Type.statusBars())
-            onDispose {
-                controller.systemBarsBehavior = previousBehavior
-                controller.show(WindowInsetsCompat.Type.statusBars())
-            }
-        }
     }
 
     NPatchScaffold(
@@ -136,6 +117,12 @@ fun AboutScreen(onBack: () -> Unit) {
         ) {
             item {
                 ModuleIntroCard()
+            }
+
+            item {
+                AuthorCard(
+                    onClick = { context.openUri(AUTHOR_GITHUB_URL) }
+                )
             }
 
             item {
@@ -192,35 +179,32 @@ private fun ModuleIntroCard() {
                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 textAlign = TextAlign.Center
             )
-            Spacer(Modifier.height(20.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+        }
+    }
+}
+
+@Composable
+private fun AuthorCard(onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = backgroundAwareCardColors(),
+    ) {
+        ArrowPreference(
+            title = "NkBe",
+            summary = stringResource(R.string.about_author_summary),
+            startAction = {
                 AsyncImage(
-                    model = AUTHOR_AVATAR_URL,
+                    model = crossfadeModel(AUTHOR_AVATAR_URL),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
+                        .padding(end = 12.dp)
                         .size(46.dp)
                         .clip(RoundedCornerShape(12.dp))
                 )
-                Spacer(Modifier.width(12.dp))
-                Column {
-                    Text(
-                        text = "NkBe",
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MiuixTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = stringResource(R.string.about_author_summary),
-                        fontSize = 13.sp,
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary
-                    )
-                }
-            }
-        }
+            },
+            onClick = onClick
+        )
     }
 }
 
@@ -344,28 +328,45 @@ private fun LinkIcon(link: AboutLink) {
             .background(MiuixTheme.colorScheme.primaryContainer),
         contentAlignment = Alignment.Center
     ) {
-        if (link.imageUrl != null) {
-            AsyncImage(
-                model = link.imageUrl,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        } else if (link.imageRes != null) {
-            Image(
-                painter = painterResource(link.imageRes),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        } else if (link.icon != null) {
-            Icon(
-                imageVector = link.icon,
-                contentDescription = null,
-                modifier = Modifier.size(22.dp),
-                tint = MiuixTheme.colorScheme.onPrimaryContainer
-            )
+        when {
+            link.imageUrl != null -> {
+                AsyncImage(
+                    model = crossfadeModel(link.imageUrl),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+
+            link.imageRes != null -> {
+                Image(
+                    painter = painterResource(link.imageRes),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+
+            link.icon != null -> {
+                Icon(
+                    imageVector = link.icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(22.dp),
+                    tint = MiuixTheme.colorScheme.onPrimaryContainer
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun crossfadeModel(url: String): ImageRequest {
+    val context = LocalContext.current
+    return remember(url, context) {
+        ImageRequest.Builder(context)
+            .data(url)
+            .crossfade(true)
+            .build()
     }
 }
 
@@ -394,7 +395,7 @@ private fun rememberAboutLinks(): List<AboutLink> {
                 title = "Telegram",
                 summary = telegramSummary,
                 url = TELEGRAM_URL,
-                icon = Icons.Outlined.Send
+                icon = Icons.AutoMirrored.Outlined.Send
             )
         )
     }
@@ -465,6 +466,7 @@ private fun Context.openUri(uri: String) {
 private const val ABOUT_WEBSITE_URL = "https://www.nkbe.top"
 private const val GITHUB_URL = "https://github.com/7723mod/NPatch"
 private const val TELEGRAM_URL = "https://t.me/NPatch"
+private const val AUTHOR_GITHUB_URL = "https://github.com/HSSkyBoy"
 private const val AUTHOR_AVATAR_URL = "https://avatars.githubusercontent.com/u/122550437?s=256"
 private const val ROVO89_AVATAR_URL = "https://avatars.githubusercontent.com/u/1573299?s=256"
 private const val JING_MATRIX_AVATAR_URL = "https://avatars.githubusercontent.com/u/24476093?s=256"

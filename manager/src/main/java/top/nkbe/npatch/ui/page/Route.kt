@@ -8,7 +8,11 @@ import kotlinx.serialization.Serializable
  * 包含主页容器 (Main) 和其他全屏页面。
  */
 sealed interface Route : NavKey {
-    @Serializable data object Main : Route
+    @Serializable
+    data class Main(
+        val initialTab: Int = MainTab.Home.ordinal,
+        val initialManageTab: Int = 0
+    ) : Route
 
     @Serializable data object About : Route
 

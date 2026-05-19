@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,9 +36,17 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun MainScreen(navigator: Navigator) {
+fun MainScreen(
+    navigator: Navigator,
+    initialTab: Int = MainTab.Home.ordinal,
+    initialManageTab: Int = 0
+) {
     val tabs = MainTab.entries
-    val pagerState = rememberPagerState(pageCount = { tabs.size })
+    val safeInitialTab = initialTab.coerceIn(0, tabs.lastIndex)
+    val pagerState = rememberPagerState(
+        initialPage = safeInitialTab,
+        pageCount = { tabs.size }
+    )
     val scope = rememberCoroutineScope()
     val useFloatingGlassBottomBar = LocalFloatingGlassBottomBar.current
     val useFloatingGlassBottomBarBlur = LocalFloatingGlassBottomBarBlur.current
@@ -45,6 +54,12 @@ fun MainScreen(navigator: Navigator) {
     val backdrop = rememberLayerBackdrop {
         drawRect(surfaceColor)
         drawContent()
+    }
+
+    LaunchedEffect(safeInitialTab) {
+        if (pagerState.currentPage != safeInitialTab) {
+            pagerState.scrollToPage(safeInitialTab)
+        }
     }
 
     NPatchScaffold(
@@ -122,7 +137,10 @@ fun MainScreen(navigator: Navigator) {
         ) { page ->
             when (tabs[page]) {
                 MainTab.Home -> HomeScreen(navigator)
-                MainTab.Manage -> ManageScreen(navigator)
+                MainTab.Manage -> ManageScreen(
+                    navigator = navigator,
+                    initialPage = initialManageTab
+                )
                 MainTab.Repo -> RepositoryScreen(navigator)
                 MainTab.Settings -> SettingsScreen()
             }

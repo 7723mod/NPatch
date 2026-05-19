@@ -31,7 +31,7 @@
     
     <!-- About Screen -->
     <string name="about_view_source_code"><![CDATA[查看原始碼 %1$s]]></string>
-    <string name="about_author_summary">NPatch 開發者</string>
+    <string name="about_author_summary">NPatch 主要開發者</string>
     <string name="about_disclaimer_title">免責聲明</string>
     <string name="about_disclaimer_body">NPatch 僅供學習、研究以及合法的應用程式相容性工作使用。請尊重當地法律、應用程式條款與原開發者權益。您需自行承擔在裝置上使用修補應用與模組的責任。</string>
     <string name="about_links_title">相關連結</string>

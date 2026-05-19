@@ -10,11 +10,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -74,6 +74,9 @@ import kotlin.math.abs
 import kotlin.math.sign
 
 private val LocalFloatingBottomBarTabScale = staticCompositionLocalOf { { 1f } }
+private val FloatingBottomBarItemMinWidth = 76.dp
+private val FloatingBottomBarHorizontalPadding = 4.dp
+private val FloatingBottomBarVerticalPadding = 4.dp
 
 @Composable
 fun RowScope.FloatingGlassBottomBarItem(
@@ -84,7 +87,7 @@ fun RowScope.FloatingGlassBottomBarItem(
     val scale = LocalFloatingBottomBarTabScale.current
     Column(
         modifier
-            .defaultMinSize(minWidth = 80.dp)
+            .defaultMinSize(minWidth = FloatingBottomBarItemMinWidth)
             .clip(CircleShape)
             .clickable(
                 interactionSource = null,
@@ -118,7 +121,7 @@ fun FloatingGlassBottomBar(
     val isInLightTheme = !isSystemInDarkTheme()
     val accentColor = MiuixTheme.colorScheme.primary
     val containerColor = if (isBlurEnabled) {
-        MiuixTheme.colorScheme.surfaceContainer.copy(0.4f)
+        MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.18f)
     } else {
         MiuixTheme.colorScheme.surfaceContainer
     }
@@ -139,7 +142,7 @@ fun FloatingGlassBottomBar(
             } else {
                 val fraction = (offsetAnimation.value / totalWidthPx).fastCoerceIn(-1f, 1f)
                 with(density) {
-                    4.dp.toPx() * fraction.sign * EaseOut.transform(abs(fraction))
+                    FloatingBottomBarHorizontalPadding.toPx() * fraction.sign * EaseOut.transform(abs(fraction))
                 }
             }
         }
@@ -166,7 +169,7 @@ fun FloatingGlassBottomBar(
 
                 val currentValue = anim.value
                 val indicatorX = currentValue * tabWidthPx
-                val padding = with(density) { 4.dp.toPx() }
+                val padding = with(density) { FloatingBottomBarHorizontalPadding.toPx() }
                 val globalTouchX = if (isLtr) {
                     padding + indicatorX + offset.x
                 } else {
@@ -221,14 +224,14 @@ fun FloatingGlassBottomBar(
     }
 
     Box(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.width(IntrinsicSize.Min),
         contentAlignment = Alignment.CenterStart
     ) {
         Row(
             Modifier
                 .onGloballyPositioned { coords ->
                     totalWidthPx = coords.size.width.toFloat()
-                    val contentWidthPx = totalWidthPx - with(density) { 12.dp.toPx() }
+                    val contentWidthPx = totalWidthPx - with(density) { FloatingBottomBarHorizontalPadding.toPx() * 2f }
                     tabWidthPx = contentWidthPx / tabsCount
                 }
                 .graphicsLayer { translationX = panelOffset }
@@ -243,7 +246,7 @@ fun FloatingGlassBottomBar(
                     effects = {
                         if (isBlurEnabled) {
                             vibrancy()
-                            blur(8.dp.toPx())
+                            blur(4.dp.toPx())
                             lens(24.dp.toPx(), 24.dp.toPx())
                         }
                     },
@@ -252,7 +255,7 @@ fun FloatingGlassBottomBar(
                     },
                     shadow = {
                         Shadow.Default.copy(
-                            color = Color.Black.copy(if (isInLightTheme) 0.1f else 0.2f),
+                            color = Color.Black.copy(if (isInLightTheme) 0.06f else 0.12f),
                         )
                     },
                     layerBlock = {
@@ -266,8 +269,8 @@ fun FloatingGlassBottomBar(
                     onDrawSurface = { drawRect(containerColor) }
                 )
                 .then(if (isBlurEnabled) interactiveHighlight.modifier else Modifier)
-                .height(68.dp)
-                .padding(6.dp),
+                .height(64.dp)
+                .padding(horizontal = FloatingBottomBarHorizontalPadding, vertical = FloatingBottomBarVerticalPadding),
             verticalAlignment = Alignment.CenterVertically,
             content = content
         )
@@ -290,7 +293,7 @@ fun FloatingGlassBottomBar(
                             if (isBlurEnabled) {
                                 val progress = dampedDragAnimation.pressProgress
                                 vibrancy()
-                                blur(8.dp.toPx())
+                                blur(4.dp.toPx())
                                 lens(24.dp.toPx() * progress, 24.dp.toPx() * progress)
                             }
                         },
@@ -301,7 +304,7 @@ fun FloatingGlassBottomBar(
                     )
                     .then(if (isBlurEnabled) interactiveHighlight.modifier else Modifier)
                     .height(56.dp)
-                    .padding(horizontal = 6.dp)
+                    .padding(horizontal = FloatingBottomBarHorizontalPadding)
                     .graphicsLayer(colorFilter = ColorFilter.tint(accentColor)),
                 verticalAlignment = Alignment.CenterVertically,
                 content = content
@@ -311,9 +314,9 @@ fun FloatingGlassBottomBar(
         if (tabWidthPx > 0f) {
             Box(
                 Modifier
-                    .padding(horizontal = 6.dp)
+                    .padding(horizontal = FloatingBottomBarHorizontalPadding)
                     .graphicsLayer {
-                        val contentWidth = totalWidthPx - with(density) { 12.dp.toPx() }
+                        val contentWidth = totalWidthPx - with(density) { FloatingBottomBarHorizontalPadding.toPx() * 2f }
                         val singleTabWidth = contentWidth / tabsCount
                         val progressOffset = dampedDragAnimation.value * singleTabWidth
 
@@ -363,7 +366,11 @@ fun FloatingGlassBottomBar(
                         }
                     )
                     .height(56.dp)
-                    .width(with(density) { ((totalWidthPx - 12.dp.toPx()) / tabsCount).toDp() })
+                    .width(
+                        with(density) {
+                            ((totalWidthPx - FloatingBottomBarHorizontalPadding.toPx() * 2f) / tabsCount).toDp()
+                        }
+                    )
             )
         }
     }

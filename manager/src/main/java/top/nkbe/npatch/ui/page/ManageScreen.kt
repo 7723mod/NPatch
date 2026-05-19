@@ -12,6 +12,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -40,12 +41,19 @@ import top.yukonga.miuix.kmp.basic.TabRow
 import top.yukonga.miuix.kmp.basic.TabRowDefaults
 
 @Composable
-fun ManageScreen(navigator: Navigator) {
+fun ManageScreen(
+    navigator: Navigator,
+    initialPage: Int = 0
+) {
     val scope = rememberCoroutineScope()
     val tabTitles = listOf(stringResource(R.string.apps), stringResource(R.string.modules))
     val useFloatingGlassBottomBar = LocalFloatingGlassBottomBar.current
 
-    val pagerState = rememberPagerState(pageCount = { tabTitles.size })
+    val safeInitialPage = initialPage.coerceIn(0, tabTitles.lastIndex)
+    val pagerState = rememberPagerState(
+        initialPage = safeInitialPage,
+        pageCount = { tabTitles.size }
+    )
     val scrollBehavior = MiuixScrollBehavior()
 
     val manageSearchLabel = stringResource(R.string.manage_search)
@@ -57,6 +65,12 @@ fun ManageScreen(navigator: Navigator) {
         derivedStateOf { 12.dp * (1f - scrollBehavior.state.collapsedFraction) }
     }
     val floatingFabBottomPadding = rememberFloatingBottomBarFabPadding()
+
+    LaunchedEffect(safeInitialPage) {
+        if (pagerState.currentPage != safeInitialPage) {
+            pagerState.scrollToPage(safeInitialPage)
+        }
+    }
 
     NPatchScaffold(
         topBar = {

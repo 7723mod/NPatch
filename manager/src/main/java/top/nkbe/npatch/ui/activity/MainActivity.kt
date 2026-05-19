@@ -146,7 +146,7 @@ class MainActivity : ComponentActivity() {
 
                         val snackbarHostState = remember { SnackbarHostState() }
                         val startRoute = remember {
-                            if (Configs.welcomeSeen) Route.Main else Route.Welcome()
+                            if (Configs.welcomeSeen) Route.Main() else Route.Welcome()
                         }
                         val backStack = remember { mutableStateListOf<NavKey>(startRoute) }
                         val navigator = remember { Navigator(backStack) }
@@ -159,7 +159,13 @@ class MainActivity : ComponentActivity() {
                                 backStack = backStack,
                                 onBack = { navigator.pop() },
                                 entryProvider = entryProvider {
-                                    entry<Route.Main> { MainScreen(navigator) }
+                                    entry<Route.Main> { route ->
+                                        MainScreen(
+                                            navigator = navigator,
+                                            initialTab = route.initialTab,
+                                            initialManageTab = route.initialManageTab
+                                        )
+                                    }
 
                                     entry<Route.About> {
                                         AboutScreen(onBack = { navigator.pop() })
@@ -170,7 +176,7 @@ class MainActivity : ComponentActivity() {
                                             reviewMode = route.reviewMode,
                                             onFinish = {
                                                 backStack.clear()
-                                                backStack.add(Route.Main)
+                                                backStack.add(Route.Main())
                                             },
                                             onReturn = { navigator.pop() }
                                         )

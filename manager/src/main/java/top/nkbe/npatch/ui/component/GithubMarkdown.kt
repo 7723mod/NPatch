@@ -75,6 +75,8 @@ fun GithubMarkdown(
     val bgMuted = cssColorFromArgb(makeVariant(if (bgLuminance > 0.6) -0.06f else 0.06f))
     val bgNeutralMuted = cssColorFromArgb(makeVariant(if (bgLuminance > 0.6) -0.12f else 0.12f))
     val bgAttentionMuted = cssColorFromArgb(makeVariant(-0.12f))
+    val fgDefault = cssColorFromArgb(MiuixTheme.colorScheme.onSurface.toArgb())
+    val fgMuted = cssColorFromArgb(MiuixTheme.colorScheme.onSurfaceVariantSummary.toArgb())
     val fgLink = cssColorFromArgb(MiuixTheme.colorScheme.primary.toArgb())
 
     val colorsCss =
@@ -94,7 +96,13 @@ fun GithubMarkdown(
           <link rel="stylesheet" href="$markdownCss" />
           <link rel="stylesheet" href="$syntaxCss" />
           <style>
-            html, body { margin:0; padding:0; }
+            html, body {
+              margin:0;
+              padding:0;
+              color-scheme: ${if (isDark) "dark" else "light"};
+              background: transparent;
+              color: $fgDefault;
+            }
             img, video { max-width:100%; height:auto; }
             .markdown-body {
               padding: 16px;
@@ -102,7 +110,25 @@ fun GithubMarkdown(
               --bgColor-muted: $bgMuted;
               --bgColor-neutral-muted: $bgNeutralMuted;
               --bgColor-attention-muted: $bgAttentionMuted;
+              --fgColor-default: $fgDefault;
+              --fgColor-muted: $fgMuted;
               --fgColor-accent: $fgLink;
+              --fgColor-link: $fgLink;
+              color: var(--fgColor-default);
+            }
+            .markdown-body p,
+            .markdown-body li,
+            .markdown-body td,
+            .markdown-body th,
+            .markdown-body blockquote {
+              color: var(--fgColor-default);
+            }
+            .markdown-body code,
+            .markdown-body pre {
+              color: var(--fgColor-default);
+            }
+            .markdown-body a {
+              color: var(--fgColor-link);
             }
           </style>
         </head>

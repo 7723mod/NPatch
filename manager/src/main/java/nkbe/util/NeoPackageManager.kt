@@ -66,7 +66,6 @@ object NeoPackageManager {
         val result = withContext(Dispatchers.IO) {
             val pm = lspApp.packageManager
             val collection = mutableListOf<AppInfo>()
-            val icons = mutableMapOf<String, ImageBitmap>()
             val applicationList: List<ApplicationInfo>
 
             if (ShizukuApi.isReady) {
@@ -88,7 +87,6 @@ object NeoPackageManager {
                     ModuleMetadataReader.read(it, pm)
                 }.getOrNull()
                 collection.add(AppInfo(it, label.toString(), moduleMetadata))
-                icons[it.packageName] = loadIconBitmap(it)
             }
 
             collection.sortWith(compareBy(Collator.getInstance(Locale.getDefault()), AppInfo::label))
@@ -96,13 +94,11 @@ object NeoPackageManager {
                 collection.forEach { if (it.isXposedModule) put(it.app.packageName, it.app.sourceDir) }
             }
             ConfigManager.updateModules(modules)
-            collection to icons
+            collection
         }
         withContext(Dispatchers.Main.immediate) {
-            val (collection, icons) = result
-            appIcon.clear()
-            appIcon.putAll(icons)
-            appList = collection
+            appIcon.keys.retainAll(result.map { it.app.packageName }.toSet())
+            appList = result
         }
     }
 
