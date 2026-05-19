@@ -287,11 +287,15 @@ public class SigBypass {
             XC_MethodHook hook = new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
-                    if (isModuleCaller() || cachedOriginalApkPath == null) return;
+                    if (cachedOriginalApkPath == null) return;
                     Object apkPath = param.args.length == 0 ? null : param.args[0];
-                    if (apkPath instanceof String path && path.equals(cachedPatchedApkPath)) {
-                        param.args[0] = cachedOriginalApkPath;
+                    if (!(apkPath instanceof String path) || !path.equals(cachedPatchedApkPath)) {
+                        return;
                     }
+                    if (isModuleCaller()) {
+                        return;
+                    }
+                    param.args[0] = cachedOriginalApkPath;
                 }
 
                 @Override
@@ -410,13 +414,23 @@ public class SigBypass {
         XC_MethodHook redirectHook = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
+                Object arg0 = param.args[0];
+                boolean isPatchedApkPath = false;
+                if (arg0 instanceof String path) {
+                    isPatchedApkPath = path.equals(patchedApkPath);
+                } else if (arg0 instanceof File file) {
+                    isPatchedApkPath = file.getPath().equals(patchedApkPath);
+                }
+                // Fast-path: most File/Zip opens are unrelated to patched APK, skip stack walking.
+                if (!isPatchedApkPath) {
+                    return;
+                }
                 if (!isSignatureSensitiveCaller() || isModuleCaller()) {
                     return;
                 }
-                Object arg0 = param.args[0];
-                if (arg0 instanceof String path && path.equals(patchedApkPath)) {
+                if (arg0 instanceof String) {
                     param.args[0] = originalApkPath;
-                } else if (arg0 instanceof File file && file.getPath().equals(patchedApkPath)) {
+                } else if (arg0 instanceof File) {
                     param.args[0] = new File(originalApkPath);
                 }
             }
