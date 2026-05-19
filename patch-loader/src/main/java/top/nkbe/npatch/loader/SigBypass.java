@@ -76,6 +76,10 @@ public class SigBypass {
         }
     }
 
+    static boolean isModuleCallerForCompat() {
+        return isModuleCaller();
+    }
+
     public static void setPaths(String originalApkPath, String patchedApkPath) {
         cachedOriginalApkPath = originalApkPath;
         cachedPatchedApkPath = patchedApkPath;

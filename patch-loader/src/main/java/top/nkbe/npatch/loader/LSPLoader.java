@@ -4,6 +4,7 @@ import android.app.ActivityThread;
 import android.app.Application;
 import android.app.LoadedApk;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
@@ -22,10 +23,13 @@ import java.util.Enumeration;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedInit;
 import de.robv.android.xposed.XposedHelpers;
@@ -43,8 +47,12 @@ import org.matrix.vector.nativebridge.NativeAPI;
 public class LSPLoader {
     private static final String TAG = "NPatch-Loader";
     private static final Set<String> enhancedLoadedModules = new LinkedHashSet<>();
+    private static final Map<String, ApplicationInfo> moduleRuntimeAppInfos = new ConcurrentHashMap<>();
+    private static volatile boolean moduleSelfPathHooked;
 
     public static void initModules(LoadedApk loadedApk) {
+        registerModuleRuntimeAppInfos();
+        installModuleSelfPathCompatibility();
         installNativeModuleServiceProxy();
         XposedInit.loadModules(ActivityThread.currentActivityThread());
         dispatchModernLifecycle(loadedApk);
@@ -59,6 +67,90 @@ public class LSPLoader {
         lpparam.appInfo = loadedApk.getApplicationInfo();
         lpparam.isFirstApplication = true;
         XC_LoadPackage.callAll(lpparam);
+    }
+
+    private static void registerModuleRuntimeAppInfos() {
+        try {
+            Field serviceField = VectorServiceClient.class.getDeclaredField("service");
+            serviceField.setAccessible(true);
+            Object current = serviceField.get(VectorServiceClient.INSTANCE);
+            if (!(current instanceof ILSPApplicationService service)) {
+                Log.w(TAG, "VectorServiceClient service is not ready for module path compatibility");
+                return;
+            }
+
+            registerModuleRuntimeAppInfos(service.getLegacyModulesList());
+            registerModuleRuntimeAppInfos(service.getModulesList());
+        } catch (Throwable e) {
+            Log.e(TAG, "Failed to register module runtime ApplicationInfo", e);
+        }
+    }
+
+    private static void registerModuleRuntimeAppInfos(List<Module> modules) {
+        if (modules == null || modules.isEmpty()) {
+            return;
+        }
+        for (Module module : modules) {
+            ApplicationInfo runtimeAppInfo = buildRuntimeApplicationInfo(module);
+            if (runtimeAppInfo == null || runtimeAppInfo.packageName == null) {
+                continue;
+            }
+            moduleRuntimeAppInfos.put(runtimeAppInfo.packageName, runtimeAppInfo);
+        }
+    }
+
+    private static void installModuleSelfPathCompatibility() {
+        if (moduleSelfPathHooked) {
+            return;
+        }
+        try {
+            XC_MethodHook appInfoHook = new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) {
+                    if (param.args.length == 0 || !(param.args[0] instanceof String packageName)) {
+                        return;
+                    }
+                    ApplicationInfo runtimeAppInfo = findRuntimeAppInfo(packageName);
+                    if (runtimeAppInfo == null) {
+                        return;
+                    }
+                    param.setResult(copyApplicationInfo(runtimeAppInfo));
+                }
+            };
+            XC_MethodHook packageInfoHook = new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) {
+                    if (param.args.length == 0 || !(param.args[0] instanceof String packageName)) {
+                        return;
+                    }
+                    ApplicationInfo runtimeAppInfo = findRuntimeAppInfo(packageName);
+                    if (runtimeAppInfo == null) {
+                        return;
+                    }
+                    PackageInfo packageInfo = (PackageInfo) param.getResult();
+                    if (packageInfo == null) {
+                        return;
+                    }
+                    packageInfo.applicationInfo = copyApplicationInfo(runtimeAppInfo);
+                }
+            };
+
+            Class<?> appPmClass = Class.forName("android.app.ApplicationPackageManager");
+            XposedBridge.hookAllMethods(appPmClass, "getApplicationInfo", appInfoHook);
+            XposedBridge.hookAllMethods(appPmClass, "getApplicationInfoAsUser", appInfoHook);
+            XposedBridge.hookAllMethods(appPmClass, "getPackageInfo", packageInfoHook);
+            moduleSelfPathHooked = true;
+            Log.i(TAG, "Installed module self path compatibility hook");
+        } catch (Throwable e) {
+            Log.e(TAG, "Failed to install module self path compatibility hook", e);
+        }
+    }
+
+    private static ApplicationInfo findRuntimeAppInfo(String packageName) {
+        if (!SigBypass.isModuleCallerForCompat()) {
+            return null;
+        }
+        return moduleRuntimeAppInfos.get(packageName);
     }
 
     private static void installNativeModuleServiceProxy() {
@@ -153,38 +245,23 @@ public class LSPLoader {
     }
 
     private static boolean shouldHandleNative(Module module) {
-        try (ZipFile zip = new ZipFile(new File(module.apkPath))) {
-            Enumeration<? extends ZipEntry> entries = zip.entries();
-            while (entries.hasMoreElements()) {
-                ZipEntry entry = entries.nextElement();
-                if (entry.getName().startsWith("lib/") && entry.getName().endsWith(".so")) {
-                    return true;
-                }
-            }
-        } catch (Throwable ignored) {}
-        return false;
+        // Only modules that explicitly declare native entrypoints should go
+        // through the eager native path. Plenty of modern modules bundle JNI
+        // or third-party .so files but still expect plain Java onModuleLoaded().
+        return module != null
+                && module.file != null
+                && module.file.moduleLibraryNames != null
+                && !module.file.moduleLibraryNames.isEmpty();
     }
 
     private static boolean performEnhancedLoad(Module module, boolean isSystemServer, String processName) {
         try {
-            File nativeDir = prepareNativeLibraryDir(module);
+            ApplicationInfo moduleAppInfo = buildRuntimeApplicationInfo(module);
+            File nativeDir = resolvePreparedNativeDir(moduleAppInfo);
             String librarySearchPath = buildLibrarySearchPath(module, nativeDir);
 
             ClassLoader initLoader = XposedModule.class.getClassLoader();
             PathClassLoader moduleClassLoader = new PathClassLoader(module.apkPath, librarySearchPath, initLoader);
-
-            ApplicationInfo moduleAppInfo = module.applicationInfo;
-            if (moduleAppInfo == null) {
-                moduleAppInfo = new ApplicationInfo();
-                moduleAppInfo.packageName = module.packageName;
-                moduleAppInfo.sourceDir = module.apkPath;
-                moduleAppInfo.publicSourceDir = module.apkPath;
-                moduleAppInfo.uid = module.appId;
-            }
-            if (nativeDir != null) {
-                moduleAppInfo.nativeLibraryDir = nativeDir.getAbsolutePath();
-                moduleAppInfo.flags |= ApplicationInfo.FLAG_HAS_CODE | (1 << 26);
-            }
 
             VectorContext vectorContext = new VectorContext(
                     module.packageName,
@@ -193,11 +270,7 @@ public class LSPLoader {
             );
 
             for (String libName : discoverNativeLibraries(module)) {
-                if (module.file != null
-                        && module.file.moduleLibraryNames != null
-                        && module.file.moduleLibraryNames.contains(libName)) {
-                    NativeAPI.recordNativeEntrypoint(libName);
-                }
+                NativeAPI.recordNativeEntrypoint(libName);
                 for (String candidate : buildNativeInitCandidates(module, nativeDir, libName)) {
                     if (NativeAPI.initializeNativeEntrypoint(libName, candidate)) {
                         Log.i(TAG, "Prepared native library " + libName + " from " + candidate);
@@ -232,6 +305,55 @@ public class LSPLoader {
             Log.e(TAG, "Enhanced load failed for " + module.packageName, e);
             return false;
         }
+    }
+
+    private static ApplicationInfo buildRuntimeApplicationInfo(Module module) {
+        if (module == null || module.packageName == null || module.apkPath == null) {
+            return null;
+        }
+        ApplicationInfo appInfo = copyApplicationInfo(module.applicationInfo);
+        if (appInfo == null) {
+            appInfo = new ApplicationInfo();
+            appInfo.packageName = module.packageName;
+            appInfo.uid = module.appId;
+        }
+        appInfo.sourceDir = module.apkPath;
+        appInfo.publicSourceDir = module.apkPath;
+        appInfo.flags |= ApplicationInfo.FLAG_HAS_CODE;
+
+        File nativeDir = prepareNativeLibraryDir(module);
+        if (nativeDir != null) {
+            appInfo.nativeLibraryDir = nativeDir.getAbsolutePath();
+            appInfo.flags |= (1 << 26);
+        }
+        return appInfo;
+    }
+
+    private static ApplicationInfo copyApplicationInfo(ApplicationInfo source) {
+        if (source == null) {
+            return null;
+        }
+        try {
+            return new ApplicationInfo(source);
+        } catch (Throwable ignored) {
+            ApplicationInfo copy = new ApplicationInfo();
+            copy.packageName = source.packageName;
+            copy.sourceDir = source.sourceDir;
+            copy.publicSourceDir = source.publicSourceDir;
+            copy.nativeLibraryDir = source.nativeLibraryDir;
+            copy.dataDir = source.dataDir;
+            copy.uid = source.uid;
+            copy.flags = source.flags;
+            copy.metaData = source.metaData;
+            return copy;
+        }
+    }
+
+    private static File resolvePreparedNativeDir(ApplicationInfo appInfo) {
+        if (appInfo == null || appInfo.nativeLibraryDir == null || appInfo.nativeLibraryDir.isEmpty()) {
+            return null;
+        }
+        return new File(appInfo.nativeLibraryDir);
     }
 
     private static File prepareNativeLibraryDir(Module module) {
@@ -312,24 +434,15 @@ public class LSPLoader {
     private static List<String> discoverNativeLibraries(Module module) {
         LinkedHashSet<String> libraries = new LinkedHashSet<>();
         if (module.file != null && module.file.moduleLibraryNames != null) {
-            libraries.addAll(module.file.moduleLibraryNames);
-        }
-
-        String[] abis = Process.is64Bit() ? Build.SUPPORTED_64_BIT_ABIS : Build.SUPPORTED_32_BIT_ABIS;
-        try (ZipFile zip = new ZipFile(new File(module.apkPath))) {
-            for (String abi : abis) {
-                String prefix = "lib/" + abi + "/";
-                Enumeration<? extends ZipEntry> entries = zip.entries();
-                while (entries.hasMoreElements()) {
-                    ZipEntry entry = entries.nextElement();
-                    String name = entry.getName();
-                    if (!entry.isDirectory() && name.startsWith(prefix) && name.endsWith(".so")) {
-                        libraries.add(new File(name).getName());
-                    }
+            for (String libName : module.file.moduleLibraryNames) {
+                if (libName == null || libName.isEmpty()) {
+                    continue;
+                }
+                libraries.add(libName);
+                if (!libName.startsWith("lib") || !libName.endsWith(".so")) {
+                    libraries.add(System.mapLibraryName(libName));
                 }
             }
-        } catch (Throwable e) {
-            Log.w(TAG, "Failed to discover native libraries for " + module.packageName, e);
         }
         return new ArrayList<>(libraries);
     }
