@@ -15,12 +15,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.rememberHazeState
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import top.nkbe.npatch.R
 import top.nkbe.npatch.ui.component.SearchBar
@@ -43,15 +45,16 @@ import top.yukonga.miuix.kmp.basic.TabRowDefaults
 @Composable
 fun ManageScreen(
     navigator: Navigator,
-    initialPage: Int = 0
+    selectedPage: Int = 0,
+    onSelectedPageChange: (Int) -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
     val tabTitles = listOf(stringResource(R.string.apps), stringResource(R.string.modules))
     val useFloatingGlassBottomBar = LocalFloatingGlassBottomBar.current
 
-    val safeInitialPage = initialPage.coerceIn(0, tabTitles.lastIndex)
+    val safeSelectedPage = selectedPage.coerceIn(0, tabTitles.lastIndex)
     val pagerState = rememberPagerState(
-        initialPage = safeInitialPage,
+        initialPage = safeSelectedPage,
         pageCount = { tabTitles.size }
     )
     val scrollBehavior = MiuixScrollBehavior()
@@ -66,10 +69,16 @@ fun ManageScreen(
     }
     val floatingFabBottomPadding = rememberFloatingBottomBarFabPadding()
 
-    LaunchedEffect(safeInitialPage) {
-        if (pagerState.currentPage != safeInitialPage) {
-            pagerState.scrollToPage(safeInitialPage)
+    LaunchedEffect(safeSelectedPage) {
+        if (pagerState.currentPage != safeSelectedPage) {
+            pagerState.scrollToPage(safeSelectedPage)
         }
+    }
+
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.currentPage }
+            .distinctUntilChanged()
+            .collect(onSelectedPageChange)
     }
 
     NPatchScaffold(
@@ -103,7 +112,10 @@ fun ManageScreen(
                         TabRow(
                             tabs = tabTitles,
                             selectedTabIndex = pagerState.currentPage,
-                            onTabSelected = { scope.launch { pagerState.animateScrollToPage(it) } },
+                            onTabSelected = {
+                                onSelectedPageChange(it)
+                                scope.launch { pagerState.animateScrollToPage(it) }
+                            },
                             modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 6.dp),
                             colors = TabRowDefaults.tabRowColors(backgroundColor = Color.Transparent)
                         )
@@ -135,7 +147,10 @@ fun ManageScreen(
                     TabRow(
                         tabs = tabTitles,
                         selectedTabIndex = pagerState.currentPage,
-                        onTabSelected = { scope.launch { pagerState.animateScrollToPage(it) } },
+                        onTabSelected = {
+                            onSelectedPageChange(it)
+                            scope.launch { pagerState.animateScrollToPage(it) }
+                        },
                         modifier = Modifier.padding(horizontal = 12.dp),
                         colors = TabRowDefaults.tabRowColors(backgroundColor = Color.Transparent)
                     )

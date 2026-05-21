@@ -6,11 +6,11 @@ import androidx.room.Room
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.withContext
-import top.nkbe.npatch.util.LocalInjectedModuleService
 import top.nkbe.npatch.database.LSPDatabase
 import top.nkbe.npatch.database.entity.Module
 import top.nkbe.npatch.database.entity.Scope
 import top.nkbe.npatch.lspApp
+import top.nkbe.npatch.util.LocalInjectedModuleService
 import top.nkbe.npatch.util.ModuleLoader
 import java.io.File
 

@@ -16,8 +16,11 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
@@ -35,6 +38,7 @@ import top.nkbe.npatch.config.ThemeMode
 import top.nkbe.npatch.config.ThemeSettings
 import top.nkbe.npatch.ui.page.AboutScreen
 import top.nkbe.npatch.ui.page.LocalNavigator
+import top.nkbe.npatch.ui.page.MainTab
 import top.nkbe.npatch.ui.page.MainScreen
 import top.nkbe.npatch.ui.page.Navigator
 import top.nkbe.npatch.ui.page.NewPatchScreen
@@ -150,6 +154,13 @@ class MainActivity : ComponentActivity() {
                         }
                         val backStack = remember { mutableStateListOf<NavKey>(startRoute) }
                         val navigator = remember { Navigator(backStack) }
+                        val startMainRoute = startRoute as? Route.Main
+                        var selectedMainTab by rememberSaveable {
+                            mutableIntStateOf(startMainRoute?.initialTab ?: MainTab.Home.ordinal)
+                        }
+                        var selectedManageTab by rememberSaveable {
+                            mutableIntStateOf(startMainRoute?.initialManageTab ?: 0)
+                        }
 
                         CompositionLocalProvider(
                             LocalSnackbarHost provides snackbarHostState,
@@ -159,11 +170,13 @@ class MainActivity : ComponentActivity() {
                                 backStack = backStack,
                                 onBack = { navigator.pop() },
                                 entryProvider = entryProvider {
-                                    entry<Route.Main> { route ->
+                                    entry<Route.Main> {
                                         MainScreen(
                                             navigator = navigator,
-                                            initialTab = route.initialTab,
-                                            initialManageTab = route.initialManageTab
+                                            selectedTab = selectedMainTab,
+                                            selectedManageTab = selectedManageTab,
+                                            onSelectedTabChange = { selectedMainTab = it },
+                                            onSelectedManageTabChange = { selectedManageTab = it }
                                         )
                                     }
 

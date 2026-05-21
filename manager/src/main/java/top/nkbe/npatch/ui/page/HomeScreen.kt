@@ -52,7 +52,10 @@ import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
 @SuppressLint("ContextCastToActivity")
 @Composable
-fun HomeScreen(navigator: Navigator) {
+fun HomeScreen(
+    navigator: Navigator,
+    onManageShortcut: (Int) -> Unit = {},
+) {
     val scrollBehavior = MiuixScrollBehavior()
     var isIntentLaunched by rememberSaveable { mutableStateOf(false) }
     val activity = LocalContext.current as Activity
@@ -95,7 +98,7 @@ fun HomeScreen(navigator: Navigator) {
             overscrollEffect = null
         ) {
             item {
-                StatusCard(navigator)
+                StatusCard(onManageShortcut)
             }
 
             item {
@@ -115,7 +118,7 @@ private val listener: (Int, Int) -> Unit = { _, grantResult ->
 }
 
 @Composable
-private fun StatusCard(navigator: Navigator) {
+private fun StatusCard(onManageShortcut: (Int) -> Unit) {
     LaunchedEffect(Unit) {
         ShizukuApi.refreshState()
         ShizukuApi.addRequestPermissionResultListener(listener)
@@ -208,12 +211,7 @@ private fun StatusCard(navigator: Navigator) {
                     .weight(1f),
                 colors = backgroundAwareCardColors(),
                 onClick = {
-                    navigator.replace(
-                        Route.Main(
-                            initialTab = MainTab.Manage.ordinal,
-                            initialManageTab = 0
-                        )
-                    )
+                    onManageShortcut(0)
                 },
                 insideMargin = PaddingValues(16.dp),
                 showIndication = true,
@@ -259,12 +257,7 @@ private fun StatusCard(navigator: Navigator) {
                     .weight(1f),
                 colors = backgroundAwareCardColors(),
                 onClick = {
-                    navigator.replace(
-                        Route.Main(
-                            initialTab = MainTab.Manage.ordinal,
-                            initialManageTab = 1
-                        )
-                    )
+                    onManageShortcut(1)
                 },
                 insideMargin = PaddingValues(16.dp),
                 showIndication = true,

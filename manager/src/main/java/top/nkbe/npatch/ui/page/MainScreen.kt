@@ -14,12 +14,14 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.lsposed.manager.ui.compose.repository.RepositoryScreen
 import top.nkbe.npatch.ui.component.FloatingGlassBottomBar
@@ -38,13 +40,15 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 @Composable
 fun MainScreen(
     navigator: Navigator,
-    initialTab: Int = MainTab.Home.ordinal,
-    initialManageTab: Int = 0
+    selectedTab: Int = MainTab.Home.ordinal,
+    selectedManageTab: Int = 0,
+    onSelectedTabChange: (Int) -> Unit = {},
+    onSelectedManageTabChange: (Int) -> Unit = {},
 ) {
     val tabs = MainTab.entries
-    val safeInitialTab = initialTab.coerceIn(0, tabs.lastIndex)
+    val safeSelectedTab = selectedTab.coerceIn(0, tabs.lastIndex)
     val pagerState = rememberPagerState(
-        initialPage = safeInitialTab,
+        initialPage = safeSelectedTab,
         pageCount = { tabs.size }
     )
     val scope = rememberCoroutineScope()
@@ -56,10 +60,16 @@ fun MainScreen(
         drawContent()
     }
 
-    LaunchedEffect(safeInitialTab) {
-        if (pagerState.currentPage != safeInitialTab) {
-            pagerState.scrollToPage(safeInitialTab)
+    LaunchedEffect(safeSelectedTab) {
+        if (pagerState.currentPage != safeSelectedTab) {
+            pagerState.scrollToPage(safeSelectedTab)
         }
+    }
+
+    LaunchedEffect(navigator, pagerState) {
+        snapshotFlow { pagerState.currentPage }
+            .distinctUntilChanged()
+            .collect(onSelectedTabChange)
     }
 
     NPatchScaffold(
@@ -78,6 +88,7 @@ fun MainScreen(
                     FloatingGlassBottomBar(
                         selectedIndex = { pagerState.currentPage },
                         onSelected = { index ->
+                            onSelectedTabChange(index)
                             scope.launch { pagerState.animateScrollToPage(index) }
                         },
                         tabsCount = tabs.size,
@@ -90,6 +101,7 @@ fun MainScreen(
                             val label = stringResource(tab.labelRes)
                             FloatingGlassBottomBarItem(
                                 onClick = {
+                                    onSelectedTabChange(index)
                                     scope.launch { pagerState.animateScrollToPage(index) }
                                 }
                             ) {
@@ -110,6 +122,7 @@ fun MainScreen(
                         NavigationBarItem(
                             selected = isSelected,
                             onClick = {
+                                onSelectedTabChange(index)
                                 scope.launch {
                                     pagerState.animateScrollToPage(index)
                                 }
@@ -136,10 +149,17 @@ fun MainScreen(
                 .fillMaxSize(),
         ) { page ->
             when (tabs[page]) {
-                MainTab.Home -> HomeScreen(navigator)
+                MainTab.Home -> HomeScreen(
+                    navigator = navigator,
+                    onManageShortcut = { managePage ->
+                        onSelectedManageTabChange(managePage)
+                        onSelectedTabChange(MainTab.Manage.ordinal)
+                    }
+                )
                 MainTab.Manage -> ManageScreen(
                     navigator = navigator,
-                    initialPage = initialManageTab
+                    selectedPage = selectedManageTab,
+                    onSelectedPageChange = onSelectedManageTabChange
                 )
                 MainTab.Repo -> RepositoryScreen(navigator)
                 MainTab.Settings -> SettingsScreen()
