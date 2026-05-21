@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,14 +28,15 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
+import nkbe.util.NeoPackageManager
 import top.nkbe.npatch.R
 import top.nkbe.npatch.ui.component.AppItem
 import top.nkbe.npatch.ui.viewmodel.manage.ModuleManageViewModel
 import top.nkbe.npatch.ui.util.ensureVisibleByMix
 import top.nkbe.npatch.ui.util.relativeLuminance
-import nkbe.util.NeoPackageManager
 import top.yukonga.miuix.kmp.basic.DropdownDefaults
 import top.yukonga.miuix.kmp.basic.DropdownImpl
+import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
@@ -92,10 +95,10 @@ fun ModuleManageBody(
     searchQuery: String = "",
     contentPadding: PaddingValues = PaddingValues(0.dp),
     scrollBehavior: ScrollBehavior,
-    hazeState: HazeState
+    hazeState: HazeState,
+    viewModel: ModuleManageViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    val viewModel = viewModel<ModuleManageViewModel>()
     val pullToRefreshState = rememberPullToRefreshState()
     val hapticFeedback = LocalHapticFeedback.current
 
@@ -174,6 +177,16 @@ fun ModuleManageBody(
                             },
                             label = item.metadata.displayName.ifEmpty { item.appInfo.label },
                             packageName = item.appInfo.app.packageName,
+                            labelTrailingContent = {
+                                if (item.activationEnabled) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.CheckCircle,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = MiuixTheme.colorScheme.primary
+                                    )
+                                }
+                            },
                             summaryRow = {
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),

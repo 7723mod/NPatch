@@ -47,6 +47,7 @@ import top.nkbe.npatch.BuildConfig
 import top.nkbe.npatch.config.ConfigManager
 import top.nkbe.npatch.config.Configs
 import top.nkbe.npatch.database.entity.Module
+import top.nkbe.npatch.manager.ModuleActivationController
 import top.nkbe.npatch.share.Constants
 import top.nkbe.npatch.share.LSPConfig
 
@@ -57,6 +58,7 @@ import top.nkbe.npatch.ui.page.Navigator
 import top.nkbe.npatch.ui.page.Route
 import top.nkbe.npatch.ui.page.SelectAppsResult
 import top.nkbe.npatch.ui.viewmodel.manage.AppManageViewModel
+import top.nkbe.npatch.ui.viewmodel.manage.ModuleManageViewModel
 import top.nkbe.npatch.ui.viewstate.ProcessingState
 import nkbe.util.NeoPackageManager
 import nkbe.util.ShizukuApi
@@ -91,6 +93,7 @@ fun AppManageBody(
     hazeState: HazeState
 ) {
     val viewModel = viewModel<AppManageViewModel>()
+    val moduleManageViewModel = viewModel<ModuleManageViewModel>()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val pullToRefreshState = rememberPullToRefreshState()
@@ -342,7 +345,13 @@ fun AppManageBody(
                                                     Log.d(TAG, "Activate ${it.app.packageName} for $targetAppPkg")
                                                     ConfigManager.activateModule(targetAppPkg, Module(it.app.packageName, it.app.sourceDir))
                                                 }
+                                                if (ShizukuApi.isReady) {
+                                                    result.selected.forEach {
+                                                        ModuleActivationController.activate(it.app.packageName)
+                                                    }
+                                                }
                                             }
+                                            moduleManageViewModel.refreshScopedActivationState()
                                             Toast.makeText(context, scopeUpdatedText, Toast.LENGTH_SHORT).show()
                                         }
                                     }

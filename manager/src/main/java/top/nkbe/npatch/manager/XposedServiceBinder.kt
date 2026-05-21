@@ -5,6 +5,7 @@ import android.os.Binder
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.os.RemoteException
+import androidx.core.os.BundleCompat
 import io.github.libxposed.service.IXposedScopeCallback
 import io.github.libxposed.service.IXposedService
 import kotlinx.coroutines.runBlocking
@@ -68,13 +69,13 @@ class XposedServiceBinder(private val packageName: String) : IXposedService.Stub
         val prefs = lspApp.getSharedPreferences(preferencesName(group), Context.MODE_PRIVATE)
         val editor = prefs.edit()
         
-        diff.getSerializable("delete")?.let { deletes ->
+        BundleCompat.getSerializable(diff, "delete", HashSet::class.java)?.let { deletes ->
             (deletes as? Set<*>)?.forEach { key ->
                 if (key is String) editor.remove(key)
             }
         }
         
-        diff.getSerializable("put")?.let { puts ->
+        BundleCompat.getSerializable(diff, "put", HashMap::class.java)?.let { puts ->
             (puts as? Map<*, *>)?.forEach { (k, v) ->
                 if (k is String) {
                     when (v) {
@@ -106,7 +107,9 @@ class XposedServiceBinder(private val packageName: String) : IXposedService.Stub
     override fun openRemoteFile(name: String): ParcelFileDescriptor {
         if (!isSafeRelativePath(name)) throw RemoteException("Invalid file name")
         val file = File(remoteFilesDir(), name)
-        if (!file.parentFile.exists()) file.parentFile.mkdirs()
+        file.parentFile?.let { parent ->
+            if (!parent.exists()) parent.mkdirs()
+        }
         return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_WRITE or ParcelFileDescriptor.MODE_CREATE)
     }
 

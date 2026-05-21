@@ -30,6 +30,7 @@ fun AppItem(
     icon: @Composable () -> Unit,
     label: String,
     packageName: String,
+    labelTrailingContent: (@Composable RowScope.() -> Unit)? = null,
     summaryRow: (@Composable RowScope.() -> Unit)? = null,
     topRightContent: (@Composable () -> Unit)? = null,
     trailingContent: (@Composable () -> Unit)? = null,
@@ -75,15 +76,23 @@ fun AppItem(
                         .alpha(if (isEnabled) 1f else 0.45f)
                         .align(Alignment.CenterVertically)
                 ) {
-                    Text(
-                        text = label,
-                        modifier = Modifier.basicMarquee(),
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight(600),
-                        color = colorScheme.onSurface,
-                        maxLines = 1,
-                        softWrap = false
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = label,
+                            modifier = Modifier
+                                .weight(1f, fill = false)
+                                .basicMarquee(),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight(600),
+                            color = colorScheme.onSurface,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                        labelTrailingContent?.invoke(this)
+                    }
 
                     Spacer(modifier = Modifier.height(2.dp))
 

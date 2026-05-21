@@ -70,6 +70,11 @@ object ConfigManager {
             return@withContext scopeDao.getAppsForModule(pkgName)
         }
 
+    suspend fun getScopedModulePackageNames(): Set<String> =
+        withContext(dispatcher) {
+            return@withContext scopeDao.getScopedModulePackageNames().toSet()
+        }
+
     suspend fun getModuleFilesForApp(pkgName: String): List<org.lsposed.lspd.models.Module> =
         withContext(dispatcher) {
             val modules = scopeDao.getModulesForApp(pkgName)

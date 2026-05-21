@@ -20,10 +20,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import nkbe.util.ShizukuApi
 import top.nkbe.npatch.R
 import top.nkbe.npatch.ui.component.SearchBar
 import top.nkbe.npatch.ui.page.manage.AppManageBody
@@ -36,6 +38,7 @@ import top.nkbe.npatch.ui.component.SearchStatus
 import top.nkbe.npatch.ui.component.NPatchScaffold
 import top.nkbe.npatch.ui.util.LocalFloatingGlassBottomBar
 import top.nkbe.npatch.ui.util.backgroundAwareHazeStyle
+import top.nkbe.npatch.ui.viewmodel.manage.ModuleManageViewModel
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.TopAppBar
@@ -61,6 +64,7 @@ fun ManageScreen(
 
     val manageSearchLabel = stringResource(R.string.manage_search)
     val searchStatus = remember(manageSearchLabel) { SearchStatus(manageSearchLabel) }
+    val moduleManageViewModel = viewModel<ModuleManageViewModel>()
     val hazeState = rememberHazeState()
     val hazeStyle = backgroundAwareHazeStyle()
 
@@ -79,6 +83,19 @@ fun ManageScreen(
         snapshotFlow { pagerState.currentPage }
             .distinctUntilChanged()
             .collect(onSelectedPageChange)
+    }
+
+    LaunchedEffect(
+        pagerState.currentPage,
+        ShizukuApi.isReady,
+        moduleManageViewModel.enabledActivationPackagesKey
+    ) {
+        if (pagerState.currentPage == 1) {
+            moduleManageViewModel.refreshScopedActivationState()
+            if (ShizukuApi.isReady) {
+                moduleManageViewModel.refreshEnabledActivations()
+            }
+        }
     }
 
     NPatchScaffold(
@@ -129,7 +146,13 @@ fun ManageScreen(
                         val contentPadding = PaddingValues(top = dynamicTopPadding, bottom = 0.dp)
                         when (page) {
                             0 -> AppManageBody(navigator, searchStatus.searchText, contentPadding, scrollBehavior,hazeState)
-                            1 -> ModuleManageBody(searchStatus.searchText, contentPadding, scrollBehavior, hazeState)
+                            1 -> ModuleManageBody(
+                                searchStatus.searchText,
+                                contentPadding,
+                                scrollBehavior,
+                                hazeState,
+                                moduleManageViewModel
+                            )
                         }
                     }
                 }
@@ -167,7 +190,13 @@ fun ManageScreen(
                 )
                 when (page) {
                     0 -> AppManageBody(navigator, searchStatus.searchText, contentPadding, scrollBehavior, hazeState)
-                    1 -> ModuleManageBody(searchStatus.searchText, contentPadding, scrollBehavior, hazeState)
+                    1 -> ModuleManageBody(
+                        searchStatus.searchText,
+                        contentPadding,
+                        scrollBehavior,
+                        hazeState,
+                        moduleManageViewModel
+                    )
                 }
             }
         }

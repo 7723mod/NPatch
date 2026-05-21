@@ -23,4 +23,7 @@ interface ScopeDao {
 
     @Query("SELECT appPkgName FROM scope WHERE modulePkgName = :modulePkgName")
     suspend fun getAppsForModule(modulePkgName: String): List<String>
+
+    @Query("SELECT DISTINCT modulePkgName FROM scope")
+    suspend fun getScopedModulePackageNames(): List<String>
 }
