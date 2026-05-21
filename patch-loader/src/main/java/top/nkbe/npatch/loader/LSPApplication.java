@@ -272,7 +272,11 @@ public class LSPApplication {
                     appInfo.nativeLibraryDir = nativeLibraryDir.toString();
                 }
             }
-            appInfo.appComponentFactory = config.appComponentFactory;
+            if (config.sigBypassLevel >= 3) {
+                appInfo.appComponentFactory = config.appComponentFactory;
+            } else {
+                appInfo.appComponentFactory = null;
+            }
 
             Path providerPath = null;
             if (config.injectProvider) {
@@ -349,7 +353,7 @@ public class LSPApplication {
             var context = (Context) XposedHelpers.callStaticMethod(Class.forName("android.app.ContextImpl"), "createAppContext", activityThread, stubLoadedApk);
             if (config.appComponentFactory != null) {
                 try {
-                    context.getClassLoader().loadClass(config.appComponentFactory);
+                    appLoadedApk.getClassLoader().loadClass(config.appComponentFactory);
                 } catch (Throwable e) {
                     Log.w(TAG, "Original AppComponentFactory not found: " + config.appComponentFactory, e);
                     appInfo.appComponentFactory = null;

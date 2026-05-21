@@ -20,6 +20,8 @@
 #include <sys/syscall.h>
 #include <ucontext.h>
 #include <unistd.h>
+#include <mutex>
+#include <string>
 
 namespace lspd {
 
@@ -40,6 +42,8 @@ namespace lspd {
     // Match reads of the patched APK path and redirect them to the extracted original APK.
     static char g_target_path[PATH_MAX] = {0};
     static char g_redirect_path[PATH_MAX] = {0};
+    static std::mutex g_path_mutex;
+    static thread_local std::string g_redirect_buffer;
 
     static void copy_path(char* dest, const char* src) {
         if (src == nullptr) {
@@ -58,6 +62,20 @@ namespace lspd {
         syscall(__NR_futex, uaddr, FUTEX_WAKE_PRIVATE, 1, nullptr, nullptr, 0);
     }
 
+    static const char* resolve_redirect_path(const char* pathname) {
+        if (pathname == nullptr) {
+            return nullptr;
+        }
+
+        std::scoped_lock lock(g_path_mutex);
+        // trusted thread 只读当前快照，避免和 Java 侧刷新重定向路径时互相踩内存。
+        if (g_target_path[0] == '\0' || strcmp(pathname, g_target_path) != 0) {
+            return pathname;
+        }
+        g_redirect_buffer = g_redirect_path;
+        return g_redirect_buffer.c_str();
+    }
+
     static void* trusted_thread_loop(void*) {
         LOGD("SvcBypass: Trusted thread started (TID: %d)", gettid());
         while (true) {
@@ -72,11 +90,12 @@ namespace lspd {
 
             if (req->sys_no == __NR_openat && g_target_path[0] != '\0') {
                 const char* pathname = reinterpret_cast<const char*>(req->args[1]);
+                const char* redirected_path = resolve_redirect_path(pathname);
                 // Keep the syscall path unchanged unless it exactly targets the patched APK.
-                if (pathname != nullptr && strcmp(pathname, g_target_path) == 0) {
+                if (redirected_path != pathname && redirected_path != nullptr) {
                     LOGD("SvcBypass: Redirecting openat('%s') -> '%s'", pathname,
-                         g_redirect_path);
-                    req->args[1] = reinterpret_cast<long>(g_redirect_path);
+                         redirected_path);
+                    req->args[1] = reinterpret_cast<long>(redirected_path);
                 }
             }
 
@@ -190,8 +209,11 @@ namespace lspd {
             return;
         }
 
-        copy_path(g_target_path, c_current);
-        copy_path(g_redirect_path, c_original);
+        {
+            std::scoped_lock lock(g_path_mutex);
+            copy_path(g_target_path, c_current);
+            copy_path(g_redirect_path, c_original);
+        }
 
         env->ReleaseStringUTFChars(current_path, c_current);
         env->ReleaseStringUTFChars(original_path, c_original);

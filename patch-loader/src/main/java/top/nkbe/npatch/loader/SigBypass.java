@@ -158,36 +158,20 @@ public class SigBypass {
         }
         if (packageInfo.signingInfo != null) {
             XLog.d(TAG, "Replace signature info for `" + packageName + "` (method 2)");
-            Signature[] signaturesArray = packageInfo.signingInfo.getApkContentsSigners();
-            if (signaturesArray != null && signaturesArray.length > 0) {
-                signaturesArray[0] = replacementSignature;
+            try {
+                Signature[] signaturesArray = packageInfo.signingInfo.getApkContentsSigners();
+                if (signaturesArray != null && signaturesArray.length > 0) {
+                    signaturesArray[0] = replacementSignature;
+                }
+                // Reinforce: SigningInfo might cache these or have multiple fields.
+                // We also try to replace the history if it exists.
+                Signature[] history = packageInfo.signingInfo.getSigningCertificateHistory();
+                if (history != null && history.length > 0) {
+                    history[0] = replacementSignature;
+                }
+            } catch (Throwable e) {
+                Log.w(TAG, "fail to reinforce signingInfo", e);
             }
-            if (activeSigBypassLevel >= 3) {
-                replaceSigningInfoFields(packageInfo.signingInfo, replacementSignature);
-            }
-        }
-    }
-
-    private static void replaceSigningInfoFields(Object signingInfo, Signature replacement) {
-        try {
-            Object signingDetails = XposedHelpers.getObjectField(signingInfo, "mSigningDetails");
-            if (signingDetails == null) return;
-            Signature[] replacements = new Signature[]{replacement};
-            setFieldIfExists(signingDetails, "signatures", replacements);
-            setFieldIfExists(signingDetails, "mSignatures", replacements);
-            setFieldIfExists(signingDetails, "pastSigningCertificates", replacements);
-            setFieldIfExists(signingDetails, "mPastSigningCertificates", replacements);
-        } catch (Throwable e) {
-            Log.w(TAG, "fail to replace SigningInfo internals", e);
-        }
-    }
-
-    private static void setFieldIfExists(Object target, String fieldName, Object value) {
-        try {
-            XposedHelpers.setObjectField(target, fieldName, value);
-        } catch (NoSuchFieldError ignored) {
-        } catch (Throwable e) {
-            Log.w(TAG, "fail to replace field " + fieldName, e);
         }
     }
 
@@ -367,9 +351,10 @@ public class SigBypass {
         }
     }
 
-    private static boolean isArm64Runtime() {
-        // SVC 依賴 ARM64 SIGSYS/ucontext 暫存器佈局，其他 ABI 直接跳過比較穩。
-        for (String abi : Build.SUPPORTED_ABIS) {
+    private static boolean isSvcRuntimeSupported() {
+        // SVC 這層看的是目前行程實際執行的 ABI，不是裝置宣告支援過哪些 ABI。
+        String[] runtimeAbis = Process.is64Bit() ? Build.SUPPORTED_64_BIT_ABIS : Build.SUPPORTED_32_BIT_ABIS;
+        for (String abi : runtimeAbis) {
             if ("arm64-v8a".equals(abi)) {
                 return true;
             }
@@ -456,42 +441,44 @@ public class SigBypass {
 
         if (sigBypassLevel >= Constants.SIGBYPASS_LV_PM) {
             hookPackageParser(context);
-            proxyPackageInfoCreator(context);
         }
 
         if (sigBypassLevel >= Constants.SIGBYPASS_LV_PM_OPENAT && cachedOriginalApkPath != null) {
             hookJavaIO(currentApkPath, cachedOriginalApkPath);
+            org.lsposed.lspd.nativebridge.SigBypass.enableOpenatHook(
+                    currentApkPath,
+                    cachedOriginalApkPath,
+                    context.getPackageName()
+            );
             if (!nativeOpenatEnabled) {
-                org.lsposed.lspd.nativebridge.SigBypass.enableOpenatHook(
+                nativeOpenatEnabled = true;
+            }
+        }
+
+        if (sigBypassLevel >= 3) {
+            proxyPackageInfoCreator(context);
+            hookPackageArchiveInfo(context);
+            hookHasSigningCertificate(context);
+        }
+
+        if (sigBypassLevel >= Constants.SIGBYPASS_LV_SVC && cachedOriginalApkPath != null) {
+            // SVC (Seccomp) Hook
+            if (!isSvcRuntimeSupported()) {
+                XLog.w(TAG, "SVC Hook skipped on non-arm64 runtime ABI");
+            } else if (SvcBypass.initSvcHook()) {
+                SvcBypass.enableSvcRedirect(
                         currentApkPath,
                         cachedOriginalApkPath,
                         context.getPackageName()
                 );
-                nativeOpenatEnabled = true;
-            }
-
-            if (sigBypassLevel >= 3) {
-                hookPackageArchiveInfo(context);
-                hookHasSigningCertificate(context);
-            }
-
-            // SVC (Seccomp) Hook
-            if (sigBypassLevel >= Constants.SIGBYPASS_LV_SVC && !svcRedirectEnabled) {
-                if (!isArm64Runtime()) {
-                    XLog.w(TAG, "SVC Hook skipped on non-arm64 runtime");
-                } else if (SvcBypass.initSvcHook()) {
-                    SvcBypass.enableSvcRedirect(
-                            currentApkPath,
-                            cachedOriginalApkPath,
-                            context.getPackageName()
-                    );
-                    svcRedirectEnabled = true;
+                if (!svcRedirectEnabled) {
                     XLog.i(TAG, "SVC Hook enabled");
-                } else {
-                    XLog.w(TAG, "SVC Hook failed to init");
                 }
+                svcRedirectEnabled = true;
+            } else {
+                XLog.w(TAG, "SVC Hook failed to init");
             }
-        } else if (sigBypassLevel >= Constants.SIGBYPASS_LV_PM_OPENAT) {
+        } else if (sigBypassLevel >= Constants.SIGBYPASS_LV_PM_OPENAT && cachedOriginalApkPath == null) {
             XLog.w(TAG, "Original APK unavailable, native signature bypass disabled");
         }
     }
