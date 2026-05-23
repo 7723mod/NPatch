@@ -67,7 +67,7 @@ object SelectionColumnScope {
                                     text = desc,
                                     modifier = Modifier.padding(top = 4.dp),
                                     style = MiuixTheme.textStyles.body2,
-                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary.copy(alpha = 0.67f)
                                 )
                             }
                             extraContent?.invoke(this)

@@ -58,13 +58,27 @@ fun ConfiguringFab() {
 }
 
 @Composable
-fun sigBypassLvStr(level: Int) = when (level) {
-    0 -> stringResource(R.string.patch_sigbypasslv0)
-    1 -> stringResource(R.string.patch_sigbypasslv1)
-    2 -> stringResource(R.string.patch_sigbypasslv2)
-    3 -> stringResource(R.string.patch_sigbypasslv3)
-    4 -> stringResource(R.string.patch_sigbypasslv4)
-    else -> throw IllegalArgumentException("Invalid sigBypassLv: $level")
+fun sigBypassLvTitle(level: Int): String {
+    return when (level) {
+        0 -> stringResource(R.string.patch_sigbypasslv0)
+        1 -> stringResource(R.string.patch_sigbypasslv1)
+        2 -> stringResource(R.string.patch_sigbypasslv2)
+        3 -> stringResource(R.string.patch_sigbypasslv3)
+        4 -> stringResource(R.string.patch_sigbypasslv4)
+        else -> error("Invalid sigBypassLv: $level")
+    }
+}
+
+@Composable
+fun sigBypassLvDesc(level: Int): String {
+    return when (level) {
+        0 -> stringResource(R.string.patch_sigbypasslv0_desc)
+        1 -> stringResource(R.string.patch_sigbypasslv1_desc)
+        2 -> stringResource(R.string.patch_sigbypasslv2_desc)
+        3 -> stringResource(R.string.patch_sigbypasslv3_desc)
+        4 -> stringResource(R.string.patch_sigbypasslv4_desc)
+        else -> error("Invalid sigBypassLv: $level")
+    }
 }
 
 @Composable
@@ -202,11 +216,21 @@ fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
                     checked = viewModel.outputLog,
                     onCheckedChange = { viewModel.outputLog = it }
                 )
+                val sigBypassEntries = listOf(
+                    DropdownEntry(
+                        items = (0..4).map { level ->
+                            DropdownItem(
+                                text = sigBypassLvTitle(level),
+                                summary = sigBypassLvDesc(level),
+                                selected = viewModel.sigBypassLevel == level,
+                                onClick = { viewModel.sigBypassLevel = level }
+                            )
+                        }
+                    )
+                )
                 OverlayDropdownPreference(
                     title = stringResource(R.string.patch_sigbypass),
-                    items = (0..4).map { sigBypassLvStr(it) },
-                    selectedIndex = viewModel.sigBypassLevel,
-                    onSelectedIndexChange = { viewModel.sigBypassLevel = it }
+                    entries = sigBypassEntries
                 )
             }
         }
