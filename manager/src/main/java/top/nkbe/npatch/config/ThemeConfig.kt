@@ -1,6 +1,7 @@
 package top.nkbe.npatch.config
 
 import android.content.Context
+import android.os.Build
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -36,6 +37,10 @@ object ThemeConfig {
     val USE_FLOATING_GLASS_BOTTOM_BAR = booleanPreferencesKey("use_floating_glass_bottom_bar")
     val USE_FLOATING_GLASS_BOTTOM_BAR_BLUR = booleanPreferencesKey("use_floating_glass_bottom_bar_blur")
 
+    fun isFloatingGlassBottomBarBlurSupported(): Boolean {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+    }
+
     fun getThemeFlow(context: Context) = context.dataStore.data.map { prefs ->
         ThemeSettings(
             backgroundImageUri = prefs[BG_IMAGE_URI] ?: "",
@@ -43,7 +48,7 @@ object ThemeConfig {
             customColor = prefs[CUSTOM_COLOR] ?: 0xFF007AFF.toInt(),
             themeMode = ThemeMode.fromValue(prefs[THEME_MODE] ?: ThemeMode.SYSTEM.value),
             useFloatingGlassBottomBar = prefs[USE_FLOATING_GLASS_BOTTOM_BAR] ?: false,
-            useFloatingGlassBottomBarBlur = prefs[USE_FLOATING_GLASS_BOTTOM_BAR_BLUR] ?: true,
+            useFloatingGlassBottomBarBlur = prefs[USE_FLOATING_GLASS_BOTTOM_BAR_BLUR] ?: isFloatingGlassBottomBarBlurSupported(),
         )
     }
 }

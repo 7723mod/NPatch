@@ -79,6 +79,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val systemIsDark = isSystemInDarkTheme()
             val context = LocalContext.current
+            val supportsFloatingGlassBottomBarBlur = ThemeConfig.isFloatingGlassBottomBarBlurSupported()
 
             val themeState by ThemeConfig.getThemeFlow(context).collectAsState(
                 initial = ThemeSettings(
@@ -87,7 +88,7 @@ class MainActivity : ComponentActivity() {
                     customColor = 0xFF007AFF.toInt(),
                     themeMode = ThemeMode.SYSTEM,
                     useFloatingGlassBottomBar = false,
-                    useFloatingGlassBottomBarBlur = true,
+                    useFloatingGlassBottomBarBlur = supportsFloatingGlassBottomBarBlur,
                 )
             )
             val isDark = when (themeState.themeMode) {
@@ -121,7 +122,9 @@ class MainActivity : ComponentActivity() {
                 CompositionLocalProvider(
                     LocalBackgroundImagePath provides themeState.backgroundImageUri,
                     LocalFloatingGlassBottomBar provides themeState.useFloatingGlassBottomBar,
-                    LocalFloatingGlassBottomBarBlur provides themeState.useFloatingGlassBottomBarBlur,
+                    LocalFloatingGlassBottomBarBlur provides (
+                        themeState.useFloatingGlassBottomBarBlur && supportsFloatingGlassBottomBarBlur
+                    ),
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         Crossfade(targetState = themeState.backgroundImageUri, label = "global_background") { path ->

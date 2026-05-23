@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -113,18 +114,22 @@ fun FloatingGlassBottomBar(
     modifier: Modifier = Modifier,
     selectedIndex: () -> Int,
     onSelected: (index: Int) -> Unit,
-    backdrop: Backdrop,
+    backdrop: Backdrop?,
     tabsCount: Int,
     isBlurEnabled: Boolean = true,
     content: @Composable RowScope.() -> Unit
 ) {
+    if (!isBlurEnabled || backdrop == null) {
+        FloatingGlassBottomBarFallback(
+            modifier = modifier,
+            content = content
+        )
+        return
+    }
+
     val isInLightTheme = !isSystemInDarkTheme()
     val accentColor = MiuixTheme.colorScheme.primary
-    val containerColor = if (isBlurEnabled) {
-        MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.18f)
-    } else {
-        MiuixTheme.colorScheme.surfaceContainer
-    }
+    val containerColor = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.18f)
 
     val tabsBackdrop = rememberLayerBackdrop()
     val density = LocalDensity.current
@@ -373,6 +378,30 @@ fun FloatingGlassBottomBar(
                     )
             )
         }
+    }
+}
+
+@Composable
+private fun FloatingGlassBottomBarFallback(
+    modifier: Modifier = Modifier,
+    content: @Composable RowScope.() -> Unit
+) {
+    Box(
+        modifier = modifier.width(IntrinsicSize.Min),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Row(
+            modifier = Modifier
+                .clip(CircleShape)
+                .background(MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.94f))
+                .height(64.dp)
+                .padding(
+                    horizontal = FloatingBottomBarHorizontalPadding,
+                    vertical = FloatingBottomBarVerticalPadding
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+            content = content
+        )
     }
 }
 

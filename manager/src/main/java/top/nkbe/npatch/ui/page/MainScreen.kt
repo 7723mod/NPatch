@@ -55,9 +55,13 @@ fun MainScreen(
     val useFloatingGlassBottomBar = LocalFloatingGlassBottomBar.current
     val useFloatingGlassBottomBarBlur = LocalFloatingGlassBottomBarBlur.current
     val surfaceColor = MiuixTheme.colorScheme.surface
-    val backdrop = rememberLayerBackdrop {
-        drawRect(surfaceColor)
-        drawContent()
+    val backdrop = if (useFloatingGlassBottomBarBlur) {
+        rememberLayerBackdrop {
+            drawRect(surfaceColor)
+            drawContent()
+        }
+    } else {
+        null
     }
 
     LaunchedEffect(safeSelectedTab) {
@@ -139,7 +143,7 @@ fun MainScreen(
             state = pagerState,
             modifier = Modifier
                 .then(
-                    if (useFloatingGlassBottomBar && useFloatingGlassBottomBarBlur) {
+                    if (useFloatingGlassBottomBar && useFloatingGlassBottomBarBlur && backdrop != null) {
                         Modifier.layerBackdrop(backdrop)
                     } else {
                         Modifier

@@ -133,6 +133,7 @@ fun SettingsScreen() {
 fun AppearanceSettings() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val supportsFloatingGlassBottomBarBlur = ThemeConfig.isFloatingGlassBottomBarBlurSupported()
     val themeState by ThemeConfig.getThemeFlow(context).collectAsState(
         initial = ThemeSettings(
             backgroundImageUri = "",
@@ -140,7 +141,7 @@ fun AppearanceSettings() {
             customColor = 0xFF007AFF.toInt(),
             themeMode = ThemeMode.SYSTEM,
             useFloatingGlassBottomBar = false,
-            useFloatingGlassBottomBarBlur = true,
+            useFloatingGlassBottomBarBlur = supportsFloatingGlassBottomBarBlur,
         )
     )
     val bgImageUri = themeState.backgroundImageUri
