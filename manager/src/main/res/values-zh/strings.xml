@@ -76,7 +76,7 @@
     <string name="manage_check_manager_package_name">该应用由 %1$s 管理\n在本管理器中修改作用域 %2$s 不会生效\n重新修补以解决</string>
 
     <!-- New Patch Screen -->
-    <string name="screen_new_patch">新建修补</string>
+    <string name="screen_new_patch">新建打包</string>
     <string name="patch_select_dir_title">选择存储目录</string>
     <string name="patch_select_dir_text">选择一个目录来存储已修补的 apk</string>
     <string name="patch_select_dir_error">设置存储目录时出错</string>

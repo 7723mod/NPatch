@@ -22,10 +22,6 @@ android {
         applicationId = defaultManagerPackageName
     }
 
-    androidResources {
-        noCompress.add(".so")
-    }
-
     packaging {
         jniLibs {
             excludes += "lib/*/libandroidx.graphics.path.so"
@@ -84,6 +80,9 @@ afterEvaluate {
             dependsOn(":patch-loader:copy$variantCapped")
 
             val targetDir = layout.buildDirectory.dir("intermediates/assets/$variantLowered/merge${variantCapped}Assets")
+            doFirst {
+                delete(targetDir.map { it.file("npatch/loader.dex") })
+            }
             into(targetDir)
 
             from("${rootProject.projectDir}/out/assets/${variant.name}")

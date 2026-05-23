@@ -49,8 +49,11 @@ androidComponents.onVariants { variant ->
 
     val copyDexTask = tasks.register<Copy>("copyDex$variantCapped") {
         dependsOn("assemble$variantCapped")
+        doFirst {
+            delete("${rootProject.projectDir}/out/assets/${variant.name}/npatch/loader.dex")
+        }
         from(layout.buildDirectory.file("intermediates/dex/${variant.name}/mergeDex$variantCapped/classes.dex"))
-        rename("classes.dex", "loader.dex")
+        rename("classes.dex", "loader.bin")
         into("${rootProject.projectDir}/out/assets/${variant.name}/npatch")
     }
 

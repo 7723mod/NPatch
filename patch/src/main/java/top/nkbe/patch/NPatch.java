@@ -350,7 +350,7 @@ public class NPatch {
                     }
                     dstZFile.add(LOADER_DEX_ASSET_PATH, is);
                 } catch (Throwable e) {
-                    throw new PatchError("Error when adding loader.dex", e);
+                    throw new PatchError("Error when adding loader.bin", e);
                 }
 
                 logger.i("Adding native lib...");
