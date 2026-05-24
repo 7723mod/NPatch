@@ -73,7 +73,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">الإعدادات</string>
     <string name="settings_keystore">مخزن مفاتيح التوقيع</string>
-    <string name="settings_keystore_default">مدمج</string>
     <string name="settings_keystore_custom">مخصص</string>
     <string name="settings_keystore_dialog_title">تخزين المفاتيح المخصص</string>
     <string name="settings_keystore_file">ملف Keystore</string>

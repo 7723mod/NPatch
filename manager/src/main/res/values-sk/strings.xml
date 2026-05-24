@@ -72,7 +72,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">nastavenie</string>
     <string name="settings_keystore">Úložisko podpisových kľúčov</string>
-    <string name="settings_keystore_default">Vstavaný</string>
     <string name="settings_keystore_custom">Vlastné</string>
     <string name="settings_keystore_dialog_title">Vlastné úložisko kľúčov</string>
     <string name="settings_keystore_file">Súbor úložiska kľúčov</string>

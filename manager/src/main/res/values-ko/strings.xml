@@ -73,7 +73,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">설정</string>
     <string name="settings_keystore">서명 키 저장소</string>
-    <string name="settings_keystore_default">내장</string>
     <string name="settings_keystore_custom">사용자 정의</string>
     <string name="settings_keystore_dialog_title">사용자 정의 키 저장소</string>
     <string name="settings_keystore_file">키 저장소 파일</string>

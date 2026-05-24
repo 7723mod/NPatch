@@ -72,7 +72,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">Cài đặt</string>
     <string name="settings_keystore">Kho khóa chữ ký</string>
-    <string name="settings_keystore_default">Được xây dựng trong</string>
     <string name="settings_keystore_custom">Tập quán</string>
     <string name="settings_keystore_dialog_title">Kho khóa tùy chỉnh</string>
     <string name="settings_keystore_file">Tệp kho khóa</string>

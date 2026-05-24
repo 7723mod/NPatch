@@ -72,7 +72,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">Inställningar</string>
     <string name="settings_keystore">Arkiv för signaturnycklar</string>
-    <string name="settings_keystore_default">Inbyggt</string>
     <string name="settings_keystore_custom">Anpassad</string>
     <string name="settings_keystore_dialog_title">Anpassat nyckelarkiv</string>
     <string name="settings_keystore_file">Nyckelarkivfil</string>

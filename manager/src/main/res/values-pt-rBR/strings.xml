@@ -73,7 +73,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">Configurações</string>
     <string name="settings_keystore">Armazenamento de chaves de assinatura</string>
-    <string name="settings_keystore_default">Construídas em</string>
     <string name="settings_keystore_custom">Personalizado</string>
     <string name="settings_keystore_dialog_title">Armazenamento de chaves personalizado</string>
     <string name="settings_keystore_file">Arquivo de armazenamento de chaves</string>

@@ -73,7 +73,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">הגדרות</string>
     <string name="settings_keystore">מאגר מפתחות חתימה</string>
-    <string name="settings_keystore_default">מובנה</string>
     <string name="settings_keystore_custom">המותאם אישית</string>
     <string name="settings_keystore_dialog_title">מאגר מפתחות מותאם אישית</string>
     <string name="settings_keystore_file">קובץ מאגר מפתחות</string>

@@ -72,7 +72,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">Definições</string>
     <string name="settings_keystore">Chaveiro de Assinatura</string>
-    <string name="settings_keystore_default">Incorporado em</string>
     <string name="settings_keystore_custom">Personalizado</string>
     <string name="settings_keystore_dialog_title">Chaveiro personalizado</string>
     <string name="settings_keystore_file">Arquivo da Keystore</string>

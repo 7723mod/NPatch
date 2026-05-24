@@ -73,7 +73,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">সেটিংস</string>
     <string name="settings_keystore">স্বাক্ষর কীস্টোর</string>
-    <string name="settings_keystore_default">অন্তর্নির্মিত</string>
     <string name="settings_keystore_custom">কাস্টম</string>
     <string name="settings_keystore_dialog_title">কাস্টম কীস্টোর</string>
     <string name="settings_keystore_file">কীস্টোর ফাইল</string>

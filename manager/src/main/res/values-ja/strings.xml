@@ -73,7 +73,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">設定</string>
     <string name="settings_keystore">署名のキーストア</string>
-    <string name="settings_keystore_default">ビルトイン</string>
     <string name="settings_keystore_custom">カスタム</string>
     <string name="settings_keystore_dialog_title">カスタムキーストア</string>
     <string name="settings_keystore_file">キーストアファイル</string>

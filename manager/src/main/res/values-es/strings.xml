@@ -72,7 +72,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">Ajustes</string>
     <string name="settings_keystore">Almacén de claves de firma</string>
-    <string name="settings_keystore_default">Construido en</string>
     <string name="settings_keystore_custom">Personalizado</string>
     <string name="settings_keystore_dialog_title">Almacén de claves personalizado</string>
     <string name="settings_keystore_file">Archivo Keystore</string>

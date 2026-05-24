@@ -72,7 +72,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">Instellings</string>
     <string name="settings_keystore">Armazenamento de assinatura</string>
-    <string name="settings_keystore_default">Ingeboude</string>
     <string name="settings_keystore_custom">Pasgemaak</string>
     <string name="settings_keystore_dialog_title">Pasgemaakte sleutelstoor</string>
     <string name="settings_keystore_file">Sleutelstoor lêer</string>

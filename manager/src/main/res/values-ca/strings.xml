@@ -72,7 +72,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">Configuració</string>
     <string name="settings_keystore">Botiga de claus de signatures</string>
-    <string name="settings_keystore_default">Integrat</string>
     <string name="settings_keystore_custom">Personalitzat</string>
     <string name="settings_keystore_dialog_title">Magatzem de claus personalitzat</string>
     <string name="settings_keystore_file">Fitxer de magatzem de claus</string>

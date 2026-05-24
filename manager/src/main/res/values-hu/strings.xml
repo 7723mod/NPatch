@@ -72,7 +72,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">Beállítások</string>
     <string name="settings_keystore">Aláírás kulcstároló</string>
-    <string name="settings_keystore_default">Beépített</string>
     <string name="settings_keystore_custom">Egyedi</string>
     <string name="settings_keystore_dialog_title">Egyéni kulcstár</string>
     <string name="settings_keystore_file">Kulcstároló fájl</string>

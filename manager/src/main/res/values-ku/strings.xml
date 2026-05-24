@@ -72,7 +72,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">Settings</string>
     <string name="settings_keystore">keystore îmza</string>
-    <string name="settings_keystore_default">Avakirin</string>
     <string name="settings_keystore_custom">Hûnbunî</string>
     <string name="settings_keystore_dialog_title">keystore Custom</string>
     <string name="settings_keystore_file">Pelê keystore</string>

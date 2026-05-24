@@ -72,7 +72,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">Nustatymai</string>
     <string name="settings_keystore">Parašo raktų saugykla</string>
-    <string name="settings_keystore_default">Įmontuotas</string>
     <string name="settings_keystore_custom">Pasirinktinis</string>
     <string name="settings_keystore_dialog_title">Pasirinktinė raktų saugykla</string>
     <string name="settings_keystore_file">Raktų saugyklos failas</string>

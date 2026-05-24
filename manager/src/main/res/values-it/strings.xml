@@ -72,7 +72,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">Impostazioni</string>
     <string name="settings_keystore">Firma del keystore</string>
-    <string name="settings_keystore_default">Integrato</string>
     <string name="settings_keystore_custom">Personalizzato</string>
     <string name="settings_keystore_dialog_title">Keystore personalizzato</string>
     <string name="settings_keystore_file">File keystore</string>

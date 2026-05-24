@@ -72,7 +72,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">Ρυθμίσεις</string>
     <string name="settings_keystore">Υπογραφή keystore</string>
-    <string name="settings_keystore_default">Ενσωματωμένο</string>
     <string name="settings_keystore_custom">Προσαρμοσμένο</string>
     <string name="settings_keystore_dialog_title">Προσαρμοσμένο keystore</string>
     <string name="settings_keystore_file">Αρχείο κλειδοθήκης</string>

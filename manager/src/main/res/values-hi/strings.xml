@@ -73,7 +73,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">समायोजन</string>
     <string name="settings_keystore">सिग्नेचर कीस्टोर</string>
-    <string name="settings_keystore_default">में निर्मित</string>
     <string name="settings_keystore_custom">रिवाज़</string>
     <string name="settings_keystore_dialog_title">कस्टम कीस्टोर</string>
     <string name="settings_keystore_file">कीस्टोर फ़ाइल</string>

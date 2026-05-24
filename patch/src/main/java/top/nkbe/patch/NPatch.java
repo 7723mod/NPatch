@@ -52,6 +52,12 @@ import java.util.stream.Collectors;
 
 public class NPatch {
 
+    private static final String NPATCH_KEYSTORE_PASSWORD_ENC = "a2hpbm9s";
+    private static final String NPATCH_KEY_ALIAS_ENC = "MT8jag==";
+    private static final String FPA_KEYSTORE_PASSWORD_ENC = "a2hpbm9sbWI=";
+    private static final String FPA_KEY_ALIAS_ENC = "Oyoq";
+    private static final int SECRET_XOR_KEY = 0x5a;
+
     static class PatchError extends Error {
         public PatchError(String message, Throwable cause) {
             super(message, cause);
@@ -99,7 +105,13 @@ public class NPatch {
     private boolean outputLog = true;
 
     @Parameter(names = {"-k", "--keystore"}, arity = 4, description = "Set custom signature keystore. Followed by 4 arguments: keystore path, keystore password, keystore alias, keystore alias password")
-    private List<String> keystoreArgs = Arrays.asList(null, "123456", "key0", "123456");
+    private List<String> keystoreArgs = null;
+
+    @Parameter(names = {"-npa", "--npatch-keystore"}, description = "Use built-in NPatch keystore")
+    private boolean useNpatchKeystore = false;
+
+    @Parameter(names = {"-fpa", "--fpa-keystore"}, description = "Use built-in FPA keystore")
+    private boolean useFpaKeystore = false;
 
     @Parameter(names = {"--manager"}, description = "Use manager (Cannot work with embedding modules)")
     private boolean useManager = false;
@@ -154,6 +166,14 @@ public class NPatch {
         }
         if (!modules.isEmpty() && useManager) {
             logger.e("Should not use --embed and --manager at the same time\n");
+            help = true;
+        }
+        if (keystoreArgs != null && (useNpatchKeystore || useFpaKeystore)) {
+            logger.e("Cannot use -k with -npa or -fpa\n");
+            help = true;
+        }
+        if (useNpatchKeystore && useFpaKeystore) {
+            logger.e("Cannot use -npa and -fpa at the same time\n");
             help = true;
         }
 
@@ -218,25 +238,26 @@ public class NPatch {
 
             // sign apk
             try {
-                var keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-                if (keystoreArgs.get(0) == null) {
-                    logger.i("Register apk signer with default keystore...");
-                    try (var is = getClass().getClassLoader().getResourceAsStream("assets/keystore")) {
-                        keyStore.load(is, keystoreArgs.get(1).toCharArray());
-                    }
-                } else {
+                var keyStore = KeyStore.getInstance("BKS");
+                if (useNpatchKeystore || (!useFpaKeystore && keystoreArgs == null)) {
+                    logger.i("Register apk signer with built-in NPatch keystore...");
+                    registerBuiltinSigner(keyStore, dstZFile, "assets/npatch.key", NPATCH_KEYSTORE_PASSWORD_ENC, NPATCH_KEY_ALIAS_ENC);
+                } else if (useFpaKeystore) {
+                    logger.i("Register apk signer with built-in FPA keystore...");
+                    registerBuiltinSigner(keyStore, dstZFile, "assets/fpa_app.key", FPA_KEYSTORE_PASSWORD_ENC, FPA_KEY_ALIAS_ENC);
+                } else if (keystoreArgs != null) {
                     logger.i("Register apk signer with custom keystore...");
                     try (var is = new FileInputStream(keystoreArgs.get(0))) {
                         keyStore.load(is, keystoreArgs.get(1).toCharArray());
                     }
+                    var entry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(keystoreArgs.get(2), new KeyStore.PasswordProtection(keystoreArgs.get(3).toCharArray()));
+                    new SigningExtension(SigningOptions.builder()
+                            .setMinSdkVersion(27)
+                            .setV2SigningEnabled(true)
+                            .setCertificates((X509Certificate[]) entry.getCertificateChain())
+                            .setKey(entry.getPrivateKey())
+                            .build()).register(dstZFile);
                 }
-                var entry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(keystoreArgs.get(2), new KeyStore.PasswordProtection(keystoreArgs.get(3).toCharArray()));
-                new SigningExtension(SigningOptions.builder()
-                        .setMinSdkVersion(27)
-                        .setV2SigningEnabled(true)
-                        .setCertificates((X509Certificate[]) entry.getCertificateChain())
-                        .setKey(entry.getPrivateKey())
-                        .build()).register(dstZFile);
             } catch (Exception e) {
                 throw new PatchError("Failed to register signer", e);
             }
@@ -452,6 +473,44 @@ public class NPatch {
             } catch (Exception e) {
                 logger.e(module + " does not exist or is not a valid apk file. error:" + e);
             }
+        }
+    }
+
+    private void registerBuiltinSigner(KeyStore keyStore, ZFile dstZFile, String keystoreResource, String passwordToken, String aliasToken) throws Exception {
+        var password = decodeSecretChars(passwordToken);
+        try {
+            try (var is = getClass().getClassLoader().getResourceAsStream(keystoreResource)) {
+                keyStore.load(is, password);
+            }
+
+            var alias = decodeSecretString(aliasToken);
+            var entry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(alias, new KeyStore.PasswordProtection(password));
+            new SigningExtension(SigningOptions.builder()
+                    .setMinSdkVersion(27)
+                    .setV2SigningEnabled(true)
+                    .setCertificates((X509Certificate[]) entry.getCertificateChain())
+                    .setKey(entry.getPrivateKey())
+                    .build()).register(dstZFile);
+        } finally {
+            Arrays.fill(password, '\0');
+        }
+    }
+
+    private static char[] decodeSecretChars(String token) {
+        byte[] encoded = Base64.getDecoder().decode(token);
+        char[] decoded = new char[encoded.length];
+        for (int i = 0; i < encoded.length; i++) {
+            decoded[i] = (char) (encoded[i] ^ SECRET_XOR_KEY);
+        }
+        return decoded;
+    }
+
+    private static String decodeSecretString(String token) {
+        char[] decoded = decodeSecretChars(token);
+        try {
+            return new String(decoded);
+        } finally {
+            Arrays.fill(decoded, '\0');
         }
     }
 

@@ -72,7 +72,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">Pengaturan</string>
     <string name="settings_keystore">Toko kunci tanda tangan</string>
-    <string name="settings_keystore_default">Built-in</string>
     <string name="settings_keystore_custom">Kebiasaan</string>
     <string name="settings_keystore_dialog_title">Toko kunci khusus</string>
     <string name="settings_keystore_file">File penyimpanan kunci</string>

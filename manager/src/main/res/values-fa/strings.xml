@@ -73,7 +73,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">تنظیمات</string>
     <string name="settings_keystore">فروشگاه کلید امضا</string>
-    <string name="settings_keystore_default">ساخته شده در</string>
     <string name="settings_keystore_custom">سفارشی</string>
     <string name="settings_keystore_dialog_title">فروشگاه کلید سفارشی</string>
     <string name="settings_keystore_file">فایل فروشگاه کلید</string>

@@ -152,7 +152,6 @@
     <string name="screen_settings">設定</string>
     <string name="settings_language">語言</string>
     <string name="settings_keystore">簽名金鑰庫</string>
-    <string name="settings_keystore_default">內建</string>
     <string name="settings_keystore_custom">自訂</string>
     <string name="settings_keystore_dialog_title">自訂金鑰庫</string>
     <string name="settings_keystore_file">金鑰庫檔案</string>

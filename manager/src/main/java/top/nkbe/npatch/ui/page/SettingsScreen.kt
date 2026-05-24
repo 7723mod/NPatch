@@ -53,6 +53,7 @@ import kotlinx.coroutines.launch
 import top.nkbe.npatch.LSPApplication
 import top.nkbe.npatch.R
 import top.nkbe.npatch.config.Configs
+import top.nkbe.npatch.config.KeystorePreset
 import top.nkbe.npatch.config.MyKeyStore
 import top.nkbe.npatch.config.ThemeConfig
 import top.nkbe.npatch.config.ThemeMode
@@ -442,12 +443,17 @@ private fun KeyStore() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val showDialog = remember { mutableStateOf(false) }
+    val currentPreset = Configs.keyStorePreset
 
     val keyStoreItems = listOf(
-        stringResource(R.string.settings_keystore_default),
+        "NPatch",
+        "FPA",
         stringResource(R.string.settings_keystore_custom)
     )
-    var selectedIndex by remember { mutableStateOf(if (MyKeyStore.useDefault) 0 else 1) }
+    var selectedIndex by remember { mutableStateOf(keyStorePresetIndex(currentPreset)) }
+    LaunchedEffect(currentPreset) {
+        selectedIndex = keyStorePresetIndex(currentPreset)
+    }
 
     OverlayDropdownPreference(
         title = stringResource(R.string.settings_keystore),
@@ -460,6 +466,8 @@ private fun KeyStore() {
             selectedIndex = index
             if (index == 0) {
                 scope.launch { MyKeyStore.reset() }
+            } else if (index == 1) {
+                scope.launch { MyKeyStore.setBuiltinFpa() }
             } else {
                 showDialog.value = true
             }
@@ -476,6 +484,11 @@ private fun KeyStore() {
         var password by rememberSaveable { mutableStateOf("") }
         var alias by rememberSaveable { mutableStateOf("") }
         var aliasPassword by rememberSaveable { mutableStateOf("") }
+
+        val dismissDialog = {
+            showDialog.value = false
+            selectedIndex = keyStorePresetIndex(Configs.keyStorePreset)
+        }
 
         val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
             if (uri == null) return@rememberLauncherForActivityResult
@@ -500,7 +513,7 @@ private fun KeyStore() {
             title = stringResource(R.string.settings_keystore_dialog_title),
             show = showDialog.value,
             onDismissRequest = {
-                showDialog.value = false
+                dismissDialog()
             },
         ) {
             Column(
@@ -563,7 +576,7 @@ private fun KeyStore() {
                 ) {
                     TextButton(
                         text = stringResource(android.R.string.cancel),
-                        onClick = { showDialog.value = false },
+                        onClick = dismissDialog,
                         modifier = Modifier.weight(1f),
                     )
                     Spacer(Modifier.width(20.dp))
@@ -579,7 +592,7 @@ private fun KeyStore() {
                                 wrongKeystore = true
                                 return@TextButton
                             }
-                            val keyStore = KeyStore.getInstance(KeyStore.getDefaultType())
+                            val keyStore = KeyStore.getInstance("BKS")
                             try {
                                 MyKeyStore.tmpFile.inputStream().use { input ->
                                     keyStore.load(input, password.toCharArray())
@@ -611,6 +624,14 @@ private fun KeyStore() {
                 }
             }
         }
+    }
+}
+
+private fun keyStorePresetIndex(preset: KeystorePreset): Int {
+    return when (preset) {
+        KeystorePreset.NPATCH -> 0
+        KeystorePreset.FPA -> 1
+        KeystorePreset.CUSTOM -> 2
     }
 }
 

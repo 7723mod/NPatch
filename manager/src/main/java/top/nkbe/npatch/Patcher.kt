@@ -5,6 +5,7 @@ import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import top.nkbe.npatch.config.Configs
+import top.nkbe.npatch.config.KeystorePreset
 import top.nkbe.npatch.config.MyKeyStore
 import top.nkbe.npatch.share.Constants
 import top.nkbe.npatch.share.PatchConfig
@@ -37,8 +38,10 @@ object Patcher {
                 if (config.injectProvider) add("--provider")
                 if(injectDex) add("--injectdex")
                 if (config.useMicroG) add("--useMicroG")
-                if (!MyKeyStore.useDefault) {
-                    addAll(arrayOf("-k", MyKeyStore.file.path, Configs.keyStorePassword, Configs.keyStoreAlias, Configs.keyStoreAliasPassword))
+                when (Configs.keyStorePreset) {
+                    KeystorePreset.NPATCH -> add("-npa")
+                    KeystorePreset.FPA -> add("-fpa")
+                    KeystorePreset.CUSTOM -> addAll(arrayOf("-k", MyKeyStore.file.path, Configs.keyStorePassword, Configs.keyStoreAlias, Configs.keyStoreAliasPassword))
                 }
                 addAll(apkPaths)
             }.toTypedArray()

@@ -75,7 +75,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">Réglages</string>
     <string name="settings_keystore">Magasin de clés de signature</string>
-    <string name="settings_keystore_default">Intégré</string>
     <string name="settings_keystore_custom">Personnalisé</string>
     <string name="settings_keystore_dialog_title">Magasin de clés personnalisé</string>
     <string name="settings_keystore_file">Fichier Keystore</string>

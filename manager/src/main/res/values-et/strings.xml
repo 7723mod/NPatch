@@ -72,7 +72,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">Seaded</string>
     <string name="settings_keystore">Allkirja võtmehoidla</string>
-    <string name="settings_keystore_default">Sisseehitatud</string>
     <string name="settings_keystore_custom">Kohandatud</string>
     <string name="settings_keystore_dialog_title">Kohandatud võtmehoidla</string>
     <string name="settings_keystore_file">Võtmehoidla fail</string>

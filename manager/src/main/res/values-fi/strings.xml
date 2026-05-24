@@ -72,7 +72,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">Asetukset</string>
     <string name="settings_keystore">Allekirjoituksen avainsäilö</string>
-    <string name="settings_keystore_default">Sisäänrakennettu</string>
     <string name="settings_keystore_custom">Custom</string>
     <string name="settings_keystore_dialog_title">Mukautettu avainsäilö</string>
     <string name="settings_keystore_file">Avainsäilytystiedosto</string>

@@ -72,7 +72,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">Innstillinger</string>
     <string name="settings_keystore">Signatur nøkkellager</string>
-    <string name="settings_keystore_default">Innebygd</string>
     <string name="settings_keystore_custom">Tilpasset</string>
     <string name="settings_keystore_dialog_title">Egendefinert nøkkellager</string>
     <string name="settings_keystore_file">Keystore-fil</string>

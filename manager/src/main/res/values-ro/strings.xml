@@ -72,7 +72,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">Setări</string>
     <string name="settings_keystore">Keystore de semnături</string>
-    <string name="settings_keystore_default">Built-in</string>
     <string name="settings_keystore_custom">Personalizat</string>
     <string name="settings_keystore_dialog_title">Keystore personalizat</string>
     <string name="settings_keystore_file">Fișier Keystore</string>

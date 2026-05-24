@@ -153,7 +153,6 @@
     <string name="settings_language">Language</string>
     <string name="settings_language_system" translatable="false">Follow System</string>
     <string name="settings_keystore">Signature keystore</string>
-    <string name="settings_keystore_default">Built-in</string>
     <string name="settings_keystore_custom">Custom</string>
     <string name="settings_keystore_dialog_title">Custom keystore</string>
     <string name="settings_keystore_file">Keystore file</string>

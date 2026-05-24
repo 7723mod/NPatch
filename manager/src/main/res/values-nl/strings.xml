@@ -72,7 +72,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">Instellingen</string>
     <string name="settings_keystore">Handtekening sleutelbewaarplaats</string>
-    <string name="settings_keystore_default">Ingebouwd</string>
     <string name="settings_keystore_custom">Custom</string>
     <string name="settings_keystore_dialog_title">Aangepaste sleutelbewaarplaats</string>
     <string name="settings_keystore_file">Keystore bestand</string>

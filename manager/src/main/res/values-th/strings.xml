@@ -72,7 +72,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">การตั้งค่า</string>
     <string name="settings_keystore">ที่เก็บคีย์ลายเซ็น</string>
-    <string name="settings_keystore_default">ในตัว</string>
     <string name="settings_keystore_custom">กำหนดเอง</string>
     <string name="settings_keystore_dialog_title">ที่เก็บคีย์แบบกำหนดเอง</string>
     <string name="settings_keystore_file">ไฟล์คีย์สโตร์</string>

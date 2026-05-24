@@ -73,7 +73,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">ترتیبات</string>
     <string name="settings_keystore">دستخطی کی اسٹور</string>
-    <string name="settings_keystore_default">بلٹ ان</string>
     <string name="settings_keystore_custom">اپنی مرضی کے مطابق</string>
     <string name="settings_keystore_dialog_title">حسب ضرورت کی اسٹور</string>
     <string name="settings_keystore_file">کلیدی اسٹور فائل</string>

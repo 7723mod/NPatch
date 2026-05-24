@@ -73,7 +73,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">Налаштування</string>
     <string name="settings_keystore">Сховище ключів підпису</string>
-    <string name="settings_keystore_default">Вбудований</string>
     <string name="settings_keystore_custom">На замовлення</string>
     <string name="settings_keystore_dialog_title">Спеціальне сховище ключів</string>
     <string name="settings_keystore_file">Файл сховища ключів</string>

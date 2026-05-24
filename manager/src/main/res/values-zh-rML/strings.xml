@@ -146,7 +146,6 @@
     <string name="screen_settings">猫咪偏好</string>
     <string name="settings_language">喵语选择</string>
     <string name="settings_keystore">签名爪印</string>
-    <string name="settings_keystore_default">自带肉垫印章</string>
     <string name="settings_keystore_custom">特制专属印章</string>
     <string name="settings_keystore_dialog_title">配置专属签印喵</string>
     <string name="settings_keystore_file">印章文件</string>

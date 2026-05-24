@@ -73,7 +73,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">Ustawienia</string>
     <string name="settings_keystore">Podpisz bazę kluczy</string>
-    <string name="settings_keystore_default">Wbudowana strona</string>
     <string name="settings_keystore_custom">Własna strona</string>
     <string name="settings_keystore_dialog_title">Własny magazyn kluczy</string>
     <string name="settings_keystore_file">Plik Keystore</string>

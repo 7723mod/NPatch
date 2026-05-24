@@ -4,9 +4,11 @@ import top.nkbe.npatch.lspApp
 import top.nkbe.npatch.ui.util.delegateStateOf
 import top.nkbe.npatch.ui.util.getValue
 import top.nkbe.npatch.ui.util.setValue
+import java.io.File
 
 object Configs {
 
+    private const val PREFS_KEYSTORE_PRESET = "keystore_preset"
     private const val PREFS_KEYSTORE_PASSWORD = "keystore_password"
     private const val PREFS_KEYSTORE_ALIAS = "keystore_alias"
     private const val PREFS_KEYSTORE_ALIAS_PASSWORD = "keystore_alias_password"
@@ -14,6 +16,23 @@ object Configs {
     private const val PREFS_DETAIL_PATCH_LOGS = "detail_patch_logs"
     private const val PREFS_LANGUAGE = "language"
     private const val PREFS_welcome_skip = "welcome_skip"
+
+    private fun defaultKeyStorePreset(): KeystorePreset {
+        return if (File(lspApp.filesDir, "keystore.bks").exists()) {
+            KeystorePreset.CUSTOM
+        } else {
+            KeystorePreset.NPATCH
+        }
+    }
+
+    var keyStorePreset by delegateStateOf(
+        KeystorePreset.fromPrefValue(
+            lspApp.prefs.getString(PREFS_KEYSTORE_PRESET, null),
+            defaultKeyStorePreset()
+        )
+    ) {
+        lspApp.prefs.edit().putString(PREFS_KEYSTORE_PRESET, it.prefValue).apply()
+    }
 
     var language by delegateStateOf(lspApp.prefs.getString(PREFS_LANGUAGE, "")!!) {
         lspApp.prefs.edit().putString(PREFS_LANGUAGE, it).apply()

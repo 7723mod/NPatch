@@ -73,7 +73,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">සැකසුම්</string>
     <string name="settings_keystore">අත්සන යතුරු ගබඩාව</string>
-    <string name="settings_keystore_default">බිල්ට්-ඉන්</string>
     <string name="settings_keystore_custom">අභිරුචි</string>
     <string name="settings_keystore_dialog_title">අභිරුචි යතුරු ගබඩාව</string>
     <string name="settings_keystore_file">යතුරු ගබඩා ගොනුව</string>

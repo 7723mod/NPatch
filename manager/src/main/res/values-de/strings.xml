@@ -72,7 +72,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">Einstellungen</string>
     <string name="settings_keystore">Signatur-Schlüsselspeicher</string>
-    <string name="settings_keystore_default">Eingebaut</string>
     <string name="settings_keystore_custom">Benutzerdefiniert</string>
     <string name="settings_keystore_dialog_title">Benutzerdefinierter Schlüsselspeicher</string>
     <string name="settings_keystore_file">Schlüsselspeicher-Datei</string>

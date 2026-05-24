@@ -72,7 +72,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">Ayarlar</string>
     <string name="settings_keystore">imza anahtar deposu</string>
-    <string name="settings_keystore_default">yerleşik</string>
     <string name="settings_keystore_custom">Gelenek</string>
     <string name="settings_keystore_dialog_title">Özel anahtar deposu</string>
     <string name="settings_keystore_file">anahtar deposu dosyası</string>

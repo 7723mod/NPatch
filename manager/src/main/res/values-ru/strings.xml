@@ -73,7 +73,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">Настройки</string>
     <string name="settings_keystore">Хранилище ключей подписи</string>
-    <string name="settings_keystore_default">Встроенное</string>
     <string name="settings_keystore_custom">Пользовательское</string>
     <string name="settings_keystore_dialog_title">Пользовательское хранилище ключей</string>
     <string name="settings_keystore_file">Файл хранилища ключей</string>

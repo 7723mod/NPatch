@@ -72,7 +72,6 @@
     <!-- Settings Screen -->
     <string name="screen_settings">postavke</string>
     <string name="settings_keystore">Spremište ključeva potpisa</string>
-    <string name="settings_keystore_default">Ugrađeni</string>
     <string name="settings_keystore_custom">Prilagođen</string>
     <string name="settings_keystore_dialog_title">Prilagođeno spremište ključeva</string>
     <string name="settings_keystore_file">Datoteka spremišta ključeva</string>
