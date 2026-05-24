@@ -13,6 +13,7 @@ import top.nkbe.npatch.share.PatchConfig
 import nkbe.util.NeoPackageManager
 import nkbe.util.NeoPackageManager.AppInfo
 import top.nkbe.npatch.patch.util.Logger
+import top.nkbe.npatch.share.Constants
 
 class NewPatchViewModel : ViewModel() {
 
@@ -39,7 +40,9 @@ class NewPatchViewModel : ViewModel() {
         private set
 
     // Patch Configuration
+    @set:JvmName("_setUseManager")
     var useManager by mutableStateOf(true)
+        private set
     var newPackageName by mutableStateOf("")
     var debuggable by mutableStateOf(false)
     var overrideVersionCode by mutableStateOf(false)
@@ -102,6 +105,14 @@ class NewPatchViewModel : ViewModel() {
         logs.clear()
         hasExecutedIntent = false
     }
+
+    fun setUseManager(value: Boolean) {
+        useManager = value
+        if (!value && sigBypassLevel > Constants.SIGBYPASS_HIGH) {
+            sigBypassLevel = Constants.SIGBYPASS_HIGH
+        }
+    }
+
     private fun doneInit() {
         patchState = PatchState.SELECTING
     }
@@ -116,7 +127,9 @@ class NewPatchViewModel : ViewModel() {
     private fun submitPatch() {
         Log.d(TAG, "Submit Patch")
         if (useManager) embeddedModules = emptyList()
-        val config = PatchConfig(useManager, debuggable, overrideVersionCode, sigBypassLevel, null, null, injectProvider, outputLog, newPackageName, useMicroG)
+        val patchSigBypassLevel = if (useManager) sigBypassLevel else sigBypassLevel.coerceAtMost(Constants.SIGBYPASS_HIGH)
+        sigBypassLevel = patchSigBypassLevel
+        val config = PatchConfig(useManager, debuggable, overrideVersionCode, patchSigBypassLevel, null, null, injectProvider, outputLog, newPackageName, useMicroG)
         patchOptions = Patcher.Options(
             newPackageName = newPackageName,
             injectDex = injectDex,

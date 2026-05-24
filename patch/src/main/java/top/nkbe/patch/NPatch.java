@@ -86,7 +86,7 @@ public class NPatch {
     @Parameter(names = {"-d", "--debuggable"}, description = "Set app to be debuggable")
     private boolean debuggableFlag = false;
 
-    @Parameter(names = {"-l", "--sigbypasslv"}, description = "Signature bypass mode. 0: None, 1: Basic, 2: High, 3: Extreme, 4: Seccomp. default 1")
+    @Parameter(names = {"-l", "--sigbypasslv"}, description = "Signature bypass mode. 0: None, 1: Basic, 2: High, 3: Extreme, 4: Seccomp. Extreme and Seccomp require --manager. default 1")
     private int sigbypassLevel = 1;
 
     @Parameter(names = {"--injectdex"}, description = "Inject directly the loader dex file into the original application package")
@@ -174,6 +174,10 @@ public class NPatch {
         }
         if (useNpatchKeystore && useFpaKeystore) {
             logger.e("Cannot use -npa and -fpa at the same time\n");
+            help = true;
+        }
+        if (!useManager && sigbypassLevel > Constants.SIGBYPASS_HIGH) {
+            logger.e("Extreme and Seccomp signature bypass modes cannot be used in integrated mode\n");
             help = true;
         }
 

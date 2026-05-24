@@ -16,6 +16,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import top.nkbe.npatch.R
+import top.nkbe.npatch.share.Constants
 import top.nkbe.npatch.ui.component.SelectionColumn
 import top.nkbe.npatch.ui.component.SelectionColumnScope.SelectionItem
 import top.nkbe.npatch.ui.component.settings.SettingsEditor
@@ -127,7 +128,7 @@ fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
                 SelectionItem(
                     modifier = Modifier.clip(itemShape),
                     selected = viewModel.useManager,
-                    onClick = { viewModel.useManager = true },
+                    onClick = { viewModel.setUseManager(true) },
                     icon = Icons.Outlined.Api,
                     title = stringResource(R.string.patch_local),
                     desc = stringResource(R.string.patch_local_desc)
@@ -135,7 +136,7 @@ fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
                 SelectionItem(
                     modifier = Modifier.clip(itemShape),
                     selected = !viewModel.useManager,
-                    onClick = { viewModel.useManager = false },
+                    onClick = { viewModel.setUseManager(false) },
                     icon = Icons.Outlined.WorkOutline,
                     title = stringResource(R.string.patch_integrated),
                     desc = stringResource(R.string.patch_integrated_desc),
@@ -216,9 +217,14 @@ fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
                     checked = viewModel.outputLog,
                     onCheckedChange = { viewModel.outputLog = it }
                 )
+                val maxSigBypassLevel = if (viewModel.useManager) {
+                    Constants.SIGBYPASS_SECCOMP
+                } else {
+                    Constants.SIGBYPASS_HIGH
+                }
                 val sigBypassEntries = listOf(
                     DropdownEntry(
-                        items = (0..4).map { level ->
+                        items = (Constants.SIGBYPASS_NONE..maxSigBypassLevel).map { level ->
                             DropdownItem(
                                 text = sigBypassLvTitle(level),
                                 summary = sigBypassLvDesc(level),
