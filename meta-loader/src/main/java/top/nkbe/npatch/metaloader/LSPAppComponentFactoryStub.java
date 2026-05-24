@@ -113,7 +113,7 @@ public class LSPAppComponentFactoryStub extends AppComponentFactory {
                 if (is == null) {
                     throw new RuntimeException("Should not happen: libnpatch.so not found in assets");
                 }
-                File soFile = createTempSoFile();
+                File soFile = createTempSoFile(currentUserId);
                 soFile.deleteOnExit();
                 try (var os = new FileOutputStream(soFile)) {
                     transfer(is, os);
@@ -134,7 +134,7 @@ public class LSPAppComponentFactoryStub extends AppComponentFactory {
         }
     }
 
-    private static File createTempSoFile() throws IOException {
+    private static File createTempSoFile(int currentUserId) throws IOException {
         String packageName = null;
         try {
             var currentPackageName = ActivityThread.class.getDeclaredMethod("currentPackageName");
@@ -146,10 +146,38 @@ public class LSPAppComponentFactoryStub extends AppComponentFactory {
             throw new IOException("Unable to resolve current package name");
         }
 
-        File baseDir = new File("/data/user/0/" + packageName + "/cache");
+        String dataDir = resolveDataDir(packageName, currentUserId);
+        File baseDir = new File(dataDir, "cache");
         if (!baseDir.exists() && !baseDir.mkdirs()) {
             throw new IOException("Unable to create cache directory: " + baseDir);
         }
         return File.createTempFile("libnpatch-", ".so", baseDir);
+    }
+
+    private static String resolveDataDir(String packageName, int currentUserId) {
+        try {
+            var app = ActivityThread.currentApplication();
+            if (app != null) {
+                var info = app.getApplicationInfo();
+                if (info != null && info.dataDir != null && !info.dataDir.isEmpty()) {
+                    return info.dataDir;
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        try {
+            var ipm = IPackageManager.Stub.asInterface(ServiceManager.getService("package"));
+            ApplicationInfo info;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                info = (ApplicationInfo) HiddenApiBypass.invoke(IPackageManager.class, ipm, "getApplicationInfo", packageName, 0L, currentUserId);
+            } else {
+                info = ipm.getApplicationInfo(packageName, 0, currentUserId);
+            }
+            if (info != null && info.dataDir != null && !info.dataDir.isEmpty()) {
+                return info.dataDir;
+            }
+        } catch (Throwable ignored) {
+        }
+        return "/data/user/" + currentUserId + "/" + packageName;
     }
 }
