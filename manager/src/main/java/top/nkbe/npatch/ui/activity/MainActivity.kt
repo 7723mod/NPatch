@@ -58,7 +58,7 @@ class MainActivity : ComponentActivity() {
 
     override fun attachBaseContext(newBase: Context) {
         val prefs = newBase.getSharedPreferences("settings", Context.MODE_PRIVATE)
-        val language = prefs.getString("language", "") ?: ""
+        val language = LSPApplication.normalizeLanguageTag(prefs.getString("language", "") ?: "")
         super.attachBaseContext(LSPApplication.applyLocale(newBase, language))
     }
 

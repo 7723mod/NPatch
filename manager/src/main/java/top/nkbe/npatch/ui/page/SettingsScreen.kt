@@ -50,6 +50,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.edit
 import kotlinx.coroutines.launch
+import top.nkbe.npatch.LSPApplication
 import top.nkbe.npatch.R
 import top.nkbe.npatch.config.Configs
 import top.nkbe.npatch.config.MyKeyStore
@@ -357,7 +358,7 @@ private val LANGUAGE_ENTRIES = listOf(
     "" to "settings_language_system",
     "en" to "English",
     "zh-CN" to "中文 (简体)",
-    "zh-x-nya" to "中文 (喵喵)",
+    "zh-ML" to "中文 (喵喵)",
     "zh-TW" to "中文 (繁體)",
     "zh-HK" to "中文 (香港)",
     "ja" to "日本語",
@@ -410,7 +411,10 @@ fun LanguagePreference() {
     }
     var selectedIndex by remember {
         mutableStateOf(
-            LANGUAGE_ENTRIES.indexOfFirst { it.first == Configs.language }.takeIf { it >= 0 } ?: 0
+            LANGUAGE_ENTRIES.indexOfFirst {
+                LSPApplication.normalizeLanguageTag(it.first) ==
+                    LSPApplication.normalizeLanguageTag(Configs.language)
+            }.takeIf { it >= 0 } ?: 0
         )
     }
     OverlayDropdownPreference(
@@ -422,7 +426,7 @@ fun LanguagePreference() {
         },
         onSelectedIndexChange = { index ->
             selectedIndex = index
-            val tag = LANGUAGE_ENTRIES[index].first
+            val tag = LSPApplication.normalizeLanguageTag(LANGUAGE_ENTRIES[index].first)
             Configs.language = tag
             val intent = Intent(context, MainActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)

@@ -32,7 +32,11 @@ class LSPApplication : Application() {
 
     override fun attachBaseContext(base: Context) {
         val prefs = base.getSharedPreferences("settings", Context.MODE_PRIVATE)
-        val language = prefs.getString("language", "") ?: ""
+        val rawLanguage = prefs.getString("language", "") ?: ""
+        val language = normalizeLanguageTag(rawLanguage)
+        if (language != rawLanguage) {
+            prefs.edit().putString("language", language).apply()
+        }
         super.attachBaseContext(applyLocale(base, language))
     }
 
@@ -88,9 +92,20 @@ class LSPApplication : Application() {
     }
 
     companion object {
+        private const val LEGACY_NYA_LANGUAGE_TAG = "zh-x-nya"
+        private const val NYA_LANGUAGE_TAG = "zh-ML"
+
+        fun normalizeLanguageTag(languageTag: String): String {
+            return when (languageTag) {
+                LEGACY_NYA_LANGUAGE_TAG -> NYA_LANGUAGE_TAG
+                else -> languageTag
+            }
+        }
+
         fun applyLocale(context: Context, languageTag: String): Context {
-            if (languageTag.isEmpty()) return context
-            val locale = Locale.forLanguageTag(languageTag)
+            val normalizedLanguageTag = normalizeLanguageTag(languageTag)
+            if (normalizedLanguageTag.isEmpty()) return context
+            val locale = Locale.forLanguageTag(normalizedLanguageTag)
             Locale.setDefault(locale)
             val config = Configuration(context.resources.configuration)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
