@@ -45,6 +45,7 @@
     <string name="about_ack_lspatch_summary">A pioneer in rootless patching solutions, proving the feasibility of dynamic Xposed environment loading via manager-side implementation.</string>
     <string name="about_ack_libxposed_summary">The driving force behind Xposed API standardisation, bringing type safety and clear conventions to the module development world.</string>
     <string name="about_ack_winter_summary">My very first financial supporter; thank you for such early and direct encouragement.</string>
+    <string name="about_ack_m558_summary">The one who keeps the gears turning behind the scenes — thank you for the quiet but indispensable support.</string>
     <string name="about_ack_community_summary">Thanks to all users involved in testing, submitting PRs, and reporting issues to drive the project forward together.</string>
 
     <!-- Manage Screen -->

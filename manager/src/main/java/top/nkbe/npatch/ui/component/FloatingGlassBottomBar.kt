@@ -22,6 +22,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import top.nkbe.npatch.ui.util.BG_SURFACE_ALPHA
+import top.nkbe.npatch.ui.util.LocalBackgroundImagePath
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -385,6 +387,12 @@ private fun FloatingGlassBottomBarFallback(
     modifier: Modifier = Modifier,
     content: @Composable RowScope.() -> Unit
 ) {
+    val hasBackgroundImage = LocalBackgroundImagePath.current.isNotEmpty()
+    val barColor = if (hasBackgroundImage) {
+        MiuixTheme.colorScheme.surfaceContainer.copy(alpha = BG_SURFACE_ALPHA)
+    } else {
+        MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.94f)
+    }
     Box(
         modifier = modifier.width(IntrinsicSize.Min),
         contentAlignment = Alignment.CenterStart
@@ -392,7 +400,7 @@ private fun FloatingGlassBottomBarFallback(
         Row(
             modifier = Modifier
                 .clip(CircleShape)
-                .background(MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.94f))
+                .background(barColor)
                 .height(64.dp)
                 .padding(
                     horizontal = FloatingBottomBarHorizontalPadding,

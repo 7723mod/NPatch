@@ -46,6 +46,7 @@
     <string name="about_ack_lspatch_summary">感谢 LSPatch 先行者，你们开辟了不用 Root 也能玩乐的领地。</string>
     <string name="about_ack_libxposed_summary">感谢 LibXposed，为开发者的猫爪带来了秩序与类型安全。</string>
     <string name="about_ack_winter_summary">第一位给俺投喂小鱼干的恩人！感谢这份超级早、也超级暖心的肉垫鼓励喵。</string>
+    <string name="about_ack_m558_summary">提供大模型的喵主子，是俺脑袋瓜里的智慧来源喵～</string>
     <string name="about_ack_community_summary">蹭蹭所有参与测试、提交 PR 与回报 Issue 的猫友们，大家一起把窝建得更好喵！</string>
 
     <!-- Manage Screen -->

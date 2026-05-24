@@ -61,6 +61,7 @@ import top.nkbe.npatch.R
 import top.nkbe.npatch.config.Configs
 import top.nkbe.npatch.ui.component.NPatchScaffold
 import top.nkbe.npatch.ui.util.backgroundAwareCardColors
+import top.nkbe.npatch.ui.util.backgroundAwareColor
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
@@ -345,7 +346,7 @@ private fun WelcomePageHeader(
             modifier = Modifier
                 .size(46.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(MiuixTheme.colorScheme.primaryContainer),
+                .background(backgroundAwareColor(MiuixTheme.colorScheme.primaryContainer)),
             contentAlignment = Alignment.Center
         ) {
             Icon(

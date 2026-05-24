@@ -41,6 +41,15 @@ fun backgroundAwareCardColors(
 }
 
 @Composable
+fun backgroundAwareColor(color: Color): Color {
+    return if (LocalBackgroundImagePath.current.isNotEmpty()) {
+        color.copy(alpha = BG_SURFACE_ALPHA)
+    } else {
+        color
+    }
+}
+
+@Composable
 fun backgroundAwareHazeStyle(
     surfaceColor: Color = MiuixTheme.colorScheme.surface,
 ): HazeBlurStyle {

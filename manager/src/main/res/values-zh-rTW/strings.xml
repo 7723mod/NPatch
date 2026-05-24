@@ -45,6 +45,7 @@
     <string name="about_ack_lspatch_summary">免 Root 修補方案的先行者，證明了在管理器側動態加載 Xposed 環境的可行性。</string>
     <string name="about_ack_libxposed_summary">現代 Xposed API 標準化推手，為模組開發帶來了型別安全與更清晰的秩序。</string>
     <string name="about_ack_winter_summary">首位打赏我的支持者，感谢这份很早、也很直接的鼓励。</string>
+    <string name="about_ack_m558_summary">幕後默默轉動齒輪的人，感謝這份不可或缺的支持。</string>
     <string name="about_ack_community_summary">感謝所有參與測試、提交 PR 與回報 Issue 的用戶，共同推動專案前進。</string>
 
     <!-- Manage Screen -->

@@ -49,6 +49,7 @@ import coil.request.ImageRequest
 import top.nkbe.npatch.R
 import top.nkbe.npatch.ui.component.NPatchScaffold
 import top.nkbe.npatch.ui.util.backgroundAwareCardColors
+import top.nkbe.npatch.ui.util.backgroundAwareColor
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -325,7 +326,7 @@ private fun LinkIcon(link: AboutLink) {
             .padding(end = 12.dp)
             .size(42.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(MiuixTheme.colorScheme.primaryContainer),
+            .background(backgroundAwareColor(MiuixTheme.colorScheme.primaryContainer)),
         contentAlignment = Alignment.Center
     ) {
         when {
@@ -409,9 +410,10 @@ private fun rememberAcknowledgmentLinks(): List<AboutLink> {
     val lspatch = stringResource(R.string.about_ack_lspatch_summary)
     val libxposed = stringResource(R.string.about_ack_libxposed_summary)
     val winter = stringResource(R.string.about_ack_winter_summary)
+    val m558 = stringResource(R.string.about_ack_m558_summary)
     val community = stringResource(R.string.about_ack_community_summary)
 
-    return remember(rovo89, jingMatrix, lsposed, lspatch, libxposed, winter, community) {
+    return remember(rovo89, jingMatrix, lsposed, lspatch, libxposed, winter, m558, community) {
         listOf(
             AboutLink(
                 title = "rovo89",
@@ -448,6 +450,12 @@ private fun rememberAcknowledgmentLinks(): List<AboutLink> {
                 summary = winter,
                 url = TELEGRAM_URL,
                 imageRes = R.drawable.winter
+            ),
+            AboutLink(
+                title = "M558",
+                summary = m558,
+                url = TELEGRAM_URL,
+                imageRes = R.drawable.m558
             ),
             AboutLink(
                 title = "Community",
