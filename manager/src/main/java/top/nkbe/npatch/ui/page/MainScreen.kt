@@ -107,7 +107,8 @@ fun MainScreen(
                                 onClick = {
                                     onSelectedTabChange(index)
                                     scope.launch { pagerState.animateScrollToPage(index) }
-                                }
+                                },
+                                selected = isSelected
                             ) {
                                 FloatingGlassBottomBarIcon(
                                     selected = isSelected,

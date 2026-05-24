@@ -262,9 +262,12 @@ fun SearchStatus.SearchPager(
             .fillMaxSize()
             .zIndex(5f)
             .background(colorScheme.surface.copy(alpha = surfaceAlpha))
-            .semantics { onClick { false } }
             .then(
-                if (!searchStatus.isCollapsed()) Modifier.pointerInput(Unit) { } else Modifier
+                if (!searchStatus.isCollapsed()) {
+                    Modifier
+                        .semantics { onClick { false } }
+                        .pointerInput(Unit) { }
+                } else Modifier
             )
     ) {
         Row(

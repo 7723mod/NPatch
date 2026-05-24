@@ -4,7 +4,6 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,6 +44,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -82,12 +83,14 @@ private val FloatingBottomBarVerticalPadding = 4.dp
 @Composable
 fun RowScope.FloatingGlassBottomBarItem(
     onClick: () -> Unit,
+    selected: Boolean = false,
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val scale = LocalFloatingBottomBarTabScale.current
     Column(
         modifier
+            .semantics(mergeDescendants = true) { this.selected = selected }
             .defaultMinSize(minWidth = FloatingBottomBarItemMinWidth)
             .clip(CircleShape)
             .clickable(
@@ -234,17 +237,13 @@ fun FloatingGlassBottomBar(
     ) {
         Row(
             Modifier
+                .clearAndSetSemantics {}
                 .onGloballyPositioned { coords ->
                     totalWidthPx = coords.size.width.toFloat()
                     val contentWidthPx = totalWidthPx - with(density) { FloatingBottomBarHorizontalPadding.toPx() * 2f }
                     tabWidthPx = contentWidthPx / tabsCount
                 }
                 .graphicsLayer { translationX = panelOffset }
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = {}
-                )
                 .drawBackdrop(
                     backdrop = backdrop,
                     shape = { CircleShape },
