@@ -3,6 +3,7 @@ package top.nkbe.npatch.database.dao
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.RewriteQueriesToDropUnusedColumns
 import top.nkbe.npatch.database.entity.Module
@@ -15,7 +16,7 @@ interface ScopeDao {
     @Query("SELECT * FROM module INNER JOIN scope ON module.pkgName = scope.modulePkgName WHERE scope.appPkgName = :appPkgName")
     suspend fun getModulesForApp(appPkgName: String): List<Module>
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(scope: Scope)
 
     @Delete

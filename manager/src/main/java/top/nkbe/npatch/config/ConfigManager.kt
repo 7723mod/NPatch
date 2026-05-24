@@ -31,7 +31,7 @@ object ConfigManager {
     private val moduleDao get() = db.moduleDao()
     private val scopeDao get() = db.scopeDao()
 
-    private val loadedModules = mutableMapOf<Module, org.lsposed.lspd.models.Module>()
+    private val loadedModules = mutableMapOf<String, org.lsposed.lspd.models.Module>()
 
     suspend fun updateModules(newModules: Map<String, String>) =
         withContext(dispatcher) {
@@ -39,10 +39,11 @@ object ConfigManager {
                 val apkPath = newModules[module.pkgName]
                 if (apkPath == null) {
                     moduleDao.delete(module)
-                    loadedModules.remove(module)
+                    loadedModules.remove(module.pkgName)
                 } else if (module.apkPath != apkPath) {
                     module.apkPath = apkPath
-                    loadedModules.remove(module)
+                    moduleDao.update(module)
+                    loadedModules.remove(module.pkgName)
                 }
             }
             for ((pkgName, apkPath) in newModules) {
@@ -52,6 +53,7 @@ object ConfigManager {
 
     suspend fun activateModule(pkgName: String, module: Module) =
         withContext(dispatcher) {
+            moduleDao.insert(module)
             scopeDao.insert(Scope(appPkgName = pkgName, modulePkgName = module.pkgName))
         }
 
@@ -80,17 +82,18 @@ object ConfigManager {
             val modules = scopeDao.getModulesForApp(pkgName)
             return@withContext modules.mapNotNull {
                 if (!File(it.apkPath).exists()) {
-                    loadedModules.remove(it)
+                    loadedModules.remove(it.pkgName)
                     try {
                         it.apkPath = lspApp.packageManager.getApplicationInfo(it.pkgName, 0).sourceDir
+                        moduleDao.update(it)
                     } catch (e: PackageManager.NameNotFoundException) {
-                        moduleDao.delete(moduleDao.getModule(it.pkgName))
+                        moduleDao.delete(it)
                         Log.w(TAG, "Module may be uninstalled: ${it.pkgName}")
                         return@mapNotNull null
                     }
                     Log.i(TAG, "Module apk path updated: ${it.pkgName}")
                 }
-                loadedModules.getOrPut(it) {
+                loadedModules.getOrPut(it.pkgName) {
                     val appInfo = runCatching {
                         lspApp.packageManager.getApplicationInfo(it.pkgName, PackageManager.GET_META_DATA)
                     }.getOrNull()
