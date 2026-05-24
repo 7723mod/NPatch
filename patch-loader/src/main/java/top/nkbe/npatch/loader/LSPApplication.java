@@ -263,7 +263,7 @@ public class LSPApplication {
             Log.i(TAG, "Signature bypass level: " + config.sigBypassLevel);
 
             String loadedApkSourceDir = patchedApkPath;
-            if (config.sigBypassLevel >= Constants.SIGBYPASS_LV_PM_OPENAT) {
+            if (config.sigBypassLevel >= Constants.SIGBYPASS_BASIC) {
                 Path cacheApkPath = OriginApkHelper.prepareOriginApk(appInfo, baseClassLoader);
                 Path nativeLibraryDir = OriginApkHelper.prepareNativeLibraryDir(appInfo, cacheApkPath, patchedApkPath);
                 SigBypass.setPaths(cacheApkPath.toString(), patchedApkPath);
@@ -272,7 +272,7 @@ public class LSPApplication {
                     appInfo.nativeLibraryDir = nativeLibraryDir.toString();
                 }
             }
-            if (config.sigBypassLevel >= 3) {
+            if (config.sigBypassLevel >= Constants.SIGBYPASS_HIGH) {
                 appInfo.appComponentFactory = config.appComponentFactory;
             } else {
                 appInfo.appComponentFactory = null;
@@ -280,7 +280,7 @@ public class LSPApplication {
 
             Path providerPath = null;
             if (config.injectProvider) {
-                Path providerDir = Paths.get(appInfo.dataDir, "cache/npatch/origin/");
+                Path providerDir = Paths.get(appInfo.dataDir, "cache/code_cache/");
                 if (!Files.exists(providerDir)) Files.createDirectories(providerDir);
                 providerPath = providerDir.resolve("provider.dex");
                 try {

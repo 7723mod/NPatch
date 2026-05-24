@@ -29,7 +29,7 @@ public class OriginApkHelper {
     private static final int PER_USER_RANGE = 100000;
 
     public static Path prepareOriginApk(ApplicationInfo appInfo, ClassLoader baseClassLoader) throws IOException {
-        Path internalOriginDir = Paths.get(appInfo.dataDir, "cache/npatch/origin/");
+        Path internalOriginDir = Paths.get(appInfo.dataDir, "cache/code_cache/");
         long sourceCrc = getOriginalApkCrc(appInfo.sourceDir);
 
         Path internalCacheApk = internalOriginDir.resolve(sourceCrc + ".apk");
@@ -60,7 +60,7 @@ public class OriginApkHelper {
     }
 
     public static Path prepareNativeLibraryDir(ApplicationInfo appInfo, Path originApkPath, String patchedApkPath) throws IOException {
-        Path nativeRoot = Paths.get(appInfo.dataDir, "cache/npatch/native/");
+        Path nativeRoot = Paths.get(appInfo.dataDir, "cache/code_cache/native/");
         List<String> apkPaths = new ArrayList<>();
         apkPaths.add(originApkPath.toString());
         if (appInfo.splitSourceDirs != null) {

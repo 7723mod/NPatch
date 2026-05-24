@@ -86,7 +86,7 @@ public class NPatch {
     @Parameter(names = {"-d", "--debuggable"}, description = "Set app to be debuggable")
     private boolean debuggableFlag = false;
 
-    @Parameter(names = {"-l", "--sigbypasslv"}, description = "Signature bypass level. 0: Off, 1: PackageParser hook, 2: PM + openat/Java IO redirection, 3: restore original AppComponentFactory + PackageInfo/archive/certificate checks, 4: SVC openat redirection (ARM64 only). default 1")
+    @Parameter(names = {"-l", "--sigbypasslv"}, description = "Signature bypass mode. 0: None, 1: Basic, 2: High, 3: Extreme, 4: Seccomp. default 1")
     private int sigbypassLevel = 1;
 
     @Parameter(names = {"--injectdex"}, description = "Inject directly the loader dex file into the original application package")
@@ -229,7 +229,7 @@ public class NPatch {
 
         logger.i("Parsing original apk...");
 
-        boolean embedOriginal = sigbypassLevel >= Constants.SIGBYPASS_LV_PM_OPENAT;
+        boolean embedOriginal = sigbypassLevel >= Constants.SIGBYPASS_BASIC;
 
         try (ZFile dstZFile = ZFile.openReadWrite(outputFile, Z_FILE_OPTIONS);
              ZFile srcZFile = embedOriginal
@@ -263,7 +263,7 @@ public class NPatch {
             }
 
             String originalSignature = null;
-            if (sigbypassLevel > Constants.SIGBYPASS_LV_DISABLE) {
+            if (sigbypassLevel > Constants.SIGBYPASS_NONE) {
                 originalSignature = ApkSignatureHelper.getApkSignInfo(srcApkFile.getAbsolutePath());
                 if (originalSignature == null || originalSignature.isEmpty()) {
                     throw new PatchError("get original signature failed");

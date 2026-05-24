@@ -15,9 +15,9 @@ public class Constants {
     final static public String REAL_GMS_PACKAGE_NAME = "com.google.android.gms";
     final static public int MIN_ROLLING_VERSION_CODE = 633;
 
-    final static public int SIGBYPASS_LV_DISABLE = 0;
-    public static final int SIGBYPASS_LV_PM = 1;
-    public static final int SIGBYPASS_LV_PM_OPENAT = 2;
-    public static final int SIGBYPASS_LV_PATH_REDIR = 3;
-    public static final int SIGBYPASS_LV_SVC = 4;
+    public static final int SIGBYPASS_NONE = 0;
+    public static final int SIGBYPASS_BASIC = 1;
+    public static final int SIGBYPASS_HIGH = 2;
+    public static final int SIGBYPASS_EXTREME = 3;
+    public static final int SIGBYPASS_SECCOMP = 4;
 }

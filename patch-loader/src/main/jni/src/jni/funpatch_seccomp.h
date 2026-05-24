@@ -1,8 +1,9 @@
 #pragma once
+
 #include <jni.h>
 
 namespace lspd {
 
-    void RegisterSvcBypass(JNIEnv* env);
+    void RegisterFunPatchSeccomp(JNIEnv* env);
 
 } // namespace lspd
