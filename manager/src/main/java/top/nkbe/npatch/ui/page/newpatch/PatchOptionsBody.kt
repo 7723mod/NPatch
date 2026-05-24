@@ -230,6 +230,7 @@ fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
                 )
                 OverlayDropdownPreference(
                     title = stringResource(R.string.patch_sigbypass),
+                    startAction = { Icon(Icons.Outlined.Security, null) },
                     entries = sigBypassEntries
                 )
             }

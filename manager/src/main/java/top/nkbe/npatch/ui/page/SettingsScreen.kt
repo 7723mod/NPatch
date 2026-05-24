@@ -17,12 +17,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Ballot
-import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material.icons.outlined.BlurCircular
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Dashboard
+import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.SettingsBrightness
@@ -39,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -59,6 +62,7 @@ import top.nkbe.npatch.ui.component.NPatchScaffold
 import top.nkbe.npatch.ui.util.BackgroundImageStorage
 import top.nkbe.npatch.ui.util.LocalSnackbarHost
 import top.nkbe.npatch.ui.util.backgroundAwareCardColors
+import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
@@ -138,7 +142,7 @@ fun AppearanceSettings() {
         initial = ThemeSettings(
             backgroundImageUri = "",
             useMonet = false,
-            customColor = 0xFF007AFF.toInt(),
+            customColor = 0xFF007AFE.toInt(),
             themeMode = ThemeMode.SYSTEM,
             useFloatingGlassBottomBar = false,
             useFloatingGlassBottomBarBlur = supportsFloatingGlassBottomBarBlur,
@@ -182,12 +186,7 @@ fun AppearanceSettings() {
         items = themeModeItems,
         selectedIndex = themeModeIndex,
         startAction = {
-            Icon(
-                Icons.Outlined.SettingsBrightness,
-                modifier = Modifier.padding(end = 6.dp),
-                contentDescription = null,
-                tint = MiuixTheme.colorScheme.onBackground
-            )
+            SettingsStartIcon(Icons.Outlined.SettingsBrightness)
         },
         onSelectedIndexChange = { index ->
             val mode = when (index) {
@@ -205,16 +204,11 @@ fun AppearanceSettings() {
         title = stringResource(R.string.settings_monet_dynamic_color),
         summary = stringResource(R.string.settings_monet_dynamic_color_summary),
         checked = useMonet,
+        startAction = {
+            SettingsStartIcon(Icons.Outlined.Palette)
+        },
         onCheckedChange = { isChecked ->
             scope.launch { context.dataStore.edit { it[ThemeConfig.USE_MONET] = isChecked } }
-        },
-        startAction = {
-            Icon(
-                Icons.Outlined.Palette,
-                modifier = Modifier.padding(end = 6.dp),
-                contentDescription = null,
-                tint = MiuixTheme.colorScheme.onBackground
-            )
         }
     )
 
@@ -222,16 +216,11 @@ fun AppearanceSettings() {
         title = stringResource(R.string.settings_floating_glass_bottom_bar),
         summary = stringResource(R.string.settings_floating_glass_bottom_bar_summary),
         checked = useFloatingGlassBottomBar,
+        startAction = {
+            SettingsStartIcon(Icons.Outlined.Dashboard)
+        },
         onCheckedChange = { isChecked ->
             scope.launch { context.dataStore.edit { it[ThemeConfig.USE_FLOATING_GLASS_BOTTOM_BAR] = isChecked } }
-        },
-        startAction = {
-            Icon(
-                Icons.Outlined.Palette,
-                modifier = Modifier.padding(end = 6.dp),
-                contentDescription = null,
-                tint = MiuixTheme.colorScheme.onBackground
-            )
         }
     )
 
@@ -240,59 +229,45 @@ fun AppearanceSettings() {
             title = stringResource(R.string.settings_floating_glass_bottom_bar_blur),
             summary = stringResource(R.string.settings_floating_glass_bottom_bar_blur_summary),
             checked = useFloatingGlassBottomBarBlur,
+            startAction = {
+                SettingsStartIcon(Icons.Outlined.BlurCircular)
+            },
             onCheckedChange = { isChecked ->
                 scope.launch { context.dataStore.edit { it[ThemeConfig.USE_FLOATING_GLASS_BOTTOM_BAR_BLUR] = isChecked } }
-            },
-            startAction = {
-                Icon(
-                    Icons.Outlined.Palette,
-                    modifier = Modifier.padding(end = 6.dp),
-                    contentDescription = null,
-                    tint = MiuixTheme.colorScheme.onBackground
-                )
             }
         )
     }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { imagePickerLauncher.launch(arrayOf("image/*")) }
-            .padding(horizontal = 20.dp, vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            Icons.Outlined.Image,
-            modifier = Modifier.padding(end = 16.dp),
-            contentDescription = null,
-            tint = MiuixTheme.colorScheme.onBackground
-        )
-        Text(
-            text = stringResource(R.string.settings_custom_background_image),
-            style = MiuixTheme.textStyles.title3,
-            modifier = Modifier.weight(1f)
-        )
-        if (bgImageUri.isNotEmpty()) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable {
-                        scope.launch {
-                            BackgroundImageStorage.clear(context)
-                            context.dataStore.edit { it[ThemeConfig.BG_IMAGE_URI] = "" }
+    BasicComponent(
+        modifier = Modifier,
+        title = stringResource(R.string.settings_custom_background_image),
+        startAction = {
+            SettingsStartIcon(Icons.Outlined.Image)
+        },
+        endActions = {
+            if (bgImageUri.isNotEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable {
+                            scope.launch {
+                                BackgroundImageStorage.clear(context)
+                                context.dataStore.edit { it[ThemeConfig.BG_IMAGE_URI] = "" }
+                            }
                         }
-                    }
-                    .background(MiuixTheme.colorScheme.error.copy(alpha = 0.1f))
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.settings_clear),
-                    color = MiuixTheme.colorScheme.error,
-                    style = MiuixTheme.textStyles.body2
-                )
+                        .background(MiuixTheme.colorScheme.error.copy(alpha = 0.1f))
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_clear),
+                        color = MiuixTheme.colorScheme.error,
+                        style = MiuixTheme.textStyles.body2
+                    )
+                }
             }
-        }
-    }
+        },
+        onClick = { imagePickerLauncher.launch(arrayOf("image/*")) }
+    )
 
     AnimatedVisibility(visible = !useMonet) {
         Column {
@@ -363,6 +338,21 @@ fun AppearanceSettings() {
     }
 }
 
+@Composable
+private fun SettingsStartIcon(imageVector: ImageVector) {
+    Box(
+        modifier = Modifier.size(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = imageVector,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            tint = MiuixTheme.colorScheme.onBackground
+        )
+    }
+}
+
 private val LANGUAGE_ENTRIES = listOf(
     "" to "settings_language_system",
     "en" to "English",
@@ -427,6 +417,9 @@ fun LanguagePreference() {
         title = stringResource(R.string.settings_language),
         items = languageLabels,
         selectedIndex = selectedIndex,
+        startAction = {
+            SettingsStartIcon(Icons.Outlined.Language)
+        },
         onSelectedIndexChange = { index ->
             selectedIndex = index
             val tag = LANGUAGE_ENTRIES[index].first
@@ -436,14 +429,6 @@ fun LanguagePreference() {
             }
             context.startActivity(intent)
             (context as? Activity)?.finish()
-        },
-        startAction = {
-            Icon(
-                Icons.Outlined.Language,
-                modifier = Modifier.padding(end = 6.dp),
-                contentDescription = null,
-                tint = MiuixTheme.colorScheme.onBackground
-            )
         }
     )
 }
@@ -464,6 +449,9 @@ private fun KeyStore() {
         title = stringResource(R.string.settings_keystore),
         items = keyStoreItems,
         selectedIndex = selectedIndex,
+        startAction = {
+            SettingsStartIcon(Icons.Outlined.Key)
+        },
         onSelectedIndexChange = { index ->
             selectedIndex = index
             if (index == 0) {
@@ -471,14 +459,6 @@ private fun KeyStore() {
             } else {
                 showDialog.value = true
             }
-        },
-        startAction = {
-            Icon(
-                Icons.Outlined.Ballot,
-                modifier = Modifier.padding(end = 6.dp),
-                contentDescription = null,
-                tint = MiuixTheme.colorScheme.onBackground
-            )
         }
     )
 
@@ -635,12 +615,7 @@ private fun DetailPatchLogs() {
     SwitchPreference(
         title = stringResource(R.string.settings_detail_patch_logs),
         startAction = {
-            Icon(
-                Icons.Outlined.BugReport,
-                modifier = Modifier.padding(end = 6.dp),
-                contentDescription = null,
-                tint = MiuixTheme.colorScheme.onBackground
-            )
+            SettingsStartIcon(Icons.Outlined.BugReport)
         },
         checked = Configs.detailPatchLogs,
         onCheckedChange = { Configs.detailPatchLogs = it }
@@ -654,12 +629,7 @@ private fun WelcomeGuide() {
         title = stringResource(R.string.settings_view_welcome),
         summary = stringResource(R.string.settings_view_welcome_summary),
         startAction = {
-            Icon(
-                Icons.Outlined.Info,
-                modifier = Modifier.padding(end = 6.dp),
-                contentDescription = null,
-                tint = MiuixTheme.colorScheme.onBackground
-            )
+            SettingsStartIcon(Icons.Outlined.Info)
         },
         onClick = { navigator.push(Route.Welcome(reviewMode = true)) }
     )
@@ -688,12 +658,7 @@ fun StorageDirectory() {
         title = stringResource(R.string.settings_storage_directory),
         summary = Configs.storageDirectory ?: "no path set",
         startAction = {
-            Icon(
-                Icons.Outlined.Folder,
-                modifier = Modifier.padding(end = 6.dp),
-                contentDescription = null,
-                tint = MiuixTheme.colorScheme.onBackground
-            )
+            SettingsStartIcon(Icons.Outlined.Folder)
         },
         onClick = { launcher.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)) }
     )
