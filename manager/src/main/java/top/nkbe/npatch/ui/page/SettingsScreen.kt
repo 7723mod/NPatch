@@ -65,6 +65,7 @@ import top.nkbe.npatch.ui.activity.MainActivity
 import top.nkbe.npatch.ui.component.NPatchScaffold
 import top.nkbe.npatch.config.DEFAULT_CUSTOM_COLOR
 import top.nkbe.npatch.ui.util.BackgroundImageStorage
+import top.nkbe.npatch.ui.util.LocalFloatingGlassBottomBar
 import top.nkbe.npatch.ui.util.LocalSnackbarHost
 import top.nkbe.npatch.ui.util.backgroundAwareCardColors
 import top.yukonga.miuix.kmp.basic.BasicComponent
@@ -93,6 +94,12 @@ private const val TAG = "SettingsScreen"
 @Composable
 fun SettingsScreen() {
     val scrollBehavior = MiuixScrollBehavior()
+    val useFloatingGlassBottomBar = LocalFloatingGlassBottomBar.current
+    val bottomContentPadding = if (useFloatingGlassBottomBar) {
+        68.dp + 12.dp + 8.dp + 28.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    } else {
+        24.dp
+    }
     NPatchScaffold(
         topBar = {
             TopAppBar(
@@ -134,7 +141,7 @@ fun SettingsScreen() {
                 StorageDirectory()
                 ClearManagerCache()
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(bottomContentPadding))
         }
     }
 }
