@@ -15,7 +15,7 @@ object Configs {
     private const val PREFS_STORAGE_DIRECTORY = "storage_directory"
     private const val PREFS_DETAIL_PATCH_LOGS = "detail_patch_logs"
     private const val PREFS_LANGUAGE = "language"
-    private const val PREFS_welcome_skip = "welcome_skip"
+    private const val PREFS_WEL_SKIP = "WEL_SKIP"
 
     private fun defaultKeyStorePreset(): KeystorePreset {
         return if (File(lspApp.filesDir, "keystore.bks").exists()) {
@@ -58,7 +58,7 @@ object Configs {
         lspApp.prefs.edit().putBoolean(PREFS_DETAIL_PATCH_LOGS, it).apply()
     }
 
-    var welcomeSeen by delegateStateOf(lspApp.prefs.getBoolean(PREFS_welcome_skip, false)) {
-        lspApp.prefs.edit().putBoolean(PREFS_welcome_skip, it).apply()
+    var welcomeSeen by delegateStateOf(lspApp.prefs.getBoolean(PREFS_WEL_SKIP, false)) {
+        lspApp.prefs.edit().putBoolean(PREFS_WEL_SKIP, it).apply()
     }
 }

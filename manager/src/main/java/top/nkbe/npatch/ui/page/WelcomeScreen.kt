@@ -38,8 +38,11 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Security
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -48,14 +51,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import nkbe.util.ShizukuApi
 import top.nkbe.npatch.BuildConfig
 import top.nkbe.npatch.R
 import top.nkbe.npatch.config.Configs
@@ -70,6 +76,11 @@ import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+
+private val welcomeShizukuListener: (Int, Int) -> Unit = { _, grantResult ->
+    ShizukuApi.isPermissionGranted = grantResult == PackageManager.PERMISSION_GRANTED
+    ShizukuApi.refreshState()
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -274,6 +285,8 @@ private fun WelcomePermissionPage(
             granted = appListGranted,
             onClick = onAppListClick
         )
+        Spacer(Modifier.height(12.dp))
+        OptionalFeatureCard()
         Spacer(Modifier.height(4.dp))
         SmallTitle(text = stringResource(R.string.welcome_basic_settings_title))
         Card(
@@ -288,6 +301,86 @@ private fun WelcomePermissionPage(
             ) {
                 AppearanceSettings()
                 StorageDirectory()
+            }
+        }
+    }
+}
+
+@Composable
+private fun OptionalFeatureCard() {
+    LaunchedEffect(Unit) {
+        ShizukuApi.refreshState()
+        ShizukuApi.addRequestPermissionResultListener(welcomeShizukuListener)
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            ShizukuApi.removeRequestPermissionResultListener(welcomeShizukuListener)
+        }
+    }
+
+    val isGranted = ShizukuApi.isPermissionGranted
+    val warningContainer = if (MiuixTheme.colorScheme.surface.luminance() > 0.5f) {
+        Color(0xFFFFE08A)
+    } else {
+        Color(0xFF5C4800)
+    }
+    val warningContent = if (MiuixTheme.colorScheme.surface.luminance() > 0.5f) {
+        Color(0xFF5A4300)
+    } else {
+        Color(0xFFFFF1BF)
+    }
+    val containerColor = if (isGranted) MiuixTheme.colorScheme.primaryContainer else warningContainer
+    val contentColor = if (isGranted) MiuixTheme.colorScheme.onPrimaryContainer else warningContent
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = backgroundAwareCardColors(
+            color = containerColor,
+            contentColor = contentColor
+        ),
+        showIndication = true,
+        onClick = {
+            if (ShizukuApi.isBinderAvailable && !isGranted) {
+                ShizukuApi.requestPermission()
+            }
+        },
+    ) {
+        Row(
+            modifier = Modifier.padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = if (isGranted) Icons.Outlined.CheckCircle else Icons.Outlined.Warning,
+                contentDescription = null,
+                tint = contentColor
+            )
+            Spacer(Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.welcome_optional_title),
+                    style = MiuixTheme.textStyles.title3,
+                    color = contentColor
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = stringResource(if (isGranted) R.string.shizuku_available else R.string.shizuku_unavailable),
+                    style = MiuixTheme.textStyles.body1,
+                    color = contentColor.copy(alpha = 0.92f)
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = ShizukuApi.getVersionOrNull()?.let { "API $it" }
+                        ?: stringResource(R.string.home_shizuku_warning),
+                    style = MiuixTheme.textStyles.body2,
+                    color = contentColor.copy(alpha = 0.82f)
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.welcome_optional_summary),
+                    style = MiuixTheme.textStyles.body2,
+                    fontSize = 13.sp,
+                    color = contentColor.copy(alpha = 0.9f)
+                )
             }
         }
     }

@@ -18,6 +18,7 @@
 
     <!-- Home Screen -->
     <string name="home_shizuku_warning">Shizuku 酱没睡醒喵...</string>
+    <string name="home_shizuku_optional_summary">只是可选扩展喵，不会耽误 NPatch 的核心猫技。</string>
     <string name="home_api_version">API 核心版本</string>
     <string name="home_npatch_version">NP猫猫等级</string>
     <string name="home_framework_version">猫猫核心版本</string>
@@ -129,13 +130,15 @@
     <!-- Welcome Screen -->
         <string name="welcome_version">版本 %1$s</string>
     <string name="welcome_intro_content">专为免 Root 猫窝打造的现代化神奇挂件注入与大猫猫修补工具喵。</string>
-    <string name="welcome_intro_detail">NPatch 能在不用 Root 的爬架上，通过悄悄改装 APK 把 Xposed 加载器塞进去喵。居家模式得搭配大猫猫管理器来随时调教挂件与领地，但撒欢时不需要管理器在后台守着喵；合体模式直接把挂件缝进 App 肚子里，适合送去没有管理器住的陌生人家里独立跑跳喵。</string>
+    <string name="welcome_intro_detail">NPatch 能在不用 Root 的爬架上，通过悄悄改装 APK 把 Xposed 加载器塞进去喵。居家模式得搭配大猫猫管理器来随时调教挂件与领地，但撒欢时不需要管理器在后台守着喵；合体模式直接把挂件缝进 App 肚子里，适合送去没有管理器住的陌生人家里独立跑跳喵。Shizuku 酱只是帮忙开几个便利小后门，不是 NPatch 核心修补、挂件加载和基础管理的必需品喵。</string>
     <string name="welcome_permission_title">打通猫窝管道</string>
     <string name="welcome_permission_summary">开始撒欢前，请先解开以下爪印束缚以确保核心猫技正常施展喵。</string>
     <string name="welcome_permission_storage_title">翻找储藏室权限</string>
     <string name="welcome_permission_storage_summary">用来去你的储藏室里翻找 APK 宝贝，修补完还会把新猫完好地存回藏宝处喵。</string>
     <string name="welcome_permission_applist_title">清点住户名单</string>
     <string name="welcome_permission_applist_summary">用来打探已经住下哪些 Apps 邻居，方便你一爪子精准逮住想要修补的目标喵。</string>
+    <string name="welcome_optional_title">可选扩展：Shizuku 酱</string>
+    <string name="welcome_optional_summary">只是可选扩展喵，就算没连上也不耽误 NPatch 的核心猫技正常发挥。</string>
     <string name="welcome_permission_granted">肉垫已盖章</string>
     <string name="welcome_permission_authorize">这就去按爪</string>
 
@@ -185,6 +188,7 @@
     <string name="settings_custom_background_image">自定义猫窝背景</string>
     <string name="settings_clear">丢弃喵</string>
     <string name="settings_builtin_theme_color">精选毛色</string>
+    <string name="settings_color_cherry_blossom">樱花喵粉</string>
     <string name="settings_color_default_blue">忧郁波斯蓝</string>
     <string name="settings_color_fresh_green">嫩草薄荷绿</string>
     <string name="settings_color_elegant_purple">高冷贵族紫</string>

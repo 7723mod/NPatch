@@ -61,6 +61,7 @@ import top.nkbe.npatch.config.ThemeSettings
 import top.nkbe.npatch.config.dataStore
 import top.nkbe.npatch.ui.activity.MainActivity
 import top.nkbe.npatch.ui.component.NPatchScaffold
+import top.nkbe.npatch.config.DEFAULT_CUSTOM_COLOR
 import top.nkbe.npatch.ui.util.BackgroundImageStorage
 import top.nkbe.npatch.ui.util.LocalSnackbarHost
 import top.nkbe.npatch.ui.util.backgroundAwareCardColors
@@ -144,7 +145,7 @@ fun AppearanceSettings() {
         initial = ThemeSettings(
             backgroundImageUri = "",
             useMonet = false,
-            customColor = 0xFF007AFE.toInt(),
+            customColor = DEFAULT_CUSTOM_COLOR,
             themeMode = ThemeMode.SYSTEM,
             useFloatingGlassBottomBar = false,
             useFloatingGlassBottomBarBlur = supportsFloatingGlassBottomBarBlur,
@@ -288,6 +289,7 @@ fun AppearanceSettings() {
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 val colorPalettes = listOf(
+                    DEFAULT_CUSTOM_COLOR to stringResource(R.string.settings_color_cherry_blossom),
                     0xFF007AFF to stringResource(R.string.settings_color_default_blue),
                     0xFF34C759 to stringResource(R.string.settings_color_fresh_green),
                     0xFFAF52DE to stringResource(R.string.settings_color_elegant_purple),

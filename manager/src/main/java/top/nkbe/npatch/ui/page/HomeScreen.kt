@@ -19,6 +19,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -130,8 +131,18 @@ private fun StatusCard(onManageShortcut: (Int) -> Unit) {
     }
 
     val isGranted = ShizukuApi.isPermissionGranted
-    val containerColor = if (isGranted) MiuixTheme.colorScheme.primaryContainer else MiuixTheme.colorScheme.errorContainer
-    val contentColor = if (isGranted) MiuixTheme.colorScheme.onPrimaryContainer else MiuixTheme.colorScheme.onErrorContainer
+    val warningContainer = if (MiuixTheme.colorScheme.surface.luminance() > 0.5f) {
+        Color(0xFFFFE08A)
+    } else {
+        Color(0xFF5C4800)
+    }
+    val warningContent = if (MiuixTheme.colorScheme.surface.luminance() > 0.5f) {
+        Color(0xFF5A4300)
+    } else {
+        Color(0xFFFFF1BF)
+    }
+    val containerColor = if (isGranted) MiuixTheme.colorScheme.primaryContainer else warningContainer
+    val contentColor = if (isGranted) MiuixTheme.colorScheme.onPrimaryContainer else warningContent
 
     val appViewModel = viewModel<AppManageViewModel>()
     val moduleViewModel = viewModel<ModuleManageViewModel>()
@@ -196,6 +207,16 @@ private fun StatusCard(onManageShortcut: (Int) -> Unit) {
                         fontWeight = FontWeight.Medium,
                         color = contentColor.copy(alpha = 0.8f)
                     )
+                    if (!isGranted) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            modifier = Modifier.fillMaxWidth(),
+                            text = stringResource(R.string.home_shizuku_optional_summary),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = contentColor.copy(alpha = 0.9f)
+                        )
+                    }
                 }
             }
         }

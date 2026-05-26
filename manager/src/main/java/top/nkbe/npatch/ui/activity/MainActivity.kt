@@ -46,6 +46,7 @@ import top.nkbe.npatch.ui.page.RepositoryDetailScreen
 import top.nkbe.npatch.ui.page.Route
 import top.nkbe.npatch.ui.page.SelectAppsScreen
 import top.nkbe.npatch.ui.page.WelcomeScreen
+import top.nkbe.npatch.config.DEFAULT_CUSTOM_COLOR
 import top.nkbe.npatch.ui.theme.LSPTheme
 import top.nkbe.npatch.ui.util.LocalBackgroundImagePath
 import top.nkbe.npatch.ui.util.LocalFloatingGlassBottomBar
@@ -85,7 +86,7 @@ class MainActivity : ComponentActivity() {
                 initial = ThemeSettings(
                     backgroundImageUri = "",
                     useMonet = false,
-                    customColor = 0xFF007AFF.toInt(),
+                    customColor = DEFAULT_CUSTOM_COLOR,
                     themeMode = ThemeMode.SYSTEM,
                     useFloatingGlassBottomBar = false,
                     useFloatingGlassBottomBarBlur = supportsFloatingGlassBottomBarBlur,

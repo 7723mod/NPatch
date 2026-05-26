@@ -17,6 +17,7 @@
 
     <!-- Home Screen -->
     <string name="home_shizuku_warning">Some functions unavailable</string>
+    <string name="home_shizuku_optional_summary">Optional extension, not required by NPatch.</string>
     <string name="home_api_version">API Version</string>
     <string name="home_npatch_version">NPatch Version</string>
     <string name="home_framework_version">Framework Version</string>
@@ -131,13 +132,15 @@
     <!-- Welcome Screen -->
     <string name="welcome_version">Version %1$s</string>
     <string name="welcome_intro_content">A modern Xposed module injection and APK patching tool designed for rootless environments.</string>
-    <string name="welcome_intro_detail">NPatch injects the Xposed loader by modifying APK files. Local mode works with the manager to load modules and manage scopes dynamically, without keeping the manager running in the background. Integrated mode embeds modules directly into the target app for standalone use on devices without the manager.</string>
+    <string name="welcome_intro_detail">NPatch injects the Xposed loader by modifying APK files. Local mode works with the manager to load modules and manage scopes dynamically, without keeping the manager running in the background. Integrated mode embeds modules directly into the target app for standalone use on devices without the manager. Shizuku only unlocks some convenience features and is not required for NPatch core patching, module loading, or basic management.</string>
     <string name="welcome_permission_title">Configure Required Permissions</string>
     <string name="welcome_permission_summary">Before getting started, grant basic access permissions to keep core features working.</string>
     <string name="welcome_permission_storage_title">Storage Access</string>
     <string name="welcome_permission_storage_summary">Used to select local APK files for patching and save output results to external storage.</string>
     <string name="welcome_permission_applist_title">Read App List</string>
     <string name="welcome_permission_applist_summary">Used to read installed apps so you can choose patch targets accurately.</string>
+    <string name="welcome_optional_title">Optional extension: Shizuku</string>
+    <string name="welcome_optional_summary">Optional extension only. Even without Shizuku, NPatch core features still work normally.</string>
     <string name="welcome_permission_granted">Granted</string>
     <string name="welcome_permission_authorize">Grant access</string>
     <string name="welcome_disclaimer_title">Usage Notes and Disclaimer</string>
@@ -187,6 +190,7 @@
     <string name="settings_custom_background_image">Custom Background Image</string>
     <string name="settings_clear">Clear</string>
     <string name="settings_builtin_theme_color">Built-in Theme Color</string>
+    <string name="settings_color_cherry_blossom">Cherry Blossom</string>
     <string name="settings_color_default_blue">Default Blue</string>
     <string name="settings_color_fresh_green">Fresh Green</string>
     <string name="settings_color_elegant_purple">Elegant Purple</string>

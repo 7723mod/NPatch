@@ -29,6 +29,8 @@ data class ThemeSettings(
     val useFloatingGlassBottomBarBlur: Boolean,
 )
 
+const val DEFAULT_CUSTOM_COLOR = 0xFFF27297.toInt()
+
 object ThemeConfig {
     val BG_IMAGE_URI = stringPreferencesKey("bg_image_uri")
     val USE_MONET = booleanPreferencesKey("use_monet")
@@ -45,7 +47,7 @@ object ThemeConfig {
         ThemeSettings(
             backgroundImageUri = prefs[BG_IMAGE_URI] ?: "",
             useMonet = prefs[USE_MONET] ?: false,
-            customColor = prefs[CUSTOM_COLOR] ?: 0xFF007AFF.toInt(),
+            customColor = prefs[CUSTOM_COLOR] ?: DEFAULT_CUSTOM_COLOR,
             themeMode = ThemeMode.fromValue(prefs[THEME_MODE] ?: ThemeMode.SYSTEM.value),
             useFloatingGlassBottomBar = prefs[USE_FLOATING_GLASS_BOTTOM_BAR] ?: false,
             useFloatingGlassBottomBarBlur = prefs[USE_FLOATING_GLASS_BOTTOM_BAR_BLUR] ?: isFloatingGlassBottomBarBlurSupported(),

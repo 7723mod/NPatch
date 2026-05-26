@@ -17,6 +17,7 @@
 
     <!-- Home Screen -->
     <string name="home_shizuku_warning">部分功能不可用</string>
+    <string name="home_shizuku_optional_summary">可選擴展，不影響 NPatch 核心功能。</string>
     <string name="home_api_version">API 版本</string>
     <string name="home_npatch_version">NPatch 版本</string>
     <string name="home_framework_version">框架版本</string>
@@ -128,7 +129,7 @@
     <!-- Welcome Screen -->
     <string name="welcome_version">版本 %1$s</string>
     <string name="welcome_intro_content">專為免 Root 環境設計的現代化 Xposed 模組注入與應用修補工具。</string>
-    <string name="welcome_intro_detail">NPatch 能在免 Root 環境中，透過修改 APK 檔案注入 Xposed 載入器。本地模式需搭配管理器動態載入並管理模組與作用域，但使用時無需保持管理器處於背景運行；集成模式則將模組直接內嵌至目標應用中，適合無管理器的裝置獨立執行。</string>
+    <string name="welcome_intro_detail">NPatch 能在免 Root 環境中，透過修改 APK 檔案注入 Xposed 載入器。本地模式需搭配管理器動態載入並管理模組與作用域，但使用時無需保持管理器處於背景運行；集成模式則將模組直接內嵌至目標應用中，適合無管理器的裝置獨立執行。Shizuku 只會擴充部分便利功能，並不是 NPatch 核心修補、模組載入或基本管理的必要依賴。</string>
 
     <string name="welcome_permission_title">配置必要權限</string>
     <string name="welcome_permission_summary">開始體驗前，請先授予基本存取權限以確保核心功能運作。</string>
@@ -136,6 +137,8 @@
     <string name="welcome_permission_storage_summary">用於選取本機 APK 檔案進行修補，並將輸出結果儲存至外部儲存空間。</string>
     <string name="welcome_permission_applist_title">讀取應用程式清單</string>
     <string name="welcome_permission_applist_summary">用於獲取已安裝的應用程式，以便您精確選取修補目標。</string>
+    <string name="welcome_optional_title">可選擴展：Shizuku</string>
+    <string name="welcome_optional_summary">僅為可選擴展，未連接也不影響 NPatch 核心功能。</string>
     <string name="welcome_permission_granted">已授予</string>
     <string name="welcome_permission_authorize">前往授權</string>
 
@@ -186,6 +189,7 @@
     <string name="settings_custom_background_image">自定義背景圖片</string>
     <string name="settings_clear">清除</string>
     <string name="settings_builtin_theme_color">內建主題色</string>
+    <string name="settings_color_cherry_blossom">櫻花粉</string>
     <string name="settings_color_default_blue">冷淡蓝</string>
     <string name="settings_color_fresh_green">清爽綠</string>
     <string name="settings_color_elegant_purple">優雅紫</string>
