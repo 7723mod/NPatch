@@ -267,6 +267,7 @@ public class LSPApplication {
                 Path cacheApkPath = OriginApkHelper.prepareOriginApk(appInfo, baseClassLoader);
                 Path nativeLibraryDir = OriginApkHelper.prepareNativeLibraryDir(appInfo, cacheApkPath, patchedApkPath);
                 SigBypass.setPaths(cacheApkPath.toString(), patchedApkPath);
+                SigBypass.setOriginalSignature(config.newPackage, config.originalSignature);
                 loadedApkSourceDir = cacheApkPath.toString();
                 if (nativeLibraryDir != null) {
                     appInfo.nativeLibraryDir = nativeLibraryDir.toString();

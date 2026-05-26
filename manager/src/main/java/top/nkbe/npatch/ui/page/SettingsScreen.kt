@@ -361,7 +361,7 @@ private val LANGUAGE_ENTRIES = listOf(
     "" to "settings_language_system",
     "en" to "English",
     "zh-CN" to "中文 (简体)",
-    "zh-ML" to "中文 (喵喵)",
+    "zh-MO" to "中文 (喵喵)",
     "zh-TW" to "中文 (繁體)",
     "zh-HK" to "中文 (香港)",
     "ja" to "日本語",

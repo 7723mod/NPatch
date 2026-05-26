@@ -93,7 +93,7 @@ class LSPApplication : Application() {
 
     companion object {
         private const val LEGACY_NYA_LANGUAGE_TAG = "zh-x-nya"
-        private const val NYA_LANGUAGE_TAG = "zh-ML"
+        private const val NYA_LANGUAGE_TAG = "zh-MO"
 
         fun normalizeLanguageTag(languageTag: String): String {
             return when (languageTag) {
