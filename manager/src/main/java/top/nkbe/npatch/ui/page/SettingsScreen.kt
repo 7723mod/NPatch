@@ -21,6 +21,7 @@ import androidx.compose.material.icons.outlined.BlurCircular
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Info
@@ -59,6 +60,7 @@ import top.nkbe.npatch.config.ThemeConfig
 import top.nkbe.npatch.config.ThemeMode
 import top.nkbe.npatch.config.ThemeSettings
 import top.nkbe.npatch.config.dataStore
+import top.nkbe.npatch.manager.ManagerCacheCleaner
 import top.nkbe.npatch.ui.activity.MainActivity
 import top.nkbe.npatch.ui.component.NPatchScaffold
 import top.nkbe.npatch.config.DEFAULT_CUSTOM_COLOR
@@ -130,6 +132,7 @@ fun SettingsScreen() {
                 DetailPatchLogs()
                 WelcomeGuide()
                 StorageDirectory()
+                ClearManagerCache()
             }
             Spacer(Modifier.height(24.dp))
         }
@@ -689,4 +692,66 @@ fun StorageDirectory() {
         },
         onClick = { launcher.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)) }
     )
+}
+
+@Composable
+fun ClearManagerCache() {
+    val scope = rememberCoroutineScope()
+    val snackbarHost = LocalSnackbarHost.current
+    val clearText = stringResource(R.string.settings_manager_cache)
+    val summaryText = stringResource(R.string.settings_manager_cache_summary)
+    val dialogText = stringResource(R.string.settings_manager_cache_dialog_text)
+    val successText = stringResource(R.string.settings_manager_cache_success)
+    val failedText = stringResource(R.string.settings_manager_cache_failed)
+    val showDialog = remember { mutableStateOf(false) }
+
+    ArrowPreference(
+        title = clearText,
+        summary = summaryText,
+        startAction = {
+            SettingsStartIcon(Icons.Outlined.DeleteSweep)
+        },
+        onClick = { showDialog.value = true }
+    )
+
+    if (showDialog.value) {
+        OverlayDialog(
+            title = clearText,
+            show = showDialog.value,
+            onDismissRequest = { showDialog.value = false },
+        ) {
+            Column {
+                Text(
+                    text = dialogText,
+                    modifier = Modifier.padding(bottom = 16.dp),
+                )
+                Row(horizontalArrangement = Arrangement.SpaceBetween) {
+                    TextButton(
+                        text = stringResource(android.R.string.cancel),
+                        onClick = { showDialog.value = false },
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(20.dp))
+                    TextButton(
+                        text = stringResource(android.R.string.ok),
+                        onClick = {
+                            showDialog.value = false
+                            scope.launch {
+                                runCatching {
+                                    ManagerCacheCleaner.clear()
+                                }.onSuccess {
+                                    snackbarHost.showSnackbar(successText)
+                                }.onFailure {
+                                    Log.e(TAG, "Failed to clear manager cache", it)
+                                    snackbarHost.showSnackbar(failedText)
+                                }
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                    )
+                }
+            }
+        }
+    }
 }

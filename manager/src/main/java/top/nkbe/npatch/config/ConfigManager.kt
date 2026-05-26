@@ -77,6 +77,11 @@ object ConfigManager {
             return@withContext scopeDao.getScopedModulePackageNames().toSet()
         }
 
+    suspend fun clearRuntimeCache() =
+        withContext(dispatcher) {
+            loadedModules.clear()
+        }
+
     suspend fun getModuleFilesForApp(pkgName: String): List<org.lsposed.lspd.models.Module> =
         withContext(dispatcher) {
             val modules = scopeDao.getModulesForApp(pkgName)

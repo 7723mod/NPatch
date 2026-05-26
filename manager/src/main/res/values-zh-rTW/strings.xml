@@ -171,6 +171,11 @@
     <string name="settings_view_welcome">查看導覽介面</string>
     <string name="settings_view_welcome_summary">重新查看歡迎與權限導覽</string>
     <string name="settings_storage_directory">更改存儲資料夾</string>
+    <string name="settings_manager_cache">清除管理器快取</string>
+    <string name="settings_manager_cache_summary">清除模組同步快取、倉庫快取與臨時修補檔案，同時保留基礎設定</string>
+    <string name="settings_manager_cache_dialog_text">這會清除管理器端的同步狀態與臨時檔案，但會保留儲存目錄、簽名金鑰庫、語言與主題設定。</string>
+    <string name="settings_manager_cache_success">管理器快取已清除</string>
+    <string name="settings_manager_cache_failed">清除管理器快取失敗</string>
     <string name="settings_appearance_theme">外觀與主題</string>
     <string name="settings_other_settings">其他設定</string>
     <string name="settings_theme_mode">主題模式</string>

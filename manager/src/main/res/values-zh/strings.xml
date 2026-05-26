@@ -170,6 +170,11 @@
     <string name="settings_view_welcome">查看导览界面</string>
     <string name="settings_view_welcome_summary">重新查看欢迎与权限导览</string>
     <string name="settings_storage_directory">变更存储目录</string>
+    <string name="settings_manager_cache">清除管理器缓存</string>
+    <string name="settings_manager_cache_summary">清除模块同步缓存、仓库缓存与临时修补文件，同时保留基础设置</string>
+    <string name="settings_manager_cache_dialog_text">这会清除管理器侧的同步状态与临时文件，但会保留存储目录、签名密钥库、语言与主题设置。</string>
+    <string name="settings_manager_cache_success">管理器缓存已清除</string>
+    <string name="settings_manager_cache_failed">清除管理器缓存失败</string>
     <string name="settings_appearance_theme">外观与主题</string>
     <string name="settings_other_settings">其他设置</string>
     <string name="settings_theme_mode">主题模式</string>

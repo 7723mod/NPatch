@@ -172,6 +172,11 @@
     <string name="settings_detail_patch_logs">Detail patch logs</string>
     <string name="settings_view_welcome">View guide</string>
     <string name="settings_view_welcome_summary">Review the welcome and permission guide</string>
+    <string name="settings_manager_cache">Clear manager cache</string>
+    <string name="settings_manager_cache_summary">Clear module sync cache, repo cache, and temporary patch files while keeping your basic settings</string>
+    <string name="settings_manager_cache_dialog_text">This clears manager-side sync state and temporary files. Storage directory, keystore, language, and theme settings will be kept.</string>
+    <string name="settings_manager_cache_success">Manager cache cleared</string>
+    <string name="settings_manager_cache_failed">Failed to clear manager cache</string>
     <string name="settings_appearance_theme">Appearance &amp; Theme</string>
     <string name="settings_other_settings">Other Settings</string>
     <string name="settings_theme_mode">Theme Mode</string>
