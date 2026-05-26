@@ -93,7 +93,7 @@ fun SelectAppsScreen(
         derivedStateOf { 12.dp * (1f - scrollBehavior.state.collapsedFraction) }
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(multiSelect, initialSelected) {
         viewModel.multiSelected.clear()
         viewModel.filterAppList(false, filter)
         initialSelected?.let {

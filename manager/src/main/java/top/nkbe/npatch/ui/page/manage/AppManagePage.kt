@@ -338,7 +338,12 @@ fun AppManageBody(
                                         )
                                         if (result is SelectAppsResult.MultipleApps) {
                                             withContext(Dispatchers.IO) {
-                                                ConfigManager.getModulesForApp(targetAppPkg).forEach {
+                                                val previousModules = ConfigManager.getModulesForApp(targetAppPkg)
+                                                val affectedPackages = buildSet {
+                                                    previousModules.forEach { add(it.pkgName) }
+                                                    result.selected.forEach { add(it.app.packageName) }
+                                                }
+                                                previousModules.forEach {
                                                     ConfigManager.deactivateModule(targetAppPkg, it)
                                                 }
                                                 result.selected.forEach {
@@ -346,8 +351,10 @@ fun AppManageBody(
                                                     ConfigManager.activateModule(targetAppPkg, Module(it.app.packageName, it.app.sourceDir))
                                                 }
                                                 if (ShizukuApi.isReady) {
-                                                    result.selected.forEach {
-                                                        ModuleActivationController.activate(it.app.packageName)
+                                                    // Notify both removed and newly added modules so they do not
+                                                    // keep stale scope state after a scope edit.
+                                                    affectedPackages.forEach { modulePackageName ->
+                                                        ModuleActivationController.activate(modulePackageName)
                                                     }
                                                 }
                                             }
