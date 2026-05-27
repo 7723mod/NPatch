@@ -22,6 +22,11 @@ android {
         applicationId = defaultManagerPackageName
     }
 
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
+
     packaging {
         jniLibs {
             excludes += "lib/*/libandroidx.graphics.path.so"

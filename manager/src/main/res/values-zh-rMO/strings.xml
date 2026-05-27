@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">NyaPatch</string>
     <string name="add">收入爪下</string>
     <string name="install">塞进窝里</string>
     <string name="installing">正在努力踩奶...</string>

@@ -50,7 +50,10 @@ class LSPApplication : Application() {
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        HiddenApiBypass.addHiddenApiExemptions("")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            runCatching { HiddenApiBypass.addHiddenApiExemptions("") }
+                .onFailure { it.printStackTrace() }
+        }
         lspApp = this
         filesDir.mkdir()
         tmpApkDir = cacheDir.resolve("apk").also { it.mkdir() }
