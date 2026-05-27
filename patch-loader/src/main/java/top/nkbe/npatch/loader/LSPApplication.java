@@ -268,6 +268,7 @@ public class LSPApplication {
             Log.i(TAG, "Signature bypass level: " + config.sigBypassLevel);
 
             CacheCleaner.handlePatchUpgrade(appInfo, patchedApkPath);
+            CacheCleaner.sweepLibNpatchCache(appInfo);
 
             String loadedApkSourceDir = patchedApkPath;
             if (config.sigBypassLevel >= Constants.SIGBYPASS_BASIC) {

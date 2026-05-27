@@ -61,6 +61,32 @@ public class CacheCleaner {
                 });
     }
 
+    /**
+     * Removes stale libnpatch-*.so temp files left in cache/ by meta-loader.
+     * Keeps the newest one because the current process has it loaded via System.load().
+     */
+    public static void sweepLibNpatchCache(ApplicationInfo appInfo) {
+        if (appInfo == null || appInfo.dataDir == null) return;
+
+        File cacheDir = new File(appInfo.dataDir, "cache");
+        File[] children = cacheDir.listFiles((dir, name) ->
+                name.startsWith("libnpatch-") && name.endsWith(".so"));
+        if (children == null || children.length <= 1) return;
+
+        File newest = children[0];
+        for (File f : children) {
+            if (f.lastModified() > newest.lastModified()) newest = f;
+        }
+        final File keep = newest;
+        Arrays.stream(children)
+                .filter(f -> !f.equals(keep))
+                .forEach(f -> {
+                    if (!f.delete()) {
+                        Log.w(TAG, "Failed to delete stale libnpatch: " + f);
+                    }
+                });
+    }
+
     public static void sweepModuleNativeCache(ApplicationInfo appInfo, Map<String, String> activeModuleApkPaths) {
         if (appInfo == null || appInfo.dataDir == null) return;
 
@@ -103,16 +129,29 @@ public class CacheCleaner {
     private static void wipeAll(File cacheRoot) {
         File codeCache = new File(cacheRoot, "code_cache");
         File[] children = codeCache.listFiles();
-        
+
         if (children != null) {
             Arrays.stream(children)
                     .filter(File::isFile)
                     .filter(f -> f.getName().endsWith(".apk"))
                     .forEach(File::delete);
         }
-        
+
         deleteRecursive(new File(codeCache, "native"));
         deleteRecursive(new File(cacheRoot, "npatch/native"));
+
+        // Sweep all but the newest libnpatch-*.so (current process has it mmaped).
+        File[] libs = cacheRoot.listFiles((dir, name) ->
+                name.startsWith("libnpatch-") && name.endsWith(".so"));
+        if (libs != null && libs.length > 1) {
+            File newest = libs[0];
+            for (File f : libs) {
+                if (f.lastModified() > newest.lastModified()) newest = f;
+            }
+            for (File f : libs) {
+                if (!f.equals(newest)) f.delete();
+            }
+        }
     }
 
     private static String computeStamp(String path) {
