@@ -61,4 +61,10 @@ object Configs {
     var welcomeSeen by delegateStateOf(lspApp.prefs.getBoolean(PREFS_WEL_SKIP, false)) {
         lspApp.prefs.edit().putBoolean(PREFS_WEL_SKIP, it).apply()
     }
+
+    private const val PREFS_OUTPUT_FULL_LOG = "output_full_log"
+
+    var outputFullLog by delegateStateOf(lspApp.prefs.getBoolean(PREFS_OUTPUT_FULL_LOG, false)) {
+        lspApp.prefs.edit().putBoolean(PREFS_OUTPUT_FULL_LOG, it).apply()
+    }
 }

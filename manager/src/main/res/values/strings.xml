@@ -170,6 +170,8 @@
     <string name="settings_keystore_wrong_alias_password">Wrong alias password</string>
     <string name="settings_storage_directory">change storage directory</string>
     <string name="settings_detail_patch_logs">Detail patch logs</string>
+    <string name="settings_output_full_log">Output manager log to media</string>
+    <string name="settings_output_full_log_summary">Write manager logs to Android/media/top.nkbe.npatch/log for debugging</string>
     <string name="settings_view_welcome">View guide</string>
     <string name="settings_view_welcome_summary">Review the welcome and permission guide</string>
     <string name="settings_manager_cache">Clear manager cache</string>

@@ -12,6 +12,7 @@ import top.nkbe.npatch.Patcher
 import top.nkbe.npatch.share.PatchConfig
 import nkbe.util.NeoPackageManager
 import nkbe.util.NeoPackageManager.AppInfo
+import top.nkbe.npatch.manager.ManagerLogger
 import top.nkbe.npatch.patch.util.Logger
 import top.nkbe.npatch.share.Constants
 
@@ -65,17 +66,20 @@ class NewPatchViewModel : ViewModel() {
             if (verbose) {
                 Log.d(TAG, msg)
                 logs += Log.DEBUG to msg
+                ManagerLogger.patchLog(Log.DEBUG, msg)
             }
         }
 
         override fun i(msg: String) {
             Log.i(TAG, msg)
             logs += Log.INFO to msg
+            ManagerLogger.patchLog(Log.INFO, msg)
         }
 
         override fun e(msg: String) {
             Log.e(TAG, msg)
             logs += Log.ERROR to msg
+            ManagerLogger.patchLog(Log.ERROR, msg)
         }
     }
 

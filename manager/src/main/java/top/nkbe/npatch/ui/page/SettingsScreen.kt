@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.DeleteSweep
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Info
@@ -61,6 +62,7 @@ import top.nkbe.npatch.config.ThemeMode
 import top.nkbe.npatch.config.ThemeSettings
 import top.nkbe.npatch.config.dataStore
 import top.nkbe.npatch.manager.ManagerCacheCleaner
+import top.nkbe.npatch.manager.ManagerLogger
 import top.nkbe.npatch.ui.activity.MainActivity
 import top.nkbe.npatch.ui.component.NPatchScaffold
 import top.nkbe.npatch.config.DEFAULT_CUSTOM_COLOR
@@ -137,6 +139,7 @@ fun SettingsScreen() {
                 LanguagePreference()
                 KeyStore()
                 DetailPatchLogs()
+                OutputFullLog()
                 WelcomeGuide()
                 StorageDirectory()
                 ClearManagerCache()
@@ -656,6 +659,22 @@ private fun DetailPatchLogs() {
         },
         checked = Configs.detailPatchLogs,
         onCheckedChange = { Configs.detailPatchLogs = it }
+    )
+}
+
+@Composable
+private fun OutputFullLog() {
+    SwitchPreference(
+        title = stringResource(R.string.settings_output_full_log),
+        summary = stringResource(R.string.settings_output_full_log_summary),
+        checked = Configs.outputFullLog,
+        startAction = {
+            SettingsStartIcon(Icons.Outlined.Description)
+        },
+        onCheckedChange = {
+            Configs.outputFullLog = it
+            if (!it) ManagerLogger.closeAndReset()
+        }
     )
 }
 
