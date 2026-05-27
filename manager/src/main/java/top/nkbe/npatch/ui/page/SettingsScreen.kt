@@ -673,7 +673,7 @@ private fun OutputFullLog() {
         },
         onCheckedChange = {
             Configs.outputFullLog = it
-            if (!it) ManagerLogger.closeAndReset()
+            ManagerLogger.setEnabled(it)
         }
     )
 }

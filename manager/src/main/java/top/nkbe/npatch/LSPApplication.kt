@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 import top.nkbe.npatch.manager.AppBroadcastReceiver
+import top.nkbe.npatch.manager.ManagerLogger
 import nkbe.util.NeoPackageManager
 import nkbe.util.ShizukuApi
 import java.io.File
@@ -58,6 +59,7 @@ class LSPApplication : Application() {
         filesDir.mkdir()
         tmpApkDir = cacheDir.resolve("apk").also { it.mkdir() }
         prefs = lspApp.getSharedPreferences("settings", Context.MODE_PRIVATE)
+        ManagerLogger.init()
         ShizukuApi.init()
         AppBroadcastReceiver.register(this)
         globalScope.launch { NeoPackageManager.fetchAppList() }

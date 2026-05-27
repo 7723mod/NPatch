@@ -3,9 +3,10 @@ package top.nkbe.npatch.manager
 import android.os.Environment
 import android.util.Log
 import top.nkbe.npatch.config.Configs
-import top.nkbe.npatch.lspApp
+import java.io.BufferedReader
 import java.io.File
 import java.io.FileOutputStream
+import java.io.InputStreamReader
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -14,76 +15,81 @@ object ManagerLogger {
 
     private const val TAG = "NPatch-ManagerLog"
     private val dateFormat = SimpleDateFormat("yyyyMMdd", Locale.US)
-    private val timeFormat = SimpleDateFormat("HH:mm:ss.SSS", Locale.US)
 
-    @Volatile private var out: FileOutputStream? = null
+    @Volatile private var logcatProcess: Process? = null
+    @Volatile private var logcatThread: Thread? = null
+    @Volatile private var fileOut: FileOutputStream? = null
     @Volatile private var currentDate: String = ""
 
-    fun i(tag: String, msg: String) {
-        Log.i(tag, msg)
-        write("I", tag, msg, null)
+    fun init() {
+        if (Configs.outputFullLog) start()
     }
 
-    fun w(tag: String, msg: String) {
-        Log.w(tag, msg)
-        write("W", tag, msg, null)
+    fun setEnabled(enabled: Boolean) {
+        if (enabled) start() else stop()
     }
 
-    fun e(tag: String, msg: String, tr: Throwable? = null) {
-        if (tr != null) Log.e(tag, msg, tr) else Log.e(tag, msg)
-        write("E", tag, msg, tr)
-    }
+    @Synchronized
+    private fun start() {
+        if (logcatProcess != null) return
+        try {
+            val pid = android.os.Process.myPid()
+            val process = ProcessBuilder(
+                "logcat", "-v", "threadtime", "--pid=$pid", "*:W"
+            ).redirectErrorStream(true).start()
+            logcatProcess = process
 
-    fun patchLog(level: Int, msg: String) {
-        val levelChar = when (level) {
-            android.util.Log.DEBUG -> "D"
-            android.util.Log.ERROR -> "E"
-            else -> "I"
+            val thread = Thread {
+                try {
+                    BufferedReader(InputStreamReader(process.inputStream)).use { reader ->
+                        var line = reader.readLine()
+                        while (line != null && !Thread.currentThread().isInterrupted) {
+                            writeLine(line)
+                            line = reader.readLine()
+                        }
+                    }
+                } catch (_: Exception) {
+                }
+            }
+            thread.isDaemon = true
+            thread.name = "NPatch-LogcatReader"
+            thread.start()
+            logcatThread = thread
+            Log.i(TAG, "ManagerLogger started for pid=$pid")
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to start ManagerLogger", e)
         }
-        write(levelChar, "Patcher", msg, null)
     }
 
-    fun isEnabled() = Configs.outputFullLog
+    @Synchronized
+    fun stop() {
+        logcatProcess?.destroy()
+        logcatProcess = null
+        logcatThread?.interrupt()
+        logcatThread = null
+        runCatching { fileOut?.close() }
+        fileOut = null
+        currentDate = ""
+    }
 
-    private fun write(level: String, tag: String, msg: String, tr: Throwable?) {
-        if (!Configs.outputFullLog) return
+    private fun writeLine(line: String) {
         synchronized(this) {
             try {
                 val today = dateFormat.format(Date())
-                if (out == null || today != currentDate) {
-                    out?.close()
+                if (fileOut == null || today != currentDate) {
+                    fileOut?.close()
                     val dir = File(
                         Environment.getExternalStorageDirectory(),
                         "Android/media/top.nkbe.npatch/log"
                     )
                     dir.mkdirs()
-                    out = FileOutputStream(File(dir, "$today-manager.log"), true)
+                    fileOut = FileOutputStream(File(dir, "$today-manager.log"), true)
                     currentDate = today
                 }
-                val time = timeFormat.format(Date())
-                val line = buildString {
-                    append(time).append(' ')
-                    append('[').append(level).append("] ")
-                    append(tag).append(": ")
-                    append(msg)
-                    if (tr != null) {
-                        append('\n').append(Log.getStackTraceString(tr))
-                    }
-                    append('\n')
-                }
-                out?.write(line.toByteArray())
-                out?.flush()
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to write log", e)
+                fileOut?.write((line + "\n").toByteArray())
+                fileOut?.flush()
+            } catch (_: Exception) {
             }
-        }
-    }
-
-    fun closeAndReset() {
-        synchronized(this) {
-            out?.close()
-            out = null
-            currentDate = ""
         }
     }
 }
