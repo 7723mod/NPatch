@@ -202,6 +202,11 @@ public class LSPApplication {
         logInfo("Load modules");
         LSPLoader.initModules(appLoadedApk);
         logInfo("Modules initialized");
+        try {
+            CacheCleaner.sweepModuleNativeCache(context.getApplicationInfo(), LSPLoader.getActiveModuleApkPaths());
+        } catch (Throwable e) {
+            Log.w(TAG, "Failed to sweep module native cache", e);
+        }
 
         switchAllClassLoader();
         SigBypass.doSigBypass(context, config.sigBypassLevel);
@@ -262,6 +267,8 @@ public class LSPApplication {
             Log.i(TAG, "Use manager: " + config.useManager);
             Log.i(TAG, "Signature bypass level: " + config.sigBypassLevel);
 
+            CacheCleaner.handlePatchUpgrade(appInfo, patchedApkPath);
+
             String loadedApkSourceDir = patchedApkPath;
             if (config.sigBypassLevel >= Constants.SIGBYPASS_BASIC) {
                 Path cacheApkPath = OriginApkHelper.prepareOriginApk(appInfo, baseClassLoader);
@@ -271,6 +278,11 @@ public class LSPApplication {
                 loadedApkSourceDir = cacheApkPath.toString();
                 if (nativeLibraryDir != null) {
                     appInfo.nativeLibraryDir = nativeLibraryDir.toString();
+                }
+                try {
+                    CacheCleaner.sweepOriginApkCache(appInfo, OriginApkHelper.getOriginalApkCrc(patchedApkPath));
+                } catch (IOException e) {
+                    Log.w(TAG, "Failed to sweep origin apk cache", e);
                 }
             }
             if (config.sigBypassLevel >= Constants.SIGBYPASS_HIGH) {

@@ -50,6 +50,17 @@ public class LSPLoader {
     private static final Map<String, ApplicationInfo> moduleRuntimeAppInfos = new ConcurrentHashMap<>();
     private static volatile boolean moduleSelfPathHooked;
 
+    public static Map<String, String> getActiveModuleApkPaths() {
+        Map<String, String> result = new java.util.HashMap<>();
+        for (Map.Entry<String, ApplicationInfo> e : moduleRuntimeAppInfos.entrySet()) {
+            ApplicationInfo info = e.getValue();
+            if (info != null && info.sourceDir != null) {
+                result.put(e.getKey(), info.sourceDir);
+            }
+        }
+        return result;
+    }
+
     public static void initModules(LoadedApk loadedApk) {
         registerModuleRuntimeAppInfos();
         installModuleSelfPathCompatibility();
