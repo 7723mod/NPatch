@@ -3,6 +3,7 @@ package top.nkbe.npatch.loader;
 import static top.nkbe.npatch.share.Constants.ORIGINAL_APK_ASSET_PATH;
 
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.Signature;
@@ -51,9 +52,12 @@ public class SigBypass {
     private static String cachedPatchedApkPath;
     private static int activeSigBypassLevel;
     private static boolean packageInfoConstructorHooked;
+    private static boolean applicationInfoConstructorHooked;
     private static boolean packageArchiveInfoHooked;
     private static boolean hasSigningCertificateHooked;
     private static boolean getPackageInfoHooked;
+    private static boolean getApplicationInfoHooked;
+    private static boolean apkPathAccessorsHooked;
     private static boolean javaIoHooked;
     private static boolean nativeOpenatEnabled;
     private static boolean seccompRedirectEnabled;
@@ -128,10 +132,55 @@ public class SigBypass {
         return checkCallerContext().isModule;
     }
 
+    private static void setReflectivePathField(ApplicationInfo applicationInfo, String fieldName, String path) {
+        try {
+            XposedHelpers.setObjectField(applicationInfo, fieldName, path);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private static boolean matchesPatchedApplicationInfo(Context context, ApplicationInfo applicationInfo) {
+        if (applicationInfo == null) return false;
+        if (cachedPatchedApkPath != null) {
+            if (cachedPatchedApkPath.equals(applicationInfo.sourceDir)
+                    || cachedPatchedApkPath.equals(applicationInfo.publicSourceDir)) {
+                return true;
+            }
+        }
+        return context != null && context.getPackageName().equals(applicationInfo.packageName);
+    }
+
+    private static void replaceApplicationInfoPaths(Context context, ApplicationInfo applicationInfo) {
+        if (applicationInfo == null || cachedOriginalApkPath == null) return;
+        if (!matchesPatchedApplicationInfo(context, applicationInfo)) return;
+
+        applicationInfo.sourceDir = cachedOriginalApkPath;
+        applicationInfo.publicSourceDir = cachedOriginalApkPath;
+        setReflectivePathField(applicationInfo, "scanSourceDir", cachedOriginalApkPath);
+        setReflectivePathField(applicationInfo, "scanPublicSourceDir", cachedOriginalApkPath);
+    }
+
+    private static boolean shouldSpoofPath(Object receiver, Context context, Object result) {
+        if (!(result instanceof String path) || cachedOriginalApkPath == null) return false;
+        if (path.equals(cachedOriginalApkPath)) return false;
+        if (cachedPatchedApkPath != null && path.equals(cachedPatchedApkPath)) return true;
+
+        if (receiver instanceof Context receiverContext) {
+            try {
+                if (!context.getPackageName().equals(receiverContext.getPackageName())) return false;
+                return path.equals(receiverContext.getApplicationInfo().sourceDir)
+                        || path.equals(receiverContext.getApplicationInfo().publicSourceDir);
+            } catch (Throwable ignored) {
+            }
+        }
+        return false;
+    }
+
     private static void replaceSignature(Context context, PackageInfo packageInfo) {
         if (packageInfo == null) return;
         boolean hasSignature = (packageInfo.signatures != null && packageInfo.signatures.length != 0)
                 || packageInfo.signingInfo != null;
+        replaceApplicationInfoPaths(context, packageInfo.applicationInfo);
         if (!hasSignature) return;
 
         String packageName = packageInfo.packageName;
@@ -241,6 +290,22 @@ public class SigBypass {
         }
     }
 
+    private static void hookApplicationInfoConstructor(Context context) {
+        if (applicationInfoConstructorHooked) return;
+        try {
+            XposedHelpers.findAndHookConstructor(ApplicationInfo.class, Parcel.class, new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) {
+                    if (isModuleCaller()) return;
+                    replaceApplicationInfoPaths(context, (ApplicationInfo) param.thisObject);
+                }
+            });
+            applicationInfoConstructorHooked = true;
+        } catch (Throwable e) {
+            Log.w(TAG, "fail to hook ApplicationInfo(Parcel); path spoof disabled", e);
+        }
+    }
+
     private static void hookGetPackageInfo(Context context) {
         if (getPackageInfoHooked) return;
         try {
@@ -261,6 +326,74 @@ public class SigBypass {
             getPackageInfoHooked = true;
         } catch (Throwable e) {
             Log.w(TAG, "fail to hook getPackageInfo", e);
+        }
+    }
+
+    private static void hookGetApplicationInfo(Context context) {
+        if (getApplicationInfoHooked) return;
+        try {
+            XC_MethodHook hook = new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) {
+                    if (isModuleCaller()) return;
+                    replaceApplicationInfoPaths(context, (ApplicationInfo) param.getResult());
+                }
+            };
+            XposedBridge.hookAllMethods(PackageManager.class, "getApplicationInfo", hook);
+            XposedBridge.hookAllMethods(PackageManager.class, "getApplicationInfoAsUser", hook);
+            try {
+                Class<?> appPm = Class.forName("android.app.ApplicationPackageManager");
+                XposedBridge.hookAllMethods(appPm, "getApplicationInfo", hook);
+                XposedBridge.hookAllMethods(appPm, "getApplicationInfoAsUser", hook);
+            } catch (Throwable ignored) {}
+            getApplicationInfoHooked = true;
+        } catch (Throwable e) {
+            Log.w(TAG, "fail to hook getApplicationInfo", e);
+        }
+    }
+
+    private static void hookApkPathAccessors(Context context) {
+        if (apkPathAccessorsHooked) return;
+
+        XC_MethodHook pathHook = new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) {
+                if (isModuleCaller()) return;
+                if (shouldSpoofPath(param.thisObject, context, param.getResult())) {
+                    param.setResult(cachedOriginalApkPath);
+                }
+            }
+        };
+
+        boolean hookedAny = false;
+        hookedAny |= hookAllMethodsQuietly(Context.class, "getPackageCodePath", pathHook);
+        hookedAny |= hookAllMethodsQuietly(Context.class, "getPackageResourcePath", pathHook);
+        hookedAny |= hookAllMethodsQuietly("android.content.ContextWrapper", "getPackageCodePath", pathHook);
+        hookedAny |= hookAllMethodsQuietly("android.content.ContextWrapper", "getPackageResourcePath", pathHook);
+        hookedAny |= hookAllMethodsQuietly("android.app.ContextImpl", "getPackageCodePath", pathHook);
+        hookedAny |= hookAllMethodsQuietly("android.app.ContextImpl", "getPackageResourcePath", pathHook);
+        hookedAny |= hookAllMethodsQuietly("android.app.LoadedApk", "getResDir", pathHook);
+
+        apkPathAccessorsHooked = hookedAny;
+        if (!hookedAny) {
+            Log.w(TAG, "fail to hook APK path accessors");
+        }
+    }
+
+    private static boolean hookAllMethodsQuietly(Class<?> clazz, String methodName, XC_MethodHook hook) {
+        try {
+            XposedBridge.hookAllMethods(clazz, methodName, hook);
+            return true;
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    private static boolean hookAllMethodsQuietly(String className, String methodName, XC_MethodHook hook) {
+        try {
+            return hookAllMethodsQuietly(Class.forName(className), methodName, hook);
+        } catch (Throwable ignored) {
+            return false;
         }
     }
 
@@ -423,10 +556,13 @@ public class SigBypass {
         if (sigBypassLevel >= Constants.SIGBYPASS_HIGH) {
             hookPackageArchiveInfo(context);
             hookHasSigningCertificate(context);
+            hookGetApplicationInfo(context);
+            hookApkPathAccessors(context);
         }
 
         if (sigBypassLevel >= Constants.SIGBYPASS_EXTREME) {
             hookPackageInfoConstructor(context);
+            hookApplicationInfoConstructor(context);
             hookGetPackageInfo(context);
         }
 
