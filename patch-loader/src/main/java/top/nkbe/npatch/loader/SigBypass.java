@@ -10,6 +10,7 @@ import android.content.pm.Signature;
 import android.content.pm.SigningInfo;
 import android.os.Build;
 import android.os.Parcel;
+import android.os.Parcelable;
 import android.os.Process;
 import android.util.Base64;
 import android.util.Log;
@@ -58,6 +59,8 @@ public class SigBypass {
     private static boolean getPackageInfoHooked;
     private static boolean getApplicationInfoHooked;
     private static boolean apkPathAccessorsHooked;
+    private static boolean packageInfoCreatorHooked;
+    private static boolean packageParserHooked;
     private static boolean javaIoHooked;
     private static boolean nativeOpenatEnabled;
     private static boolean seccompRedirectEnabled;
@@ -223,6 +226,26 @@ public class SigBypass {
         }
     }
 
+    private static void clearMapFieldQuietly(Class<?> clazz, String fieldName) {
+        try {
+            Object map = XposedHelpers.getStaticObjectField(clazz, fieldName);
+            if (map instanceof Map<?, ?> m) {
+                m.clear();
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private static void clearPackageInfoCreatorCaches() {
+        try {
+            Object cache = XposedHelpers.getStaticObjectField(PackageManager.class, "sPackageInfoCache");
+            XposedHelpers.callMethod(cache, "clear");
+        } catch (Throwable ignored) {
+        }
+        clearMapFieldQuietly(Parcel.class, "mCreators");
+        clearMapFieldQuietly(Parcel.class, "sPairedCreators");
+    }
+
     private static Signature getOriginalSignature(Context context, String packageName) {
         if (packageName == null) return null;
         Signature cached = signatureCache.get(packageName);
@@ -275,8 +298,8 @@ public class SigBypass {
         return false;
     }
 
-    private static void hookPackageInfoConstructor(Context context) {
-        if (packageInfoConstructorHooked) return;
+    private static boolean hookPackageInfoConstructor(Context context) {
+        if (packageInfoConstructorHooked) return true;
         try {
             XposedHelpers.findAndHookConstructor(PackageInfo.class, Parcel.class, new XC_MethodHook() {
                 @Override
@@ -285,8 +308,56 @@ public class SigBypass {
                 }
             });
             packageInfoConstructorHooked = true;
+            return true;
         } catch (Throwable e) {
             Log.w(TAG, "fail to hook PackageInfo(Parcel); IPC signature replacement disabled", e);
+            return false;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void hookPackageInfoCreator(Context context) {
+        if (packageInfoCreatorHooked) return;
+        try {
+            Parcelable.Creator<PackageInfo> originalCreator =
+                    (Parcelable.Creator<PackageInfo>) XposedHelpers.getStaticObjectField(PackageInfo.class, "CREATOR");
+            Parcelable.Creator<PackageInfo> wrapper = new Parcelable.Creator<>() {
+                @Override
+                public PackageInfo createFromParcel(Parcel source) {
+                    PackageInfo packageInfo = originalCreator.createFromParcel(source);
+                    replaceSignature(context, packageInfo);
+                    return packageInfo;
+                }
+
+                @Override
+                public PackageInfo[] newArray(int size) {
+                    return originalCreator.newArray(size);
+                }
+            };
+            XposedHelpers.setStaticObjectField(PackageInfo.class, "CREATOR", wrapper);
+            clearPackageInfoCreatorCaches();
+            packageInfoCreatorHooked = true;
+        } catch (Throwable e) {
+            Log.w(TAG, "fail to replace PackageInfo.CREATOR", e);
+        }
+    }
+
+    private static void hookPackageParserGeneratePackageInfo(Context context) {
+        if (packageParserHooked) return;
+        try {
+            Class<?> packageParser = Class.forName("android.content.pm.PackageParser");
+            XposedBridge.hookAllMethods(packageParser, "generatePackageInfo", new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) {
+                    Object result = param.getResult();
+                    if (result instanceof PackageInfo packageInfo) {
+                        replaceSignature(context, packageInfo);
+                    }
+                }
+            });
+            packageParserHooked = true;
+        } catch (Throwable e) {
+            Log.w(TAG, "fail to hook PackageParser.generatePackageInfo", e);
         }
     }
 
@@ -561,7 +632,11 @@ public class SigBypass {
         }
 
         if (sigBypassLevel >= Constants.SIGBYPASS_EXTREME) {
-            hookPackageInfoConstructor(context);
+            boolean parcelHooked = hookPackageInfoConstructor(context);
+            if (!parcelHooked) {
+                hookPackageInfoCreator(context);
+            }
+            hookPackageParserGeneratePackageInfo(context);
             hookApplicationInfoConstructor(context);
             hookGetPackageInfo(context);
         }
