@@ -20,6 +20,9 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import dev.rikka.tools.refine.Refine
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.parcelize.Parcelize
@@ -44,6 +47,10 @@ object NeoPackageManager {
 
     const val STATUS_USER_CANCELLED = -2
 
+    private val appScanDispatcher by lazy {
+        Dispatchers.IO.limitedParallelism(maxOf(2, minOf(Runtime.getRuntime().availableProcessors(), 8)))
+    }
+
     @Parcelize
     class AppInfo(
         val app: ApplicationInfo,
@@ -65,7 +72,6 @@ object NeoPackageManager {
     suspend fun fetchAppList() {
         val result = withContext(Dispatchers.IO) {
             val pm = lspApp.packageManager
-            val collection = mutableListOf<AppInfo>()
             val applicationList: List<ApplicationInfo>
 
             if (ShizukuApi.isReady) {
@@ -81,12 +87,20 @@ object NeoPackageManager {
                 applicationList = pm.getInstalledApplications(PackageManager.GET_META_DATA)
             }
 
-            applicationList.forEach {
-                val label = pm.getApplicationLabel(it)
-                val moduleMetadata = runCatching {
-                    ModuleMetadataReader.read(it, pm)
-                }.getOrNull()
-                collection.add(AppInfo(it, label.toString(), moduleMetadata))
+            val collection = coroutineScope {
+                applicationList.map { appInfo ->
+                    async(appScanDispatcher) {
+                        val label = runCatching { pm.getApplicationLabel(appInfo).toString() }
+                            .getOrElse { throwable ->
+                                Log.w(TAG, "Failed to load label for ${appInfo.packageName}", throwable)
+                                appInfo.packageName
+                            }
+                        val moduleMetadata = runCatching {
+                            ModuleMetadataReader.read(appInfo, pm)
+                        }.getOrNull()
+                        AppInfo(appInfo, label, moduleMetadata)
+                    }
+                }.awaitAll().toMutableList()
             }
 
             collection.sortWith(compareBy(Collator.getInstance(Locale.getDefault()), AppInfo::label))
