@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <cstring>
 #include <fcntl.h>
+#include <linux/audit.h>
 #include <limits.h>
 #include <linux/filter.h>
 #include <linux/futex.h>
@@ -752,25 +753,28 @@ namespace lspd {
         if (signo != SIGSYS) return;
 
         auto* ctx = reinterpret_cast<ucontext_t*>(context);
-        SeccompRequest req;
-        req.sys_no = ctx->uc_mcontext.regs[8];
-        for (int i = 0; i < 6; ++i) {
-            req.args[i] = ctx->uc_mcontext.regs[i];
-        }
-        req.state.store(0, std::memory_order_relaxed);
-
-        SeccompRequest* req_ptr = &req;
-        ssize_t written = write(g_req_pipe[1], &req_ptr, sizeof(req_ptr));
-        if (written != sizeof(req_ptr)) {
-            ctx->uc_mcontext.regs[0] = -EAGAIN;
+        if (ctx->uc_mcontext.regs[8] != __NR_openat) {
             return;
         }
 
-        while (req.state.load(std::memory_order_acquire) == 0) {
-            futex_wait(&req.state, 0);
+        auto* pathname = reinterpret_cast<const char*>(ctx->uc_mcontext.regs[1]);
+        const char* redirected_path = pathname;
+        if (pathname != nullptr
+                && g_target_path[0] != '\0'
+                && g_redirect_path[0] != '\0'
+                && path_matches_target_locked(pathname)) {
+            redirected_path = g_redirect_path;
         }
 
-        ctx->uc_mcontext.regs[0] = req.result;
+        // Match FPA seccomp-v2: replay the trapped openat directly from SIGSYS
+        // and put the libc-style return value back into x0.
+        ctx->uc_mcontext.regs[0] = syscall(__NR_openat,
+                                           ctx->uc_mcontext.regs[0],
+                                           redirected_path,
+                                           ctx->uc_mcontext.regs[2],
+                                           ctx->uc_mcontext.regs[3],
+                                           ctx->uc_mcontext.regs[4],
+                                           ctx->uc_mcontext.regs[5]);
     }
 
     static bool ensure_trusted_thread() {
@@ -778,35 +782,12 @@ namespace lspd {
             return true;
         }
 
-        if (pipe2(g_req_pipe, O_CLOEXEC) != 0) {
-            LOGE("FunPatch: failed to create seccomp request pipe");
-            return false;
-        }
-
-        int flags = fcntl(g_req_pipe[1], F_GETFL, 0);
-        if (flags >= 0) {
-            fcntl(g_req_pipe[1], F_SETFL, flags | O_NONBLOCK);
-        }
-
-        if (pthread_create(&g_trusted_thread, nullptr, trusted_thread_loop, nullptr) != 0) {
-            LOGE("FunPatch: failed to create trusted seccomp thread");
-            close(g_req_pipe[0]);
-            close(g_req_pipe[1]);
-            g_req_pipe[0] = -1;
-            g_req_pipe[1] = -1;
-            return false;
-        }
-
         struct sigaction sa;
         memset(&sa, 0, sizeof(sa));
         sa.sa_sigaction = sigsys_handler;
-        sa.sa_flags = SA_SIGINFO | SA_NODEFER;
+        sa.sa_flags = SA_SIGINFO;
         if (sigaction(SIGSYS, &sa, nullptr) < 0) {
             LOGE("FunPatch: failed to register SIGSYS handler");
-            close(g_req_pipe[0]);
-            close(g_req_pipe[1]);
-            g_req_pipe[0] = -1;
-            g_req_pipe[1] = -1;
             return false;
         }
 
@@ -820,33 +801,12 @@ namespace lspd {
         }
 
         struct sock_filter filter[] = {
+                BPF_STMT(BPF_LD + BPF_W + BPF_ABS, offsetof(struct seccomp_data, arch)),
+                BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, AUDIT_ARCH_AARCH64, 1, 0),
+                BPF_STMT(BPF_RET + BPF_K, SECCOMP_RET_KILL_PROCESS),
                 BPF_STMT(BPF_LD + BPF_W + BPF_ABS, offsetof(struct seccomp_data, nr)),
                 BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, __NR_openat, 0, 1),
                 BPF_STMT(BPF_RET + BPF_K, SECCOMP_RET_TRAP),
-#ifdef __NR_readlinkat
-                BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, __NR_readlinkat, 0, 1),
-                BPF_STMT(BPF_RET + BPF_K, SECCOMP_RET_TRAP),
-#endif
-#ifdef __NR_faccessat
-                BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, __NR_faccessat, 0, 1),
-                BPF_STMT(BPF_RET + BPF_K, SECCOMP_RET_TRAP),
-#endif
-#ifdef __NR_faccessat2
-                BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, __NR_faccessat2, 0, 1),
-                BPF_STMT(BPF_RET + BPF_K, SECCOMP_RET_TRAP),
-#endif
-#ifdef __NR_statx
-                BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, __NR_statx, 0, 1),
-                BPF_STMT(BPF_RET + BPF_K, SECCOMP_RET_TRAP),
-#endif
-#ifdef __NR_newfstatat
-                BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, __NR_newfstatat, 0, 1),
-                BPF_STMT(BPF_RET + BPF_K, SECCOMP_RET_TRAP),
-#endif
-#ifdef __NR_openat2
-                BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, __NR_openat2, 0, 1),
-                BPF_STMT(BPF_RET + BPF_K, SECCOMP_RET_TRAP),
-#endif
                 BPF_STMT(BPF_RET + BPF_K, SECCOMP_RET_ALLOW),
         };
 
