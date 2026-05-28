@@ -12,8 +12,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,6 +54,9 @@ fun MainScreen(
         initialPage = safeSelectedTab,
         pageCount = { tabs.size }
     )
+    val settledPage by remember(pagerState) {
+        derivedStateOf { pagerState.settledPage }
+    }
     val scope = rememberCoroutineScope()
     val useFloatingGlassBottomBar = LocalFloatingGlassBottomBar.current
     val useFloatingGlassBottomBarBlur = LocalFloatingGlassBottomBarBlur.current
@@ -71,7 +77,7 @@ fun MainScreen(
     }
 
     LaunchedEffect(navigator, pagerState) {
-        snapshotFlow { pagerState.currentPage }
+        snapshotFlow { pagerState.settledPage }
             .distinctUntilChanged()
             .collect(onSelectedTabChange)
     }
@@ -101,7 +107,7 @@ fun MainScreen(
                         modifier = Modifier.padding(horizontal = 12.dp),
                     ) {
                         tabs.forEachIndexed { index, tab ->
-                            val isSelected = pagerState.currentPage == index
+                            val isSelected = settledPage == index
                             val label = stringResource(tab.labelRes)
                             FloatingGlassBottomBarItem(
                                 onClick = {
@@ -123,7 +129,7 @@ fun MainScreen(
             } else {
                 NavigationBar(modifier = Modifier.background(backgroundAwareCardColors().color)) {
                     tabs.forEachIndexed { index, tab ->
-                        val isSelected = pagerState.currentPage == index
+                        val isSelected = settledPage == index
                         NavigationBarItem(
                             selected = isSelected,
                             onClick = {

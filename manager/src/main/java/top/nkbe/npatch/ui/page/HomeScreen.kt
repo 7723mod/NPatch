@@ -24,6 +24,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -328,12 +330,19 @@ private fun InfoText(title: String, content: String, bottomPadding: Dp = 10.dp) 
         fontSize = MiuixTheme.textStyles.headline1.fontSize,
         color = MiuixTheme.colorScheme.onSurface,
         fontWeight = FontWeight.Medium,
+        modifier = Modifier.semantics {
+            contentDescription = title
+        }
     )
     Text(
         text = content,
         fontSize = MiuixTheme.textStyles.body2.fontSize,
         color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-        modifier = Modifier.padding(top = 2.dp, bottom = bottomPadding)
+        modifier = Modifier
+            .padding(top = 2.dp, bottom = bottomPadding)
+            .semantics {
+                contentDescription = "$title $content"
+            }
     )
 }
 

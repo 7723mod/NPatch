@@ -193,6 +193,9 @@
     <string name="settings_floating_glass_bottom_bar_blur_summary">为悬浮底栏启用模糊、鲜明、透镜与高光效果</string>
     <string name="settings_custom_background_image">自定义背景图片</string>
     <string name="settings_clear">清除</string>
+    <string name="accessibility_clear">清除</string>
+    <string name="accessibility_sort">排序</string>
+    <string name="accessibility_selected">已选择</string>
     <string name="settings_builtin_theme_color">内置主題色</string>
     <string name="settings_color_cherry_blossom">樱花粉</string>
     <string name="settings_color_default_blue">冷淡蓝</string>
@@ -208,6 +211,7 @@
 
     <!-- Modules Repo-->
     <string name="sort_by_name">应用程序名称</string>
+    <string name="sort_by_stars">星标</string>
     <string name="sort_by_package_name">包名</string>
     <string name="sort_by_install_time">安装时间</string>
     <string name="sort_by_update_time">更新时间</string>

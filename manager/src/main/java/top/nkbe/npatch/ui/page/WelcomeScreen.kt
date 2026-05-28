@@ -56,6 +56,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
@@ -189,6 +191,7 @@ fun WelcomeScreen(
 
 @Composable
 private fun WelcomeIntroPage() {
+    val versionLabel = stringResource(R.string.welcome_version, BuildConfig.VERSION_NAME)
     WelcomePageContainer {
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -218,10 +221,13 @@ private fun WelcomeIntroPage() {
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    text = stringResource(R.string.welcome_version, BuildConfig.VERSION_NAME),
+                    text = versionLabel,
                     style = MiuixTheme.textStyles.body2,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.semantics {
+                        contentDescription = versionLabel
+                    }
                 )
                 Spacer(Modifier.height(18.dp))
                 Text(
@@ -331,6 +337,10 @@ private fun OptionalFeatureCard() {
     }
     val containerColor = if (isGranted) MiuixTheme.colorScheme.primaryContainer else warningContainer
     val contentColor = if (isGranted) MiuixTheme.colorScheme.onPrimaryContainer else warningContent
+    val shizukuApiVersion = ShizukuApi.getVersionOrNull()
+    val shizukuStatusDescription = shizukuApiVersion?.let {
+        stringResource(R.string.home_api_version) + " $it"
+    } ?: stringResource(R.string.home_shizuku_warning)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -369,10 +379,13 @@ private fun OptionalFeatureCard() {
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = ShizukuApi.getVersionOrNull()?.let { "API $it" }
+                    text = shizukuApiVersion?.let { "API $it" }
                         ?: stringResource(R.string.home_shizuku_warning),
                     style = MiuixTheme.textStyles.body2,
-                    color = contentColor.copy(alpha = 0.82f)
+                    color = contentColor.copy(alpha = 0.82f),
+                    modifier = Modifier.semantics {
+                        contentDescription = shizukuStatusDescription
+                    }
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(

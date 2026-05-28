@@ -30,12 +30,11 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import nkbe.util.NeoPackageManager
 import top.nkbe.npatch.R
+import top.nkbe.npatch.ui.component.AccessibleMenuItem
 import top.nkbe.npatch.ui.component.AppItem
 import top.nkbe.npatch.ui.viewmodel.manage.ModuleManageViewModel
 import top.nkbe.npatch.ui.util.ensureVisibleByMix
 import top.nkbe.npatch.ui.util.relativeLuminance
-import top.yukonga.miuix.kmp.basic.DropdownDefaults
-import top.yukonga.miuix.kmp.basic.DropdownImpl
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
@@ -269,17 +268,13 @@ fun ModuleManageBody(
 
                             ListPopupColumn {
                                 actions.forEachIndexed { index, (text, action) ->
-                                    DropdownImpl(
+                                    AccessibleMenuItem(
                                         text = text,
-                                        optionSize = actions.size,
-                                        isSelected = false,
-                                        dropdownColors = DropdownDefaults.dropdownColors(),
-                                        onSelectedIndexChange = {
+                                        onClick = {
                                             hapticFeedback.performHapticFeedback(HapticFeedbackType.Confirm)
                                             showDropdown.value = false
                                             action()
-                                        },
-                                        index = index
+                                        }
                                     )
                                 }
                             }

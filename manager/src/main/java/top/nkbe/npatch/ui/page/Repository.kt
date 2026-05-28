@@ -39,6 +39,7 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import top.nkbe.npatch.R
+import top.nkbe.npatch.ui.component.AccessibleMenuItem
 import top.nkbe.npatch.ui.component.SearchBarFake
 import top.nkbe.npatch.ui.component.SearchBox
 import top.nkbe.npatch.ui.component.SearchPager
@@ -52,7 +53,6 @@ import top.nkbe.npatch.ui.viewmodel.RepoSort
 import top.nkbe.npatch.ui.viewmodel.RepoUiModel
 import top.nkbe.npatch.ui.viewmodel.RepositoryViewModel
 import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.DropdownImpl
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -108,7 +108,7 @@ fun RepositoryScreen(
         stringResource(R.string.sort_by_update_time),
         stringResource(R.string.sort_by_install_time),
         stringResource(R.string.sort_by_name),
-        "Stars"
+        stringResource(R.string.sort_by_stars)
     )
 
     LaunchedEffect(searchStatus.searchText) {
@@ -135,7 +135,7 @@ fun RepositoryScreen(
                             IconButton(onClick = { showSortMenu.value = true }) {
                                 Icon(
                                     imageVector = MiuixIcons.Regular.Sort,
-                                    contentDescription = "Sort"
+                                    contentDescription = stringResource(R.string.accessibility_sort)
                                 )
                             }
                             OverlayListPopup(
@@ -144,12 +144,10 @@ fun RepositoryScreen(
                                 onDismissRequest = { showSortMenu.value = false }
                             ) {
                                 ListPopupColumn {
-                                    DropdownImpl(
+                                    AccessibleMenuItem(
                                         text = stringResource(R.string.sort_upgradable_first),
-                                        optionSize = sortOptions.size + 1,
-                                        isSelected = isUpgradableFirst,
-                                        index = 0,
-                                        onSelectedIndexChange = {
+                                        selected = isUpgradableFirst,
+                                        onClick = {
                                             viewModel.toggleUpgradableFirst()
                                             showSortMenu.value = false
                                         }
@@ -161,12 +159,10 @@ fun RepositoryScreen(
                                             2 -> RepoSort.NAME
                                             else -> RepoSort.STARS
                                         }
-                                        DropdownImpl(
+                                        AccessibleMenuItem(
                                             text = text,
-                                            optionSize = sortOptions.size + 1,
-                                            isSelected = currentSort == targetSort,
-                                            index = index + 1,
-                                            onSelectedIndexChange = {
+                                            selected = currentSort == targetSort,
+                                            onClick = {
                                                 viewModel.setSortOrder(targetSort)
                                                 showSortMenu.value = false
                                             }
@@ -394,7 +390,7 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = MiuixIcons.Regular.Favorites,
-                        contentDescription = "Stars",
+                        contentDescription = stringResource(R.string.sort_by_stars),
                         tint = colorScheme.onSurfaceVariantSummary.copy(alpha = 0.7f),
                         modifier = Modifier.size(14.dp)
                     )
@@ -410,7 +406,7 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = MiuixIcons.Regular.Recent,
-                        contentDescription = "Updated",
+                        contentDescription = stringResource(R.string.sort_by_update_time),
                         tint = colorScheme.onSurfaceVariantSummary.copy(alpha = 0.6f),
                         modifier = Modifier.size(14.dp)
                     )
@@ -430,12 +426,9 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
                 onDismissRequest = { showMenu.value = false }
             ) {
                 ListPopupColumn {
-                    DropdownImpl(
+                    AccessibleMenuItem(
                         text = androidx.compose.ui.res.stringResource(R.string.menu_open_in_browser),
-                        optionSize = 2,
-                        isSelected = false,
-                        index = 0,
-                        onSelectedIndexChange = {
+                        onClick = {
                             val url = "https://modules.lsposed.org/module/${item.module.name}"
                             val intent = Intent(
                                 Intent.ACTION_VIEW,
@@ -446,12 +439,9 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
                             showMenu.value = false
                         }
                     )
-                    DropdownImpl(
+                    AccessibleMenuItem(
                         text = androidx.compose.ui.res.stringResource(R.string.download_latest_version),
-                        optionSize = 2,
-                        isSelected = false,
-                        index = 1,
-                        onSelectedIndexChange = {
+                        onClick = {
                             val url = if (!module.sourceUrl.isNullOrEmpty()) {
                                 if (module.sourceUrl!!.endsWith("/")) {
                                     "${module.sourceUrl}releases/latest"

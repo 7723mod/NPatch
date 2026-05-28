@@ -51,6 +51,7 @@ import top.nkbe.npatch.manager.ModuleActivationController
 import top.nkbe.npatch.share.Constants
 import top.nkbe.npatch.share.LSPConfig
 
+import top.nkbe.npatch.ui.component.AccessibleMenuItem
 import top.nkbe.npatch.ui.component.AppItem
 import top.nkbe.npatch.ui.page.ACTION_APPLIST
 import top.nkbe.npatch.ui.page.ACTION_STORAGE
@@ -63,8 +64,6 @@ import top.nkbe.npatch.ui.viewstate.ProcessingState
 import nkbe.util.NeoPackageManager
 import nkbe.util.ShizukuApi
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
-import top.yukonga.miuix.kmp.basic.DropdownDefaults
-import top.yukonga.miuix.kmp.basic.DropdownImpl
 import top.yukonga.miuix.kmp.basic.FloatingActionButton
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
@@ -400,17 +399,13 @@ fun AppManageBody(
 
                             ListPopupColumn {
                                 actions.forEachIndexed { index, (text, action) ->
-                                    DropdownImpl(
+                                    AccessibleMenuItem(
                                         text = text,
-                                        optionSize = actions.size,
-                                        isSelected = false,
-                                        dropdownColors = DropdownDefaults.dropdownColors(),
-                                        onSelectedIndexChange = {
+                                        onClick = {
                                             hapticFeedback.performHapticFeedback(HapticFeedbackType.Confirm)
                                             showDropdown.value = false
                                             action()
-                                        },
-                                        index = index
+                                        }
                                     )
                                 }
                             }

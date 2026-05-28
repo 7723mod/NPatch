@@ -11,10 +11,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import top.nkbe.npatch.R
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import androidx.compose.ui.res.stringResource
 
 object SelectionColumnScope {
 
@@ -33,13 +39,19 @@ object SelectionColumnScope {
             else Color.Transparent,
             label = "SelectionItemBg"
         ).value
+        val selectedLabel = stringResource(R.string.accessibility_selected)
+        val spokenTitle = if (selected) "$title, $selectedLabel" else title
 
         Row(
             modifier = modifier
                 .fillMaxWidth()
                 .heightIn(min = 72.dp)
                 .background(backgroundColor)
-                .clickable { onClick() } 
+                .semantics(mergeDescendants = true) {
+                    role = Role.Button
+                    contentDescription = spokenTitle
+                }
+                .clickable { onClick() }
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically

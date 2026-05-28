@@ -60,6 +60,9 @@ fun ManageScreen(
         initialPage = safeSelectedPage,
         pageCount = { tabTitles.size }
     )
+    val settledPage by remember(pagerState) {
+        derivedStateOf { pagerState.settledPage }
+    }
     val scrollBehavior = MiuixScrollBehavior()
 
     val manageSearchLabel = stringResource(R.string.manage_search)
@@ -80,17 +83,17 @@ fun ManageScreen(
     }
 
     LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.currentPage }
+        snapshotFlow { pagerState.settledPage }
             .distinctUntilChanged()
             .collect(onSelectedPageChange)
     }
 
     LaunchedEffect(
-        pagerState.currentPage,
+        settledPage,
         ShizukuApi.isReady,
         moduleManageViewModel.enabledActivationPackagesKey
     ) {
-        if (pagerState.currentPage == 1) {
+        if (settledPage == 1) {
             moduleManageViewModel.refreshScopedActivationState()
             if (ShizukuApi.isReady) {
                 moduleManageViewModel.refreshEnabledActivations()
@@ -109,7 +112,7 @@ fun ManageScreen(
             }
         },
         floatingActionButton = {
-            if (pagerState.currentPage == 0) {
+            if (settledPage == 0) {
                 AppManageFab(
                     navigator = navigator,
                     modifier = if (useFloatingGlassBottomBar) {
@@ -128,7 +131,7 @@ fun ManageScreen(
                         SearchBar(status, padding)
                         TabRow(
                             tabs = tabTitles,
-                            selectedTabIndex = pagerState.currentPage,
+                            selectedTabIndex = settledPage,
                             onTabSelected = {
                                 onSelectedPageChange(it)
                                 scope.launch { pagerState.animateScrollToPage(it) }
@@ -169,7 +172,7 @@ fun ManageScreen(
                     SearchBarFake(status.label, topPadding, innerPad)
                     TabRow(
                         tabs = tabTitles,
-                        selectedTabIndex = pagerState.currentPage,
+                        selectedTabIndex = settledPage,
                         onTabSelected = {
                             onSelectedPageChange(it)
                             scope.launch { pagerState.animateScrollToPage(it) }

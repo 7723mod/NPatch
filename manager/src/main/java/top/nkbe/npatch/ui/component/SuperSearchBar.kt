@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -60,10 +61,15 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.imeAction
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
@@ -364,7 +370,10 @@ fun SearchBar(
     searchBarTopPadding: Dp = 12.dp,
 ) {
     val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
     var expanded by rememberSaveable { mutableStateOf(false) }
+    val imeBottomPadding = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
+    val clearLabel = stringResource(top.nkbe.npatch.R.string.accessibility_clear)
 
     InputField(
         query = searchStatus.searchText,
@@ -373,7 +382,7 @@ fun SearchBar(
         leadingIcon = {
             Icon(
                 imageVector = MiuixIcons.Basic.Search,
-                contentDescription = "back",
+                contentDescription = null,
                 modifier = Modifier
                     .size(44.dp)
                     .padding(start = 16.dp, end = 8.dp),
@@ -389,10 +398,13 @@ fun SearchBar(
                 Icon(
                     imageVector = MiuixIcons.Basic.SearchCleanup,
                     tint = colorScheme.onSurface,
-                    contentDescription = "Clean",
+                    contentDescription = null,
                     modifier = Modifier
                         .size(44.dp)
                         .padding(start = 8.dp, end = 16.dp)
+                        .clearAndSetSemantics {
+                            contentDescription = clearLabel
+                        }
                         .clickable(
                             interactionSource = null,
                             indication = null
@@ -406,7 +418,10 @@ fun SearchBar(
             .fillMaxWidth()
             .padding(horizontal = 12.dp)
             .padding(top = searchBarTopPadding, bottom = 6.dp)
-            .focusRequester(focusRequester),
+            .focusRequester(focusRequester)
+            .semantics {
+                imeAction = ImeAction.Search
+            },
         onSearch = { it },
         expanded = searchStatus.shouldExpand(),
         onExpandedChange = {
@@ -417,6 +432,11 @@ fun SearchBar(
         if (!expanded && searchStatus.shouldExpand()) {
             focusRequester.requestFocus()
             expanded = true
+        }
+    }
+    LaunchedEffect(searchStatus.shouldExpand(), imeBottomPadding) {
+        if (searchStatus.shouldExpand() && imeBottomPadding == 0.dp) {
+            focusManager.clearFocus(force = true)
         }
     }
 }
@@ -435,7 +455,7 @@ fun SearchBarFake(
         leadingIcon = {
             Icon(
                 imageVector = MiuixIcons.Basic.Search,
-                contentDescription = "Clean",
+                contentDescription = null,
                 modifier = Modifier
                     .size(44.dp)
                     .padding(start = 16.dp, end = 8.dp),
@@ -448,7 +468,10 @@ fun SearchBarFake(
                 start = innerPadding.calculateStartPadding(layoutDirection),
                 end = innerPadding.calculateEndPadding(layoutDirection)
             )
-            .padding(top = searchBarTopPadding, bottom = 6.dp),
+            .padding(top = searchBarTopPadding, bottom = 6.dp)
+            .clearAndSetSemantics {
+                contentDescription = label
+            },
         onSearch = { },
         enabled = false,
         expanded = false,
