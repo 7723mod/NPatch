@@ -24,6 +24,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
+#include <sys/sysmacros.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <cstdarg>
@@ -38,6 +39,7 @@ namespace lspd {
 
     using OpenAtFn = int(*)(int, const char*, int, ...);
     using OpenFn = int(*)(const char*, int, ...);
+    using Open2Fn = int(*)(const char*, int);
     using FopenFn = FILE*(*)(const char*, const char*);
 
     static std::string targetApkPath;
@@ -47,16 +49,19 @@ namespace lspd {
     static void *openat64_target = nullptr;
     static void *open_target = nullptr;
     static void *open64_target = nullptr;
+    static void *__open_2_target = nullptr;
     static void *fopen_target = nullptr;
     static OpenAtFn openat_backup = nullptr;
     static OpenAtFn openat64_backup = nullptr;
     static OpenFn open_backup = nullptr;
     static OpenFn open64_backup = nullptr;
+    static Open2Fn __open_2_backup = nullptr;
     static FopenFn fopen_backup = nullptr;
     static bool openat_hook_installed = false;
     static bool openat64_hook_installed = false;
     static bool open_hook_installed = false;
     static bool open64_hook_installed = false;
+    static bool __open_2_hook_installed = false;
     static bool fopen_hook_installed = false;
     static bool minimal_file_hook_mode = false;
     static std::mutex g_path_mutex;
@@ -73,7 +78,9 @@ namespace lspd {
         uintptr_t start = 0;
         uintptr_t end = 0;
         unsigned long offset = 0;
+        unsigned long long inode = 0;
         char perms[5] = {0};
+        char dev[32] = {0};
         char path[PATH_MAX] = {0};
     };
 
@@ -176,19 +183,28 @@ namespace lspd {
         unsigned long start = 0;
         unsigned long end = 0;
         unsigned long offset = 0;
+        unsigned long long inode = 0;
         char perms[5] = {0};
+        char dev[32] = {0};
         char path[PATH_MAX] = {0};
-        int fields = sscanf(line, "%lx-%lx %4s %lx %*s %*s %4095s",
-                            &start, &end, perms, &offset, path);
+        int fields = sscanf(line, "%lx-%lx %4s %lx %31s %llu %4095s",
+                            &start, &end, perms, &offset, dev, &inode, path);
         if (fields < 4) {
             return false;
         }
         entry->start = static_cast<uintptr_t>(start);
         entry->end = static_cast<uintptr_t>(end);
         entry->offset = offset;
+        entry->inode = fields >= 6 ? inode : 0;
         strncpy(entry->perms, perms, sizeof(entry->perms) - 1);
         entry->perms[sizeof(entry->perms) - 1] = '\0';
         if (fields >= 5) {
+            strncpy(entry->dev, dev, sizeof(entry->dev) - 1);
+            entry->dev[sizeof(entry->dev) - 1] = '\0';
+        } else {
+            entry->dev[0] = '\0';
+        }
+        if (fields >= 7) {
             copy_path(entry->path, path);
         } else {
             entry->path[0] = '\0';
@@ -256,6 +272,80 @@ namespace lspd {
         }
         bool executable = strstr(entry.perms, "r-xp") != nullptr || strstr(entry.perms, "--xp") != nullptr;
         return executable && entry.path[0] == '\0';
+    }
+
+    static bool stat_path_for_maps(const std::string& path, char* out_dev, size_t out_dev_size,
+                                   unsigned long long* out_inode) {
+        if (path.empty() || out_dev == nullptr || out_inode == nullptr || out_dev_size == 0) {
+            return false;
+        }
+
+        struct stat st = {};
+        if (stat(path.c_str(), &st) != 0) {
+            return false;
+        }
+
+        snprintf(out_dev, out_dev_size, "%02x:%02x",
+                 static_cast<unsigned int>(major(st.st_dev)),
+                 static_cast<unsigned int>(minor(st.st_dev)));
+        *out_inode = static_cast<unsigned long long>(st.st_ino);
+        return true;
+    }
+
+    static bool map_path_matches_target(const char* path) {
+        if (path == nullptr || path[0] == '\0') {
+            return false;
+        }
+        if (targetApkPath.empty()) {
+            return false;
+        }
+        if (strcmp(path, targetApkPath.c_str()) == 0) {
+            return true;
+        }
+        size_t target_len = targetApkPath.size();
+        return strncmp(path, targetApkPath.c_str(), target_len) == 0
+               && strcmp(path + target_len, " (deleted)") == 0;
+    }
+
+    static std::string rewrite_apk_inode_maps_content(const std::string& content) {
+        char redirect_dev[32] = {0};
+        unsigned long long redirect_inode = 0;
+        if (!stat_path_for_maps(redirectApkPath, redirect_dev, sizeof(redirect_dev), &redirect_inode)) {
+            return content;
+        }
+
+        std::string rewritten_content;
+        size_t pos = 0;
+        while (pos < content.size()) {
+            size_t end = content.find('\n', pos);
+            if (end == std::string::npos) {
+                end = content.size();
+            }
+            std::string line = content.substr(pos, end - pos);
+            bool has_newline = end < content.size();
+            pos = has_newline ? end + 1 : end;
+
+            MapEntry entry;
+            if (parse_maps_entry(line.c_str(), &entry) && map_path_matches_target(entry.path)) {
+                char rewritten[PATH_MAX + 128];
+                snprintf(rewritten, sizeof(rewritten),
+                         "%012lx-%012lx %s %08lx %s %llu %s",
+                         static_cast<unsigned long>(entry.start),
+                         static_cast<unsigned long>(entry.end),
+                         entry.perms,
+                         entry.offset,
+                         redirect_dev,
+                         redirect_inode,
+                         entry.path);
+                line = rewritten;
+            }
+
+            rewritten_content += line;
+            if (has_newline) {
+                rewritten_content += '\n';
+            }
+        }
+        return rewritten_content;
     }
 
     static std::string sanitize_maps_like_content(const std::string& content) {
@@ -451,7 +541,17 @@ namespace lspd {
             return -1;
         }
         if (minimal_file_hook_mode) {
-            return -1;
+            if (!is_maps_path(pathname) && !is_smaps_path(pathname)) {
+                return -1;
+            }
+            int fd = open(pathname, O_RDONLY | O_CLOEXEC);
+            if (fd < 0) {
+                return -1;
+            }
+            std::string content = read_fd_to_string(fd);
+            close(fd);
+            return create_memfd_from_string("npatch_apk_maps_view",
+                                            rewrite_apk_inode_maps_content(content));
         }
         if (is_jiagu_or_stub_caller(caller_pc)) {
             return -1;
@@ -532,10 +632,12 @@ namespace lspd {
                     return sanitized_fd;
                 }
             }
-            redirected_path = resolve_redirect_path(pathname);
-            if (redirected_path != pathname && redirected_path != nullptr) {
-                LOGD("SigBypass: Redirecting %s('%s') -> '%s'",
-                     symbol_name, pathname, redirected_path);
+            if (!minimal_file_hook_mode) {
+                redirected_path = resolve_redirect_path(pathname);
+                if (redirected_path != pathname && redirected_path != nullptr) {
+                    LOGD("SigBypass: Redirecting %s('%s') -> '%s'",
+                         symbol_name, pathname, redirected_path);
+                }
             }
             g_openat_reentry = false;
         }
@@ -616,9 +718,11 @@ namespace lspd {
                     close(sanitized_fd);
                 }
             }
-            redirected_path = resolve_redirect_path(pathname);
-            if (redirected_path != pathname && redirected_path != nullptr) {
-                LOGD("SigBypass: Redirecting fopen('%s') -> '%s'", pathname, redirected_path);
+            if (!minimal_file_hook_mode) {
+                redirected_path = resolve_redirect_path(pathname);
+                if (redirected_path != pathname && redirected_path != nullptr) {
+                    LOGD("SigBypass: Redirecting fopen('%s') -> '%s'", pathname, redirected_path);
+                }
             }
             g_fopen_reentry = false;
         }
@@ -651,6 +755,27 @@ namespace lspd {
                                             __builtin_return_address(0));
         va_end(ap);
         return result;
+    }
+
+    static int hooked___open_2(const char* pathname, int flags) {
+        if (!g_openat_reentry) {
+            g_openat_reentry = true;
+            if (is_read_only_open(flags)) {
+                int sanitized_fd = open_sanitized_proc_file(pathname, __builtin_return_address(0));
+                if (sanitized_fd >= 0) {
+                    LOGD("SigBypass: Serve sanitized __open_2 for %s", pathname);
+                    g_openat_reentry = false;
+                    return sanitized_fd;
+                }
+            }
+            g_openat_reentry = false;
+        }
+
+        if (__open_2_backup == nullptr) {
+            errno = ENOSYS;
+            return -1;
+        }
+        return __open_2_backup(pathname, flags);
     }
 
     static FILE* hooked_fopen(const char* pathname, const char* mode) {
@@ -721,6 +846,29 @@ namespace lspd {
         return true;
     }
 
+    static bool install_open2_hook() {
+        if (__open_2_hook_installed) {
+            return true;
+        }
+
+        void* symbol = dlsym(RTLD_DEFAULT, "__open_2");
+        if (symbol == nullptr) {
+            LOGW("SigBypass: Symbol __open_2 not found");
+            return false;
+        }
+
+        if (HookInline(symbol, reinterpret_cast<void*>(hooked___open_2),
+                       reinterpret_cast<void**>(&__open_2_backup)) != 0) {
+            LOGE("SigBypass: Failed to hook __open_2");
+            return false;
+        }
+
+        __open_2_target = symbol;
+        __open_2_hook_installed = true;
+        LOGI("SigBypass: Hooked __open_2");
+        return true;
+    }
+
     static bool install_fopen_hook() {
         if (fopen_hook_installed) {
             return true;
@@ -786,6 +934,7 @@ namespace lspd {
 
         bool open_ok = true;
         bool open64_ok = true;
+        bool open2_ok = true;
         bool fopen_ok = true;
         if (!minimal_file_hook_mode) {
             open_ok = install_open_hook("open", hooked_open,
@@ -798,9 +947,23 @@ namespace lspd {
                                               &open64_hook_installed);
             }
             fopen_ok = install_fopen_hook();
+        } else {
+            // Keep 360-like protectors on the old openat-only APK redirect path,
+            // but still provide a narrow maps view for fd/inode consistency checks.
+            open_ok = install_open_hook("open", hooked_open,
+                                        &open_target, &open_backup,
+                                        &open_hook_installed);
+            void* open64_symbol = dlsym(RTLD_DEFAULT, "open64");
+            if (open64_symbol != nullptr && open64_symbol != open_target) {
+                open64_ok = install_open_hook("open64", hooked_open64,
+                                              &open64_target, &open64_backup,
+                                              &open64_hook_installed);
+            }
+            open2_ok = install_open2_hook();
+            fopen_ok = install_fopen_hook();
         }
 
-        if (!openat_ok && !openat64_ok && !open_ok && !open64_ok && !fopen_ok) {
+        if (!openat_ok && !openat64_ok && !open_ok && !open64_ok && !open2_ok && !fopen_ok) {
             LOGW("SigBypass: No native file hooks were installed.");
         }
     }

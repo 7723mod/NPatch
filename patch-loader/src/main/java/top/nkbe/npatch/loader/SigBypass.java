@@ -644,7 +644,9 @@ public class SigBypass {
 
         if (sigBypassLevel >= Constants.SIGBYPASS_BASIC && cachedOriginalApkPath != null) {
             hookJavaIO(currentApkPath, cachedOriginalApkPath);
-            useMinimalNativeFileHook = useMinimalNativeFileHook || is360ProtectedApk(cachedOriginalApkPath);
+            useMinimalNativeFileHook = useMinimalNativeFileHook
+                    || (sigBypassLevel >= Constants.SIGBYPASS_EXTREME
+                    && is360ProtectedApk(cachedOriginalApkPath));
             if (useMinimalNativeFileHook) {
                 XLog.i(TAG, "360-like protector detected, using minimal native APK redirect");
                 org.lsposed.lspd.nativebridge.SigBypass.enableOpenatHookMinimal(
