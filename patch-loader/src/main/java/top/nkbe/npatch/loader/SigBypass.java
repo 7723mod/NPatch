@@ -64,6 +64,7 @@ public class SigBypass {
     private static boolean javaIoHooked;
     private static boolean nativeOpenatEnabled;
     private static boolean seccompRedirectEnabled;
+    private static boolean useMinimalNativeFileHook;
 
     static {
         moduleCallerPrefixes.add("top.nkbe.npatch.");
@@ -95,6 +96,27 @@ public class SigBypass {
     public static void setPaths(String originalApkPath, String patchedApkPath) {
         cachedOriginalApkPath = originalApkPath;
         cachedPatchedApkPath = patchedApkPath;
+    }
+
+    private static boolean is360ProtectedApk(String apkPath) {
+        if (apkPath == null) return false;
+        try (ZipFile apk = new ZipFile(apkPath)) {
+            var entries = apk.entries();
+            while (entries.hasMoreElements()) {
+                ZipEntry entry = entries.nextElement();
+                String name = entry.getName().toLowerCase();
+                if (name.contains("qihoo")
+                        || name.contains("qihu")
+                        || name.contains("360")
+                        || name.contains("jiagu")
+                        || name.contains("stub_360")) {
+                    return true;
+                }
+            }
+        } catch (Throwable e) {
+            Log.w(TAG, "fail to inspect APK protector", e);
+        }
+        return false;
     }
 
     private record CallerContext(boolean isModule, boolean isSensitive) {}
@@ -387,14 +409,17 @@ public class SigBypass {
                     replaceSignature(context, (PackageInfo) param.getResult());
                 }
             };
-            XposedBridge.hookAllMethods(PackageManager.class, "getPackageInfo", hook);
-            XposedBridge.hookAllMethods(PackageManager.class, "getPackageInfoAsUser", hook);
+            boolean hookedAny = false;
             try {
                 Class<?> appPm = Class.forName("android.app.ApplicationPackageManager");
                 XposedBridge.hookAllMethods(appPm, "getPackageInfo", hook);
                 XposedBridge.hookAllMethods(appPm, "getPackageInfoAsUser", hook);
+                hookedAny = true;
             } catch (Throwable ignored) {}
-            getPackageInfoHooked = true;
+            getPackageInfoHooked = hookedAny;
+            if (!hookedAny) {
+                Log.w(TAG, "fail to hook concrete getPackageInfo methods");
+            }
         } catch (Throwable e) {
             Log.w(TAG, "fail to hook getPackageInfo", e);
         }
@@ -410,14 +435,17 @@ public class SigBypass {
                     replaceApplicationInfoPaths(context, (ApplicationInfo) param.getResult());
                 }
             };
-            XposedBridge.hookAllMethods(PackageManager.class, "getApplicationInfo", hook);
-            XposedBridge.hookAllMethods(PackageManager.class, "getApplicationInfoAsUser", hook);
+            boolean hookedAny = false;
             try {
                 Class<?> appPm = Class.forName("android.app.ApplicationPackageManager");
                 XposedBridge.hookAllMethods(appPm, "getApplicationInfo", hook);
                 XposedBridge.hookAllMethods(appPm, "getApplicationInfoAsUser", hook);
+                hookedAny = true;
             } catch (Throwable ignored) {}
-            getApplicationInfoHooked = true;
+            getApplicationInfoHooked = hookedAny;
+            if (!hookedAny) {
+                Log.w(TAG, "fail to hook concrete getApplicationInfo methods");
+            }
         } catch (Throwable e) {
             Log.w(TAG, "fail to hook getApplicationInfo", e);
         }
@@ -616,11 +644,21 @@ public class SigBypass {
 
         if (sigBypassLevel >= Constants.SIGBYPASS_BASIC && cachedOriginalApkPath != null) {
             hookJavaIO(currentApkPath, cachedOriginalApkPath);
-            org.lsposed.lspd.nativebridge.SigBypass.enableOpenatHook(
-                    currentApkPath,
-                    cachedOriginalApkPath,
-                    context.getPackageName()
-            );
+            useMinimalNativeFileHook = useMinimalNativeFileHook || is360ProtectedApk(cachedOriginalApkPath);
+            if (useMinimalNativeFileHook) {
+                XLog.i(TAG, "360-like protector detected, using minimal native APK redirect");
+                org.lsposed.lspd.nativebridge.SigBypass.enableOpenatHookMinimal(
+                        currentApkPath,
+                        cachedOriginalApkPath,
+                        context.getPackageName()
+                );
+            } else {
+                org.lsposed.lspd.nativebridge.SigBypass.enableOpenatHook(
+                        currentApkPath,
+                        cachedOriginalApkPath,
+                        context.getPackageName()
+                );
+            }
             nativeOpenatEnabled = true;
         }
 

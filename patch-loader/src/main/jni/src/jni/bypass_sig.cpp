@@ -58,6 +58,7 @@ namespace lspd {
     static bool open_hook_installed = false;
     static bool open64_hook_installed = false;
     static bool fopen_hook_installed = false;
+    static bool minimal_file_hook_mode = false;
     static std::mutex g_path_mutex;
     static thread_local bool g_openat_reentry = false;
     static thread_local bool g_fopen_reentry = false;
@@ -449,6 +450,9 @@ namespace lspd {
         if (pathname == nullptr) {
             return -1;
         }
+        if (minimal_file_hook_mode) {
+            return -1;
+        }
         if (is_jiagu_or_stub_caller(caller_pc)) {
             return -1;
         }
@@ -740,10 +744,11 @@ namespace lspd {
         return true;
     }
 
-    LSP_DEF_NATIVE_METHOD(void, SigBypass, enableOpenatHook,
-                          jstring jOrigApkPath,
-                          jstring jCacheApkPath,
-                          jstring jPkgName) {
+    static void enable_openat_hook_impl(JNIEnv* env,
+                                        jstring jOrigApkPath,
+                                        jstring jCacheApkPath,
+                                        jstring jPkgName,
+                                        bool minimal) {
 
         if (jOrigApkPath == nullptr || jCacheApkPath == nullptr) {
             LOGE("Invalid arguments: paths cannot be null.");
@@ -755,6 +760,7 @@ namespace lspd {
 
         {
             std::scoped_lock lock(g_path_mutex);
+            minimal_file_hook_mode = minimal_file_hook_mode || minimal;
             targetApkPath = strOrig.get();
             redirectApkPath = strRedirect.get();
 
@@ -778,21 +784,39 @@ namespace lspd {
                                               &openat64_hook_installed);
         }
 
-        const bool open_ok = install_open_hook("open", hooked_open,
-                                               &open_target, &open_backup,
-                                               &open_hook_installed);
-        void* open64_symbol = dlsym(RTLD_DEFAULT, "open64");
+        bool open_ok = true;
         bool open64_ok = true;
-        if (open64_symbol != nullptr && open64_symbol != open_target) {
-            open64_ok = install_open_hook("open64", hooked_open64,
-                                          &open64_target, &open64_backup,
-                                          &open64_hook_installed);
+        bool fopen_ok = true;
+        if (!minimal_file_hook_mode) {
+            open_ok = install_open_hook("open", hooked_open,
+                                        &open_target, &open_backup,
+                                        &open_hook_installed);
+            void* open64_symbol = dlsym(RTLD_DEFAULT, "open64");
+            if (open64_symbol != nullptr && open64_symbol != open_target) {
+                open64_ok = install_open_hook("open64", hooked_open64,
+                                              &open64_target, &open64_backup,
+                                              &open64_hook_installed);
+            }
+            fopen_ok = install_fopen_hook();
         }
-        const bool fopen_ok = install_fopen_hook();
 
         if (!openat_ok && !openat64_ok && !open_ok && !open64_ok && !fopen_ok) {
             LOGW("SigBypass: No native file hooks were installed.");
         }
+    }
+
+    LSP_DEF_NATIVE_METHOD(void, SigBypass, enableOpenatHook,
+                          jstring jOrigApkPath,
+                          jstring jCacheApkPath,
+                          jstring jPkgName) {
+        enable_openat_hook_impl(env, jOrigApkPath, jCacheApkPath, jPkgName, false);
+    }
+
+    LSP_DEF_NATIVE_METHOD(void, SigBypass, enableOpenatHookMinimal,
+                          jstring jOrigApkPath,
+                          jstring jCacheApkPath,
+                          jstring jPkgName) {
+        enable_openat_hook_impl(env, jOrigApkPath, jCacheApkPath, jPkgName, true);
     }
 
     LSP_DEF_NATIVE_METHOD(void, SigBypass, disableOpenatHook) {
@@ -805,6 +829,7 @@ namespace lspd {
     // 註冊 JNI 方法
     static JNINativeMethod gMethods[] = {
             LSP_NATIVE_METHOD(SigBypass, enableOpenatHook, "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V"),
+            LSP_NATIVE_METHOD(SigBypass, enableOpenatHookMinimal, "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V"),
             LSP_NATIVE_METHOD(SigBypass, disableOpenatHook, "()V")
     };
 

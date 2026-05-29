@@ -27,8 +27,9 @@ namespace lspd {
     static bool g_sigsys_handler_ready = false;
     static char g_target_path[PATH_MAX] = {0};
     static char g_redirect_path[PATH_MAX] = {0};
+    static bool g_redirected_fds[4096] = {false};
     static std::mutex g_path_mutex;
-    static constexpr uint32_t kOpenatReplayToken = 0xABCDEF00u;
+    static constexpr uint32_t kSyscallReplayToken = 0xABCDEF00u;
 
     static void copy_path(char* dest, const char* src) {
         if (src == nullptr) {
@@ -51,33 +52,125 @@ namespace lspd {
                && strcmp(pathname + target_len, " (deleted)") == 0;
     }
 
+    static bool parse_decimal_fd(const char* text, int* out_fd) {
+        if (text == nullptr || out_fd == nullptr || *text == '\0') {
+            return false;
+        }
+
+        int fd = 0;
+        for (const char* p = text; *p != '\0'; ++p) {
+            if (*p < '0' || *p > '9') {
+                return false;
+            }
+            fd = fd * 10 + (*p - '0');
+            if (fd >= static_cast<int>(std::size(g_redirected_fds))) {
+                return false;
+            }
+        }
+
+        *out_fd = fd;
+        return true;
+    }
+
+    static bool parse_proc_fd_path(const char* pathname, int* out_fd) {
+        if (pathname == nullptr || out_fd == nullptr) {
+            return false;
+        }
+
+        static constexpr char self_fd_prefix[] = "/proc/self/fd/";
+        static constexpr char thread_self_fd_prefix[] = "/proc/thread-self/fd/";
+        if (strncmp(pathname, self_fd_prefix, sizeof(self_fd_prefix) - 1) == 0) {
+            return parse_decimal_fd(pathname + sizeof(self_fd_prefix) - 1, out_fd);
+        }
+        if (strncmp(pathname, thread_self_fd_prefix, sizeof(thread_self_fd_prefix) - 1) == 0) {
+            return parse_decimal_fd(pathname + sizeof(thread_self_fd_prefix) - 1, out_fd);
+        }
+
+        char pid_fd_prefix[64];
+        int prefix_len = snprintf(pid_fd_prefix, sizeof(pid_fd_prefix), "/proc/%d/fd/", getpid());
+        if (prefix_len > 0
+                && strncmp(pathname, pid_fd_prefix, static_cast<size_t>(prefix_len)) == 0) {
+            return parse_decimal_fd(pathname + prefix_len, out_fd);
+        }
+        return false;
+    }
+
+    static bool emulate_redirected_readlinkat(const char* pathname, char* buffer, size_t buffer_size,
+                                              ssize_t* out_result) {
+        if (pathname == nullptr || buffer == nullptr || out_result == nullptr || buffer_size == 0) {
+            return false;
+        }
+
+        int fd = -1;
+        if (!parse_proc_fd_path(pathname, &fd)
+                || fd < 0
+                || fd >= static_cast<int>(std::size(g_redirected_fds))
+                || !g_redirected_fds[fd]
+                || g_target_path[0] == '\0') {
+            return false;
+        }
+
+        size_t len = strlen(g_target_path);
+        if (len > buffer_size) {
+            len = buffer_size;
+        }
+        memcpy(buffer, g_target_path, len);
+        *out_result = static_cast<ssize_t>(len);
+        return true;
+    }
+
     static void sigsys_handler(int signo, siginfo_t*, void* context) {
         if (signo != SIGSYS) return;
 
         auto* ctx = reinterpret_cast<ucontext_t*>(context);
-        if (ctx->uc_mcontext.regs[8] != __NR_openat) {
+        if (ctx->uc_mcontext.regs[8] == __NR_openat) {
+            auto* pathname = reinterpret_cast<const char*>(ctx->uc_mcontext.regs[1]);
+            const char* redirected_path = pathname;
+            bool redirected = false;
+            if (pathname != nullptr
+                    && g_target_path[0] != '\0'
+                    && g_redirect_path[0] != '\0'
+                    && path_matches_target_locked(pathname)) {
+                redirected_path = g_redirect_path;
+                redirected = true;
+            }
+
+            // Replay the trapped syscall directly from SIGSYS. The extra magic
+            // arg is ignored by openat but lets our BPF filter allow the replay.
+            long result = syscall(__NR_openat,
+                                  ctx->uc_mcontext.regs[0],
+                                  redirected_path,
+                                  ctx->uc_mcontext.regs[2],
+                                  ctx->uc_mcontext.regs[3],
+                                  ctx->uc_mcontext.regs[4],
+                                  kSyscallReplayToken);
+            if (redirected
+                    && result >= 0
+                    && result < static_cast<long>(std::size(g_redirected_fds))) {
+                g_redirected_fds[result] = true;
+            }
+            ctx->uc_mcontext.regs[0] = result;
             return;
         }
 
-        auto* pathname = reinterpret_cast<const char*>(ctx->uc_mcontext.regs[1]);
-        const char* redirected_path = pathname;
-        if (pathname != nullptr
-                && g_target_path[0] != '\0'
-                && g_redirect_path[0] != '\0'
-                && path_matches_target_locked(pathname)) {
-            redirected_path = g_redirect_path;
-        }
+        if (ctx->uc_mcontext.regs[8] == __NR_readlinkat) {
+            auto* pathname = reinterpret_cast<const char*>(ctx->uc_mcontext.regs[1]);
+            auto* buffer = reinterpret_cast<char*>(ctx->uc_mcontext.regs[2]);
+            ssize_t emulated_result = -1;
+            if (emulate_redirected_readlinkat(pathname, buffer, ctx->uc_mcontext.regs[3],
+                                              &emulated_result)) {
+                ctx->uc_mcontext.regs[0] = emulated_result;
+                return;
+            }
 
-        // Match FPA seccomp-v2: replay the trapped openat directly from SIGSYS.
-        // The extra magic arg is ignored by openat but lets our BPF filter allow
-        // the replay, avoiding recursive SIGSYS delivery.
-        ctx->uc_mcontext.regs[0] = syscall(__NR_openat,
-                                            ctx->uc_mcontext.regs[0],
-                                            redirected_path,
-                                            ctx->uc_mcontext.regs[2],
-                                            ctx->uc_mcontext.regs[3],
-                                            ctx->uc_mcontext.regs[4],
-                                            kOpenatReplayToken);
+            ctx->uc_mcontext.regs[0] = syscall(__NR_readlinkat,
+                                               ctx->uc_mcontext.regs[0],
+                                               pathname,
+                                               buffer,
+                                               ctx->uc_mcontext.regs[3],
+                                               ctx->uc_mcontext.regs[4],
+                                               kSyscallReplayToken);
+        }
     }
 
     static bool ensure_sigsys_handler() {
@@ -108,10 +201,12 @@ namespace lspd {
                 BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, AUDIT_ARCH_AARCH64, 1, 0),
                 BPF_STMT(BPF_RET + BPF_K, SECCOMP_RET_KILL_PROCESS),
                 BPF_STMT(BPF_LD + BPF_W + BPF_ABS, offsetof(struct seccomp_data, nr)),
-                BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, __NR_openat, 0, 3),
+                BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, __NR_openat, 2, 0),
+                BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, __NR_readlinkat, 1, 0),
+                BPF_STMT(BPF_RET + BPF_K, SECCOMP_RET_ALLOW),
                 BPF_STMT(BPF_LD + BPF_W + BPF_ABS,
                          offsetof(struct seccomp_data, args[5])),
-                BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, kOpenatReplayToken, 1, 0),
+                BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, kSyscallReplayToken, 1, 0),
                 BPF_STMT(BPF_RET + BPF_K, SECCOMP_RET_TRAP),
                 BPF_STMT(BPF_RET + BPF_K, SECCOMP_RET_ALLOW),
         };
@@ -154,6 +249,7 @@ namespace lspd {
             std::scoped_lock lock(g_path_mutex);
             copy_path(g_target_path, current.get());
             copy_path(g_redirect_path, original.get());
+            memset(g_redirected_fds, 0, sizeof(g_redirected_fds));
             (void) pkg;
         }
 
