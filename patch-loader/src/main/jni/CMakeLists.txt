@@ -24,6 +24,16 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${EXTERNAL_ROOT}/lsplant/lspl
 target_compile_definitions(${PROJECT_NAME} PRIVATE
         VERSION_CODE=${VERSION_CODE}
         VERSION_NAME=\"${VERSION_NAME}\")
+target_compile_options(${PROJECT_NAME} PRIVATE
+        -ffunction-sections
+        -fdata-sections
+        -fvisibility=hidden
+        -fvisibility-inlines-hidden)
+target_link_options(${PROJECT_NAME} PRIVATE
+        $<$<CONFIG:Release>:-Wl,--gc-sections>
+        $<$<CONFIG:Release>:-Wl,--exclude-libs,ALL>
+        $<$<CONFIG:RelWithDebInfo>:-Wl,--gc-sections>
+        $<$<CONFIG:RelWithDebInfo>:-Wl,--exclude-libs,ALL>)
 
 target_link_libraries(${PROJECT_NAME} native log)
 

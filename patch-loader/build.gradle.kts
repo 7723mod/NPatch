@@ -24,7 +24,7 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -46,13 +46,20 @@ android {
 
 androidComponents.onVariants { variant ->
     val variantCapped = variant.name.replaceFirstChar { it.uppercase() }
+    val variantLowered = variant.name.lowercase()
+    val dexDirProvider = if (variant.buildType == "release") {
+        layout.buildDirectory.dir("intermediates/dex/$variantLowered/minify${variantCapped}WithR8")
+    } else {
+        layout.buildDirectory.dir("intermediates/dex/$variantLowered/mergeDex$variantCapped")
+    }
 
     val copyDexTask = tasks.register<Copy>("copyDex$variantCapped") {
         dependsOn("assemble$variantCapped")
         doFirst {
             delete("${rootProject.projectDir}/out/assets/${variant.name}/npatch/loader.dex")
+            delete("${rootProject.projectDir}/out/assets/${variant.name}/npatch/loader.bin")
         }
-        from(layout.buildDirectory.file("intermediates/dex/${variant.name}/mergeDex$variantCapped/classes.dex"))
+        from(dexDirProvider)
         rename("classes.dex", "loader.bin")
         into("${rootProject.projectDir}/out/assets/${variant.name}/npatch")
     }

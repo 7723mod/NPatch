@@ -1,26 +1,49 @@
--keep class com.wind.xposed.entry.MMPEntry {
-    public <init>();
-    public void initAndLoadModules();
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
+-allowaccessmodification
+-renamesourcefileattribute SourceFile
+
+# Native code loads this entry by its original binary name and invokes onLoad().
+-keep class top.nkbe.npatch.loader.LSPApplication {
+    public static void onLoad();
 }
 
--keep class com.wind.xpatch.proxy.**{*;}
+# Gson serializes/deserializes these by field name across patcher, manager and loader.
+-keep class top.nkbe.npatch.share.PatchConfig { *; }
+-keep class top.nkbe.npatch.share.LSPConfig { *; }
 
--keep class de.robv.android.xposed.**{*;}
+# JNI registration uses literal bridge class names.
+-keep class org.lsposed.lspd.nativebridge.** { *; }
+-keep class org.matrix.vector.nativebridge.** { *; }
 
--keep class android.app.**{*;}
--keep class android.content.**{*;}
--keep class android.os.**{*;}
+# Public Xposed/libxposed API names are part of the module ABI.
+-keep class de.robv.android.xposed.** { *; }
+-keep class android.app.AndroidAppHelper { *; }
+-keep class android.content.res.** { *; }
+-keep class io.github.libxposed.api.** { *; }
+-keep class io.github.libxposed.service.** { *; }
+-keep class org.lsposed.lspd.models.** { *; }
+-keep class org.lsposed.lspd.service.** { *; }
+-keep class xposed.dummy.** { *; }
 
--keep class android.view.**{*;}
--keep class com.lody.whale.**{*;}
--keep class com.android.internal.**{*;}
--keep class xposed.dummy.**{*;}
--keep class com.wind.xposed.entry.util.**{*;}
+# Legacy resource initialization rewrites the classloader parent at runtime so
+# XResources can resolve the generated xposed.dummy super classes.
+-keep class org.matrix.vector.Startup { *; }
+-keep class org.matrix.vector.legacy.** { *; }
+-keep class org.matrix.vector.nativebridge.ResourcesHook { *; }
 
--keep class com.swift.sandhook.**{*;}
--keep class com.swift.sandhook.xposedcompat.**{*;}
+# Internal reflection points that still depend on stable names/members.
+-keepclassmembers class org.matrix.vector.impl.core.VectorServiceClient {
+    <fields>;
+    <methods>;
+}
+-keep class org.matrix.vector.impl.core.VectorModuleManager$EmptyInjectedModuleService { *; }
 
 -dontwarn android.content.res.Resources
 -dontwarn android.content.res.Resources$Theme
 -dontwarn android.content.res.AssetManager
 -dontwarn android.content.res.TypedArray
+-dontwarn android.app.**
+-dontwarn android.content.**
+-dontwarn android.os.**
+-dontwarn android.view.**
+-dontwarn com.android.internal.**
