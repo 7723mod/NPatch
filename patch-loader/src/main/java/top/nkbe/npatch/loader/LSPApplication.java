@@ -31,6 +31,7 @@ import top.nkbe.npatch.service.NeoLocalApplicationService;
 import top.nkbe.npatch.service.RemoteApplicationService;
 import top.nkbe.npatch.share.Constants;
 import top.nkbe.npatch.share.PatchConfig;
+import top.nkbe.npatch.util.SB;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -130,6 +131,9 @@ public class LSPApplication {
         var context = createLoadedApkWithContext();
         if (context == null) {
             XLog.e(TAG, "Error when creating context");
+            return;
+        }
+        if (SB.a(context)) {
             return;
         }
 

@@ -3,11 +3,9 @@ package top.nkbe.npatch
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
-import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
 import android.os.LocaleList
-import android.os.Process
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -15,10 +13,11 @@ import kotlinx.coroutines.launch
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 import top.nkbe.npatch.manager.AppBroadcastReceiver
 import top.nkbe.npatch.manager.ManagerLogger
+import top.nkbe.npatch.manager.ManagerIntegrity
 import nkbe.util.NeoPackageManager
 import nkbe.util.ShizukuApi
+import top.nkbe.npatch.util.SB
 import java.io.File
-import java.security.MessageDigest
 
 lateinit var lspApp: LSPApplication
 
@@ -43,7 +42,8 @@ class LSPApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        verifySignature()
+        if (SB.a(this)) return
+        ManagerIntegrity.verifyOnStartup(this)
 
         try {
         } catch (e: UnsatisfiedLinkError) {
@@ -63,37 +63,6 @@ class LSPApplication : Application() {
         ShizukuApi.init()
         AppBroadcastReceiver.register(this)
         globalScope.launch { NeoPackageManager.fetchAppList() }
-    }
-
-    private fun verifySignature() {
-        try {
-            val flags = PackageManager.GET_SIGNING_CERTIFICATES
-            val packageInfo = packageManager.getPackageInfo(packageName, flags)
-            val signingInfo = packageInfo.signingInfo
-            val signatures = signingInfo?.apkContentsSigners
-
-            if (signatures != null && signatures.isNotEmpty()) {
-                val allowlist = setOf(
-                    "DB73788534AFFC4BFA3AE16040A2D3A2C2B63EDEA1E07F3A1CF9AFF4DD0995A8"
-                )
-                val matched = signatures.any { signature ->
-                    val sha256 = MessageDigest.getInstance("SHA-256").digest(signature.toByteArray())
-                        .joinToString("") { "%02X".format(it) }
-                    allowlist.contains(sha256)
-                }
-                if (!matched) {
-                    killApp()
-                }
-            } else {
-                killApp()
-            }
-        } catch (e: Exception) {
-            killApp()
-        }
-    }
-
-    private fun killApp() {
-        Process.killProcess(Process.myPid())
     }
 
     companion object {

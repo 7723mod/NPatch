@@ -1,3 +1,4 @@
+import java.util.Base64
 import java.util.Locale
 
 val defaultManagerPackageName: String by rootProject.extra
@@ -7,6 +8,19 @@ val verName: String by rootProject.extra
 val coreVerCode: Int by rootProject.extra
 val coreVerName: String by rootProject.extra
 val miuixVersion = npatch.versions.miuix.get()
+
+fun decodeSha256Hex(value: String): ByteArray {
+    require(value.length == 64) { "Manager signature digest must be 64 hex chars: $value" }
+    return ByteArray(value.length / 2) { index ->
+        value.substring(index * 2, index * 2 + 2).toInt(16).toByte()
+    }
+}
+
+fun encodeAllowlistEntry(value: String): String {
+    val key = 0x5A
+    val obfuscated = decodeSha256Hex(value).map { byte -> (byte.toInt() xor key).toByte() }.toByteArray()
+    return Base64.getEncoder().encodeToString(obfuscated)
+}
 
 plugins {
     alias(libs.plugins.agp.app)
@@ -20,6 +34,20 @@ plugins {
 android {
     defaultConfig {
         applicationId = defaultManagerPackageName
+        val managerSignatureAllowlist = (
+            System.getenv("NPATCH_MANAGER_SIGNATURE_SHA256")
+                ?: project.findProperty("npatchManagerSignatureSha256")?.toString()
+                ?: listOf(
+                    "DB73788534AFFC4BFA3AE16040A2D3A2",
+                    "C2B63EDEA1E07F3A1CF9AFF4DD0995A8",
+                ).joinToString("")
+            )
+            .split(',', ';', ' ', '\n', '\r', '\t')
+            .map { it.trim().uppercase(Locale.ROOT) }
+            .filter { it.isNotEmpty() }
+            .distinct()
+            .joinToString(",") { encodeAllowlistEntry(it) }
+        buildConfigField("String", "MANAGER_SIGNATURE_SHA256_ALLOWLIST", "\"$managerSignatureAllowlist\"")
     }
 
     dependenciesInfo {
