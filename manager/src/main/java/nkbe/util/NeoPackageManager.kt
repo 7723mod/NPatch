@@ -44,6 +44,7 @@ object NeoPackageManager {
 
     private const val TAG = "NeoPackageManager"
     private const val SETTINGS_CATEGORY = "de.robv.android.xposed.category.MODULE_SETTINGS"
+    private const val COPY_BUFFER_SIZE = 4096 * 4096
 
     const val STATUS_USER_CANCELLED = -2
 
@@ -154,17 +155,32 @@ object NeoPackageManager {
                 flags = flags or PackageManagerHidden.INSTALL_ALLOW_TEST or PackageManagerHidden.INSTALL_REPLACE_EXISTING
                 Refine.unsafeCast<SessionParamsHidden>(params).installFlags = flags
                 ShizukuApi.createPackageInstallerSession(params).use { session ->
-                    val uri = Configs.storageDirectory?.toUri() ?: throw IOException("Uri is null")
-                    val root = DocumentFile.fromTreeUri(lspApp, uri) ?: throw IOException("DocumentFile is null")
-                    root.listFiles().forEach { file ->
-                        if (file.name?.endsWith(Constants.PATCH_FILE_SUFFIX) != true) return@forEach
-                        Log.d(TAG, "Add ${file.name}")
-                        val input = lspApp.contentResolver.openInputStream(file.uri)
-                            ?: throw IOException("Cannot open input stream")
-                        input.use {
-                            session.openWrite(file.name!!, 0, input.available().toLong()).use { output ->
-                                input.copyTo(output)
-                                session.fsync(output)
+                    val localApkFiles = lspApp.targetApkFiles
+                        ?.filter { it.isFile && it.name.endsWith(Constants.PATCH_FILE_SUFFIX) }
+                        .orEmpty()
+                    if (localApkFiles.isNotEmpty()) {
+                        localApkFiles.forEach { file ->
+                            Log.d(TAG, "Add ${file.name}")
+                            file.inputStream().use { input ->
+                                session.openWrite(file.name, 0, file.length()).use { output ->
+                                    input.copyTo(output, COPY_BUFFER_SIZE)
+                                    session.fsync(output)
+                                }
+                            }
+                        }
+                    } else {
+                        val uri = Configs.storageDirectory?.toUri() ?: throw IOException("Uri is null")
+                        val root = DocumentFile.fromTreeUri(lspApp, uri) ?: throw IOException("DocumentFile is null")
+                        root.listFiles().forEach { file ->
+                            if (file.name?.endsWith(Constants.PATCH_FILE_SUFFIX) != true) return@forEach
+                            Log.d(TAG, "Add ${file.name}")
+                            val input = lspApp.contentResolver.openInputStream(file.uri)
+                                ?: throw IOException("Cannot open input stream")
+                            input.use {
+                                session.openWrite(file.name!!, 0, file.length()).use { output ->
+                                    input.copyTo(output, COPY_BUFFER_SIZE)
+                                    session.fsync(output)
+                                }
                             }
                         }
                     }
