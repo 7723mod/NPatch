@@ -426,8 +426,30 @@ namespace lspd {
         }
     }
 
-    static int open_sanitized_proc_file(const char* pathname) {
+    static bool is_jiagu_or_stub_caller(const void* caller_pc) {
+        if (caller_pc == nullptr) {
+            return true;
+        }
+
+        Dl_info info = {};
+        if (dladdr(caller_pc, &info) == 0 || info.dli_fname == nullptr || info.dli_fname[0] == '\0') {
+            return true;
+        }
+
+        std::string caller_path = to_lower(info.dli_fname);
+        return caller_path.find("/.jiagu/") != std::string::npos
+               || caller_path.find("libjiagu") != std::string::npos
+               || caller_path.find("jiagu") != std::string::npos
+               || caller_path.find("qihoo") != std::string::npos
+               || caller_path.find("qihu") != std::string::npos
+               || caller_path.find("360") != std::string::npos;
+    }
+
+    static int open_sanitized_proc_file(const char* pathname, const void* caller_pc) {
         if (pathname == nullptr) {
+            return -1;
+        }
+        if (is_jiagu_or_stub_caller(caller_pc)) {
             return -1;
         }
         if (is_mem_path(pathname)) {
@@ -488,7 +510,8 @@ namespace lspd {
                                   int dirfd,
                                   const char* pathname,
                                   int flags,
-                                  va_list ap) {
+                                  va_list ap,
+                                  const void* caller_pc) {
         const bool has_mode = needs_mode(flags);
         const mode_t mode = has_mode ? va_arg(ap, mode_t) : 0;
         const char* redirected_path = pathname;
@@ -498,7 +521,7 @@ namespace lspd {
             g_openat_reentry = true;
             g_openat_reentry = true;
             if (is_read_only_open(flags)) {
-                int sanitized_fd = open_sanitized_proc_file(pathname);
+                int sanitized_fd = open_sanitized_proc_file(pathname, caller_pc);
                 if (sanitized_fd >= 0) {
                     LOGD("SigBypass: Serve sanitized %s for %s", symbol_name, pathname);
                     g_openat_reentry = false;
@@ -535,7 +558,8 @@ namespace lspd {
                                 const char* symbol_name,
                                 const char* pathname,
                                 int flags,
-                                va_list ap) {
+                                va_list ap,
+                                const void* caller_pc) {
         const bool has_mode = needs_mode(flags);
         const mode_t mode = has_mode ? va_arg(ap, mode_t) : 0;
         const char* redirected_path = pathname;
@@ -543,7 +567,7 @@ namespace lspd {
         if (!g_openat_reentry) {
             g_openat_reentry = true;
             if (is_read_only_open(flags)) {
-                int sanitized_fd = open_sanitized_proc_file(pathname);
+                int sanitized_fd = open_sanitized_proc_file(pathname, caller_pc);
                 if (sanitized_fd >= 0) {
                     LOGD("SigBypass: Serve sanitized %s for %s", symbol_name, pathname);
                     g_openat_reentry = false;
@@ -563,7 +587,8 @@ namespace lspd {
 
     static FILE* hooked_fopen_impl(FopenFn backup,
                                    const char* pathname,
-                                   const char* mode) {
+                                   const char* mode,
+                                   const void* caller_pc) {
         if (backup == nullptr) {
             errno = ENOSYS;
             return nullptr;
@@ -575,7 +600,7 @@ namespace lspd {
             const bool read_only = mode != nullptr && mode[0] == 'r' && strchr(mode, '+') == nullptr;
             if (read_only) {
                 g_openat_reentry = true;
-                int sanitized_fd = open_sanitized_proc_file(pathname);
+                int sanitized_fd = open_sanitized_proc_file(pathname, caller_pc);
                 g_openat_reentry = false;
                 if (sanitized_fd >= 0) {
                     FILE* fp = fdopen(sanitized_fd, mode);
@@ -600,7 +625,8 @@ namespace lspd {
     static int hooked_openat(int dirfd, const char* pathname, int flags, ...) {
         va_list ap;
         va_start(ap, flags);
-        const int result = hooked_openat_impl(openat_backup, "openat", dirfd, pathname, flags, ap);
+        const int result = hooked_openat_impl(openat_backup, "openat", dirfd, pathname, flags, ap,
+                                              __builtin_return_address(0));
         va_end(ap);
         return result;
     }
@@ -608,7 +634,8 @@ namespace lspd {
     static int hooked_open(const char* pathname, int flags, ...) {
         va_list ap;
         va_start(ap, flags);
-        const int result = hooked_open_impl(open_backup, "open", pathname, flags, ap);
+        const int result = hooked_open_impl(open_backup, "open", pathname, flags, ap,
+                                            __builtin_return_address(0));
         va_end(ap);
         return result;
     }
@@ -616,19 +643,21 @@ namespace lspd {
     static int hooked_open64(const char* pathname, int flags, ...) {
         va_list ap;
         va_start(ap, flags);
-        const int result = hooked_open_impl(open64_backup, "open64", pathname, flags, ap);
+        const int result = hooked_open_impl(open64_backup, "open64", pathname, flags, ap,
+                                            __builtin_return_address(0));
         va_end(ap);
         return result;
     }
 
     static FILE* hooked_fopen(const char* pathname, const char* mode) {
-        return hooked_fopen_impl(fopen_backup, pathname, mode);
+        return hooked_fopen_impl(fopen_backup, pathname, mode, __builtin_return_address(0));
     }
 
     static int hooked_openat64(int dirfd, const char* pathname, int flags, ...) {
         va_list ap;
         va_start(ap, flags);
-        const int result = hooked_openat_impl(openat64_backup, "openat64", dirfd, pathname, flags, ap);
+        const int result = hooked_openat_impl(openat64_backup, "openat64", dirfd, pathname, flags, ap,
+                                              __builtin_return_address(0));
         va_end(ap);
         return result;
     }
