@@ -635,17 +635,25 @@ public class SigBypass {
         javaIoHooked = true;
     }
 
+    private static int effectiveHookLevel(int sigBypassLevel) {
+        if (sigBypassLevel >= Constants.SIGBYPASS_SECCOMP) {
+            return Constants.SIGBYPASS_EXTREME;
+        }
+        return sigBypassLevel;
+    }
+
     static void doSigBypass(Context context, int sigBypassLevel) throws IOException {
         activeSigBypassLevel = Math.max(activeSigBypassLevel, sigBypassLevel);
+        int hookLevel = effectiveHookLevel(sigBypassLevel);
         String currentApkPath = cachedPatchedApkPath != null ? cachedPatchedApkPath : context.getPackageResourcePath();
-        if (sigBypassLevel >= Constants.SIGBYPASS_BASIC && cachedOriginalApkPath == null) {
+        if (hookLevel >= Constants.SIGBYPASS_BASIC && cachedOriginalApkPath == null) {
             cachedOriginalApkPath = extractOriginalApk(context);
         }
 
-        if (sigBypassLevel >= Constants.SIGBYPASS_BASIC && cachedOriginalApkPath != null) {
+        if (hookLevel >= Constants.SIGBYPASS_BASIC && cachedOriginalApkPath != null) {
             hookJavaIO(currentApkPath, cachedOriginalApkPath);
             useMinimalNativeFileHook = useMinimalNativeFileHook
-                    || (sigBypassLevel >= Constants.SIGBYPASS_EXTREME
+                    || (hookLevel >= Constants.SIGBYPASS_EXTREME
                     && is360ProtectedApk(cachedOriginalApkPath));
             if (useMinimalNativeFileHook) {
                 XLog.i(TAG, "360-like protector detected, using minimal native APK redirect");
@@ -664,14 +672,14 @@ public class SigBypass {
             nativeOpenatEnabled = true;
         }
 
-        if (sigBypassLevel >= Constants.SIGBYPASS_HIGH) {
+        if (hookLevel >= Constants.SIGBYPASS_HIGH) {
             hookPackageArchiveInfo(context);
             hookHasSigningCertificate(context);
             hookGetApplicationInfo(context);
             hookApkPathAccessors(context);
         }
 
-        if (sigBypassLevel >= Constants.SIGBYPASS_EXTREME) {
+        if (hookLevel >= Constants.SIGBYPASS_EXTREME) {
             boolean parcelHooked = hookPackageInfoConstructor(context);
             if (!parcelHooked) {
                 hookPackageInfoCreator(context);
@@ -694,7 +702,7 @@ public class SigBypass {
             } else {
                 XLog.w(TAG, "Seccomp failed to init");
             }
-        } else if (sigBypassLevel >= Constants.SIGBYPASS_BASIC && cachedOriginalApkPath == null) {
+        } else if (hookLevel >= Constants.SIGBYPASS_BASIC && cachedOriginalApkPath == null) {
             XLog.w(TAG, "Original APK unavailable, native signature bypass disabled");
         }
     }

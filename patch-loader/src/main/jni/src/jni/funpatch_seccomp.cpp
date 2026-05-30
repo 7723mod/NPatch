@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <fcntl.h>
 #include <linux/audit.h>
 #include <limits.h>
 #include <linux/filter.h>
@@ -50,6 +51,38 @@ namespace lspd {
         size_t target_len = strlen(g_target_path);
         return strncmp(pathname, g_target_path, target_len) == 0
                && strcmp(pathname + target_len, " (deleted)") == 0;
+    }
+
+    static bool path_matches_target_fd(int fd) {
+        if (fd < 0 || g_target_path[0] == '\0') {
+            return false;
+        }
+
+        char fd_path[64];
+        char real_path[PATH_MAX];
+        int path_len = snprintf(fd_path, sizeof(fd_path), "/proc/self/fd/%d", fd);
+        if (path_len <= 0 || path_len >= static_cast<int>(sizeof(fd_path))) {
+            return false;
+        }
+
+        long result = syscall(__NR_readlinkat,
+                              AT_FDCWD,
+                              fd_path,
+                              real_path,
+                              sizeof(real_path) - 1,
+                              0,
+                              kSyscallReplayToken);
+        if (result < 0 || result >= static_cast<long>(sizeof(real_path))) {
+            return false;
+        }
+        real_path[result] = '\0';
+        return path_matches_target_locked(real_path);
+    }
+
+    static bool is_read_only_open(int flags) {
+        return (flags & O_ACCMODE) == O_RDONLY
+               && (flags & O_CREAT) == 0
+               && (flags & O_TRUNC) == 0;
     }
 
     static bool parse_decimal_fd(const char* text, int* out_fd) {
@@ -125,29 +158,29 @@ namespace lspd {
         auto* ctx = reinterpret_cast<ucontext_t*>(context);
         if (ctx->uc_mcontext.regs[8] == __NR_openat) {
             auto* pathname = reinterpret_cast<const char*>(ctx->uc_mcontext.regs[1]);
-            const char* redirected_path = pathname;
-            bool redirected = false;
-            if (pathname != nullptr
-                    && g_target_path[0] != '\0'
-                    && g_redirect_path[0] != '\0'
-                    && path_matches_target_locked(pathname)) {
-                redirected_path = g_redirect_path;
-                redirected = true;
-            }
-
-            // Replay the trapped syscall directly from SIGSYS. The extra magic
-            // arg is ignored by openat but lets our BPF filter allow the replay.
+            bool may_redirect = is_read_only_open(static_cast<int>(ctx->uc_mcontext.regs[2]));
             long result = syscall(__NR_openat,
                                   ctx->uc_mcontext.regs[0],
-                                  redirected_path,
+                                  pathname,
                                   ctx->uc_mcontext.regs[2],
                                   ctx->uc_mcontext.regs[3],
                                   ctx->uc_mcontext.regs[4],
                                   kSyscallReplayToken);
-            if (redirected
+            if (may_redirect
                     && result >= 0
-                    && result < static_cast<long>(std::size(g_redirected_fds))) {
-                g_redirected_fds[result] = true;
+                    && g_redirect_path[0] != '\0'
+                    && path_matches_target_fd(static_cast<int>(result))) {
+                syscall(__NR_close, result);
+                result = syscall(__NR_openat,
+                                 ctx->uc_mcontext.regs[0],
+                                 g_redirect_path,
+                                 ctx->uc_mcontext.regs[2],
+                                 ctx->uc_mcontext.regs[3],
+                                 ctx->uc_mcontext.regs[4],
+                                 kSyscallReplayToken);
+                if (result >= 0 && result < static_cast<long>(std::size(g_redirected_fds))) {
+                    g_redirected_fds[result] = true;
+                }
             }
             ctx->uc_mcontext.regs[0] = result;
             return;
