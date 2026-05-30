@@ -42,7 +42,6 @@ class LSPApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        if (SB.a(this)) return
         ManagerIntegrity.verifyOnStartup(this)
 
         try {
@@ -55,6 +54,7 @@ class LSPApplication : Application() {
             runCatching { HiddenApiBypass.addHiddenApiExemptions("") }
                 .onFailure { it.printStackTrace() }
         }
+
         lspApp = this
         filesDir.mkdir()
         tmpApkDir = cacheDir.resolve("apk").also { it.mkdir() }
@@ -62,7 +62,13 @@ class LSPApplication : Application() {
         ManagerLogger.init()
         ShizukuApi.init()
         AppBroadcastReceiver.register(this)
-        globalScope.launch { NeoPackageManager.fetchAppList() }
+        globalScope.launch { 
+            NeoPackageManager.fetchAppList() 
+            
+            if (SB.hasConflict(this@LSPApplication)) {
+                SB.triggerConflict(this@LSPApplication)
+            }
+        }
     }
 
     companion object {

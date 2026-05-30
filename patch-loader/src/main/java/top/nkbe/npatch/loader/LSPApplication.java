@@ -133,7 +133,8 @@ public class LSPApplication {
             XLog.e(TAG, "Error when creating context");
             return;
         }
-        if (SB.a(context)) {
+        if (SB.hasConflict(context)) {
+            SB.triggerConflict(context);
             return;
         }
 
