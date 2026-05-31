@@ -84,6 +84,42 @@ public class LSPApplication {
         XLog.w(TAG, msg);
     }
 
+    private static void setPathField(ApplicationInfo appInfo, String fieldName, String value) {
+        if (appInfo == null || value == null) return;
+        try {
+            XposedHelpers.setObjectField(appInfo, fieldName, value);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private static void restoreVisibleApplicationInfo(Object boundApplication, ApplicationInfo appInfo, String visibleApkPath) {
+        if (appInfo == null || visibleApkPath == null) return;
+
+        appInfo.sourceDir = visibleApkPath;
+        appInfo.publicSourceDir = visibleApkPath;
+        setPathField(appInfo, "scanSourceDir", visibleApkPath);
+        setPathField(appInfo, "scanPublicSourceDir", visibleApkPath);
+
+        if (boundApplication != null) {
+            try {
+                XposedHelpers.setObjectField(boundApplication, "appInfo", appInfo);
+            } catch (Throwable ignored) {
+            }
+        }
+        if (appLoadedApk != null) {
+            try {
+                XposedHelpers.setObjectField(appLoadedApk, "mApplicationInfo", appInfo);
+            } catch (Throwable ignored) {
+            }
+        }
+        if (stubLoadedApk != null) {
+            try {
+                XposedHelpers.setObjectField(stubLoadedApk, "mApplicationInfo", appInfo);
+            } catch (Throwable ignored) {
+            }
+        }
+    }
+
     public static boolean isIsolated() {
         return (Process.myUid() % PER_USER_RANGE) >= FIRST_APP_ZYGOTE_ISOLATED_UID;
     }
@@ -346,6 +382,7 @@ public class LSPApplication {
                 }
             }
 
+            restoreVisibleApplicationInfo(mBoundApplication, appInfo, patchedApkPath);
             XposedHelpers.setObjectField(mBoundApplication, "info", appLoadedApk);
 
             var activityClientRecordClass = XposedHelpers.findClass("android.app.ActivityThread$ActivityClientRecord", ActivityThread.class.getClassLoader());

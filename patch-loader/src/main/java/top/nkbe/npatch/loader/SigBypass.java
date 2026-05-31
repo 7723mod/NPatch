@@ -49,8 +49,8 @@ public class SigBypass {
     private static final Map<String, Signature> signatureCache = new ConcurrentHashMap<>();
     private static final Set<String> moduleCallerPrefixes = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-    private static String cachedOriginalApkPath;
-    private static String cachedPatchedApkPath;
+    private static String redirectApkPath;
+    private static String visibleApkPath;
     private static int activeSigBypassLevel;
     private static boolean packageInfoConstructorHooked;
     private static boolean applicationInfoConstructorHooked;
@@ -62,6 +62,7 @@ public class SigBypass {
     private static boolean packageInfoCreatorHooked;
     private static boolean packageParserHooked;
     private static boolean javaIoHooked;
+    private static boolean javaFilePathHooked;
     private static boolean nativeOpenatEnabled;
     private static boolean seccompRedirectEnabled;
     private static boolean useMinimalNativeFileHook;
@@ -94,8 +95,8 @@ public class SigBypass {
     }
 
     public static void setPaths(String originalApkPath, String patchedApkPath) {
-        cachedOriginalApkPath = originalApkPath;
-        cachedPatchedApkPath = patchedApkPath;
+        redirectApkPath = originalApkPath;
+        visibleApkPath = patchedApkPath;
     }
 
     private static boolean is360ProtectedApk(String apkPath) {
@@ -166,9 +167,9 @@ public class SigBypass {
 
     private static boolean matchesPatchedApplicationInfo(Context context, ApplicationInfo applicationInfo) {
         if (applicationInfo == null) return false;
-        if (cachedPatchedApkPath != null) {
-            if (cachedPatchedApkPath.equals(applicationInfo.sourceDir)
-                    || cachedPatchedApkPath.equals(applicationInfo.publicSourceDir)) {
+        if (redirectApkPath != null) {
+            if (redirectApkPath.equals(applicationInfo.sourceDir)
+                    || redirectApkPath.equals(applicationInfo.publicSourceDir)) {
                 return true;
             }
         }
@@ -176,19 +177,54 @@ public class SigBypass {
     }
 
     private static void replaceApplicationInfoPaths(Context context, ApplicationInfo applicationInfo) {
-        if (applicationInfo == null || cachedOriginalApkPath == null) return;
+        if (applicationInfo == null || visibleApkPath == null) return;
         if (!matchesPatchedApplicationInfo(context, applicationInfo)) return;
 
-        applicationInfo.sourceDir = cachedOriginalApkPath;
-        applicationInfo.publicSourceDir = cachedOriginalApkPath;
-        setReflectivePathField(applicationInfo, "scanSourceDir", cachedOriginalApkPath);
-        setReflectivePathField(applicationInfo, "scanPublicSourceDir", cachedOriginalApkPath);
+        applicationInfo.sourceDir = visibleApkPath;
+        applicationInfo.publicSourceDir = visibleApkPath;
+        setReflectivePathField(applicationInfo, "scanSourceDir", visibleApkPath);
+        setReflectivePathField(applicationInfo, "scanPublicSourceDir", visibleApkPath);
+        setReflectivePathField(applicationInfo, "baseCodePath", visibleApkPath);
+        setReflectivePathField(applicationInfo, "baseResourcePath", visibleApkPath);
+        try {
+            Object splitSourceDirs = XposedHelpers.getObjectField(applicationInfo, "splitSourceDirs");
+            if (splitSourceDirs instanceof String[] splitPaths) {
+                for (int i = 0; i < splitPaths.length; i++) {
+                    if (redirectApkPath != null && redirectApkPath.equals(splitPaths[i])) {
+                        splitPaths[i] = visibleApkPath;
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        try {
+            Object splitPublicSourceDirs = XposedHelpers.getObjectField(applicationInfo, "splitPublicSourceDirs");
+            if (splitPublicSourceDirs instanceof String[] splitPaths) {
+                for (int i = 0; i < splitPaths.length; i++) {
+                    if (redirectApkPath != null && redirectApkPath.equals(splitPaths[i])) {
+                        splitPaths[i] = visibleApkPath;
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private static String mapToVisiblePath(String path) {
+        if (path == null || visibleApkPath == null || redirectApkPath == null) return path;
+        if (path.equals(redirectApkPath)) return visibleApkPath;
+        if (path.equals(redirectApkPath + " (deleted)")) return visibleApkPath + " (deleted)";
+        String zipPrefix = redirectApkPath + "!/";
+        if (path.startsWith(zipPrefix)) {
+            return visibleApkPath + path.substring(redirectApkPath.length());
+        }
+        return path;
     }
 
     private static boolean shouldSpoofPath(Object receiver, Context context, Object result) {
-        if (!(result instanceof String path) || cachedOriginalApkPath == null) return false;
-        if (path.equals(cachedOriginalApkPath)) return false;
-        if (cachedPatchedApkPath != null && path.equals(cachedPatchedApkPath)) return true;
+        if (!(result instanceof String path) || visibleApkPath == null) return false;
+        if (path.equals(visibleApkPath)) return false;
+        if (redirectApkPath != null && path.equals(redirectApkPath)) return true;
 
         if (receiver instanceof Context receiverContext) {
             try {
@@ -199,6 +235,49 @@ public class SigBypass {
             }
         }
         return false;
+    }
+
+    private static void hookJavaFilePathAccessors() {
+        if (javaFilePathHooked) return;
+
+        XC_MethodHook stringPathHook = new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) {
+                if (isModuleCaller()) return;
+                Object result = param.getResult();
+                if (!(result instanceof String path)) return;
+                String visiblePath = mapToVisiblePath(path);
+                if (!path.equals(visiblePath)) {
+                    param.setResult(visiblePath);
+                }
+            }
+        };
+        XC_MethodHook filePathHook = new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) {
+                if (isModuleCaller()) return;
+                Object result = param.getResult();
+                if (!(result instanceof File file)) return;
+                String filePath = file.getPath();
+                String visiblePath = mapToVisiblePath(filePath);
+                if (!filePath.equals(visiblePath)) {
+                    param.setResult(new File(visiblePath));
+                }
+            }
+        };
+
+        boolean hookedAny = false;
+        hookedAny |= hookAllMethodsQuietly(File.class, "getPath", stringPathHook);
+        hookedAny |= hookAllMethodsQuietly(File.class, "getAbsolutePath", stringPathHook);
+        hookedAny |= hookAllMethodsQuietly(File.class, "getCanonicalPath", stringPathHook);
+        hookedAny |= hookAllMethodsQuietly(File.class, "toString", stringPathHook);
+        hookedAny |= hookAllMethodsQuietly(File.class, "getAbsoluteFile", filePathHook);
+        hookedAny |= hookAllMethodsQuietly(File.class, "getCanonicalFile", filePathHook);
+
+        javaFilePathHooked = hookedAny;
+        if (!hookedAny) {
+            Log.w(TAG, "fail to hook java.io.File path accessors");
+        }
     }
 
     private static void replaceSignature(Context context, PackageInfo packageInfo) {
@@ -459,7 +538,7 @@ public class SigBypass {
             protected void afterHookedMethod(MethodHookParam param) {
                 if (isModuleCaller()) return;
                 if (shouldSpoofPath(param.thisObject, context, param.getResult())) {
-                    param.setResult(cachedOriginalApkPath);
+                    param.setResult(visibleApkPath);
                 }
             }
         };
@@ -502,13 +581,13 @@ public class SigBypass {
             XC_MethodHook hook = new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
-                    if (cachedOriginalApkPath == null) return;
+                    if (visibleApkPath == null) return;
                     Object apkPath = param.args.length == 0 ? null : param.args[0];
-                    if (!(apkPath instanceof String path) || !path.equals(cachedPatchedApkPath)) {
+                    if (!(apkPath instanceof String path) || !path.equals(visibleApkPath)) {
                         return;
                     }
                     if (isModuleCaller()) return;
-                    param.args[0] = cachedOriginalApkPath;
+                    param.args[0] = redirectApkPath;
                 }
 
                 @Override
@@ -584,8 +663,8 @@ public class SigBypass {
 
             File targetFile = new File(cacheDir, entry.getCrc() + ".apk");
             if (targetFile.exists() && targetFile.length() == entry.getSize()) {
-                cachedOriginalApkPath = targetFile.getAbsolutePath();
-                return cachedOriginalApkPath;
+                redirectApkPath = targetFile.getAbsolutePath();
+                return redirectApkPath;
             }
 
             try (InputStream is = sourceFile.getInputStream(entry);
@@ -596,8 +675,8 @@ public class SigBypass {
                     fos.write(buffer, 0, length);
                 }
             }
-            cachedOriginalApkPath = targetFile.getAbsolutePath();
-            return cachedOriginalApkPath;
+            redirectApkPath = targetFile.getAbsolutePath();
+            return redirectApkPath;
         } catch (IOException e) {
             Log.e(TAG, "Failed to extract original APK", e);
             return null;
@@ -645,27 +724,28 @@ public class SigBypass {
     static void doSigBypass(Context context, int sigBypassLevel) throws IOException {
         activeSigBypassLevel = Math.max(activeSigBypassLevel, sigBypassLevel);
         int hookLevel = effectiveHookLevel(sigBypassLevel);
-        String currentApkPath = cachedPatchedApkPath != null ? cachedPatchedApkPath : context.getPackageResourcePath();
-        if (hookLevel >= Constants.SIGBYPASS_BASIC && cachedOriginalApkPath == null) {
-            cachedOriginalApkPath = extractOriginalApk(context);
+        String currentApkPath = visibleApkPath != null ? visibleApkPath : context.getPackageResourcePath();
+        if (hookLevel >= Constants.SIGBYPASS_BASIC && redirectApkPath == null) {
+            redirectApkPath = extractOriginalApk(context);
         }
 
-        if (hookLevel >= Constants.SIGBYPASS_BASIC && cachedOriginalApkPath != null) {
-            hookJavaIO(currentApkPath, cachedOriginalApkPath);
+        if (hookLevel >= Constants.SIGBYPASS_BASIC && redirectApkPath != null) {
+            hookJavaIO(currentApkPath, redirectApkPath);
+            hookJavaFilePathAccessors();
             useMinimalNativeFileHook = useMinimalNativeFileHook
                     || (hookLevel >= Constants.SIGBYPASS_EXTREME
-                    && is360ProtectedApk(cachedOriginalApkPath));
+                    && is360ProtectedApk(redirectApkPath));
             if (useMinimalNativeFileHook) {
                 XLog.i(TAG, "360-like protector detected, using minimal native APK redirect");
                 org.lsposed.lspd.nativebridge.SigBypass.enableOpenatHookMinimal(
                         currentApkPath,
-                        cachedOriginalApkPath,
+                        redirectApkPath,
                         context.getPackageName()
                 );
             } else {
                 org.lsposed.lspd.nativebridge.SigBypass.enableOpenatHook(
                         currentApkPath,
-                        cachedOriginalApkPath,
+                        redirectApkPath,
                         context.getPackageName()
                 );
             }
@@ -689,12 +769,12 @@ public class SigBypass {
             hookGetPackageInfo(context);
         }
 
-        if (sigBypassLevel == Constants.SIGBYPASS_SECCOMP && cachedOriginalApkPath != null) {
+        if (sigBypassLevel == Constants.SIGBYPASS_SECCOMP && redirectApkPath != null) {
             if (!isSeccompRuntimeSupported()) {
                 XLog.w(TAG, "Seccomp skipped on non-arm64 runtime ABI");
             } else if (FunPatch.enableSeccompV2Redirect(
                         currentApkPath,
-                        cachedOriginalApkPath,
+                        redirectApkPath,
                         context.getPackageName()
                 )) {
                 if (!seccompRedirectEnabled) XLog.i(TAG, "Seccomp enabled");
@@ -702,7 +782,7 @@ public class SigBypass {
             } else {
                 XLog.w(TAG, "Seccomp failed to init");
             }
-        } else if (hookLevel >= Constants.SIGBYPASS_BASIC && cachedOriginalApkPath == null) {
+        } else if (hookLevel >= Constants.SIGBYPASS_BASIC && redirectApkPath == null) {
             XLog.w(TAG, "Original APK unavailable, native signature bypass disabled");
         }
     }
