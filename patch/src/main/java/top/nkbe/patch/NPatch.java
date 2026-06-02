@@ -106,6 +106,9 @@ public class NPatch {
     @Parameter(names = {"--outputLog"}, description = "Output Log to Media")
     private boolean outputLog = true;
 
+    @Parameter(names = {"--hidelibs"}, description = "Hide ART and sensitive system libraries from the application")
+    private boolean hideLibs = false;
+
     @Parameter(names = {"-k", "--keystore"}, arity = 4, description = "Set custom signature keystore. Followed by 4 arguments: keystore path, keystore password, keystore alias, keystore alias password")
     private List<String> keystoreArgs = null;
 
@@ -329,7 +332,7 @@ public class NPatch {
 
             logger.i("Patching apk...");
             // modify manifest
-            final var config = new PatchConfig(useManager, debuggableFlag, overrideVersionCode, sigbypassLevel, originalSignature, appComponentFactory, isInjectProvider, outputLog, newPackage, useMicroG);
+            final var config = new PatchConfig(useManager, debuggableFlag, overrideVersionCode, sigbypassLevel, originalSignature, appComponentFactory, isInjectProvider, outputLog, newPackage, useMicroG, hideLibs);
             final var configBytes = new Gson().toJson(config).getBytes(StandardCharsets.UTF_8);
             final var metadata = Base64.getEncoder().encodeToString(configBytes);
             try (var is = new ByteArrayInputStream(modifyManifestFile(manifestEntry.open(), metadata, minSdkVersion, pair.packageName, newPackage, originalSignature))) {

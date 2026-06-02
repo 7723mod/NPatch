@@ -14,6 +14,7 @@ public class PatchConfig {
     public final String managerPackageName;
     public final String newPackage;
     public final boolean useMicroG;
+    public final boolean hideLibs;
 
     public PatchConfig(
             boolean useManager,
@@ -25,7 +26,8 @@ public class PatchConfig {
             boolean injectProvider,
             boolean outputLog,
             String newPackage,
-            boolean useMicroG
+            boolean useMicroG,
+            boolean hideLibs
     ) {
         this.useManager = useManager;
         this.debuggable = debuggable;
@@ -38,6 +40,7 @@ public class PatchConfig {
         this.newPackage = newPackage;
         this.outputLog = outputLog;
         this.useMicroG = useMicroG;
+        this.hideLibs = hideLibs;
 
         this.lspConfig = LSPConfig.instance;
         this.lspConfig.sigBypassLevel = sigBypassLevel;

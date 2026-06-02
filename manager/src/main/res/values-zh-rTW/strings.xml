@@ -115,6 +115,8 @@
     <string name="patch_use_microg_desc">重新導向 GMS 請求至社群版 MicroG。適用於 YouTube 等 Google 應用程式，需自行安裝對應的 MicroG 服務。</string>
     <string name="patch_output_log_to_media">日誌輸出到 Media 目錄</string>
     <string name="patch_output_log_to_media_desc">將模組運行的 Xposed 日誌及框架啟動日誌輸出至 Media 目錄</string>
+    <string name="patch_hide_libs">隱藏 ART 函式庫</string>
+    <string name="patch_hide_libs_desc">從應用程式中隱藏 ART 與敏感系統函式庫，以繞過部分基礎的 Root 或環境偵測。</string>
     <string name="patch_start">開始打包</string>
     <string name="patch_return">返回</string>
     <string name="patch_uninstall_text">由於簽名不同，安裝前需要先解除安裝原程式。\n確保您已備份好個人資料。</string>

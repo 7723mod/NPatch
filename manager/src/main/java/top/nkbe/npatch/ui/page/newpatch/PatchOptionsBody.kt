@@ -217,6 +217,15 @@ fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
                     checked = viewModel.outputLog,
                     onCheckedChange = { viewModel.outputLog = it }
                 )
+                SwitchPreference(
+                    title = stringResource(R.string.patch_hide_libs),
+                    summary = stringResource(R.string.patch_hide_libs_desc),
+                    startAction = { Icon(Icons.Outlined.VisibilityOff, null) },
+                    checked = viewModel.hideLibs && viewModel.sigBypassLevel > Constants.SIGBYPASS_NONE,
+                    onCheckedChange = {
+                        viewModel.hideLibs = it && viewModel.sigBypassLevel > Constants.SIGBYPASS_NONE
+                    }
+                )
                 val maxSigBypassLevel = if (viewModel.useManager) {
                     Constants.SIGBYPASS_SECCOMP
                 } else {
@@ -229,7 +238,12 @@ fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
                                 text = sigBypassLvTitle(level),
                                 summary = sigBypassLvDesc(level),
                                 selected = viewModel.sigBypassLevel == level,
-                                onClick = { viewModel.sigBypassLevel = level }
+                                onClick = {
+                                    viewModel.sigBypassLevel = level
+                                    if (level == Constants.SIGBYPASS_NONE) {
+                                        viewModel.hideLibs = false
+                                    }
+                                }
                             )
                         }
                     )

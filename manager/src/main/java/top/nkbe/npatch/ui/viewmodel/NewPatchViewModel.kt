@@ -51,6 +51,7 @@ class NewPatchViewModel : ViewModel() {
     var injectProvider by mutableStateOf(false)
     var useMicroG by mutableStateOf(false)
     var outputLog by mutableStateOf(true)
+    var hideLibs by mutableStateOf(false)
     var embeddedModules by mutableStateOf<List<AppInfo>>(emptyList())
     var hasExecutedIntent by mutableStateOf(false)
 
@@ -101,6 +102,7 @@ class NewPatchViewModel : ViewModel() {
         injectProvider = false
         useMicroG = false
         outputLog = true
+        hideLibs = false
         embeddedModules = emptyList()
         logs.clear()
         hasExecutedIntent = false
@@ -128,8 +130,10 @@ class NewPatchViewModel : ViewModel() {
         Log.d(TAG, "Submit Patch")
         if (useManager) embeddedModules = emptyList()
         val patchSigBypassLevel = if (useManager) sigBypassLevel else sigBypassLevel.coerceAtMost(Constants.SIGBYPASS_HIGH)
+        val patchHideLibs = hideLibs && patchSigBypassLevel > Constants.SIGBYPASS_NONE
         sigBypassLevel = patchSigBypassLevel
-        val config = PatchConfig(useManager, debuggable, overrideVersionCode, patchSigBypassLevel, null, null, injectProvider, outputLog, newPackageName, useMicroG)
+        hideLibs = patchHideLibs
+        val config = PatchConfig(useManager, debuggable, overrideVersionCode, patchSigBypassLevel, null, null, injectProvider, outputLog, newPackageName, useMicroG, patchHideLibs)
         patchOptions = Patcher.Options(
             newPackageName = newPackageName,
             injectDex = injectDex,

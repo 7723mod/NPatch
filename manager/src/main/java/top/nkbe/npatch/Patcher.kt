@@ -38,6 +38,7 @@ object Patcher {
                 if (config.injectProvider) add("--provider")
                 if(injectDex) add("--injectdex")
                 if (config.useMicroG) add("--useMicroG")
+                if (config.hideLibs) add("--hidelibs")
                 when (Configs.keyStorePreset) {
                     KeystorePreset.NPATCH -> add("-npa")
                     KeystorePreset.FPA -> add("-fpa")

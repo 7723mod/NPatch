@@ -66,6 +66,7 @@ public class SigBypass {
     private static boolean nativeOpenatEnabled;
     private static boolean seccompRedirectEnabled;
     private static boolean useMinimalNativeFileHook;
+    private static boolean libHideEnabled;
 
     static {
         moduleCallerPrefixes.add("top.nkbe.npatch.");
@@ -725,6 +726,20 @@ public class SigBypass {
         activeSigBypassLevel = Math.max(activeSigBypassLevel, sigBypassLevel);
         int hookLevel = effectiveHookLevel(sigBypassLevel);
         String currentApkPath = visibleApkPath != null ? visibleApkPath : context.getPackageResourcePath();
+
+        boolean hideLibs = false;
+        try {
+            var metaData = context.getPackageManager()
+                    .getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA)
+                    .metaData;
+            String encoded = metaData == null ? null : metaData.getString("npatch");
+            if (encoded != null) {
+                var json = new String(Base64.decode(encoded, Base64.DEFAULT), StandardCharsets.UTF_8);
+                var patchConfig = new JSONObject(json);
+                hideLibs = patchConfig.optBoolean("hideLibs", false);
+            }
+        } catch (Throwable ignored) {}
+
         if (hookLevel >= Constants.SIGBYPASS_BASIC && redirectApkPath == null) {
             redirectApkPath = extractOriginalApk(context);
         }
@@ -740,16 +755,19 @@ public class SigBypass {
                 org.lsposed.lspd.nativebridge.SigBypass.enableOpenatHookMinimal(
                         currentApkPath,
                         redirectApkPath,
-                        context.getPackageName()
+                        context.getPackageName(),
+                        hideLibs
                 );
             } else {
                 org.lsposed.lspd.nativebridge.SigBypass.enableOpenatHook(
                         currentApkPath,
                         redirectApkPath,
-                        context.getPackageName()
+                        context.getPackageName(),
+                        hideLibs
                 );
             }
             nativeOpenatEnabled = true;
+            libHideEnabled = hideLibs;
         }
 
         if (hookLevel >= Constants.SIGBYPASS_HIGH) {

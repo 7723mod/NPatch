@@ -108,6 +108,7 @@ namespace lspd {
     static bool close_hook_installed = false;
     static bool fopen_hook_installed = false;
     static bool minimal_file_hook_mode = false;
+    static bool g_lib_hide_enabled = false;
     static std::mutex g_path_mutex;
     static thread_local bool g_openat_reentry = false;
     static thread_local bool g_fopen_reentry = false;
@@ -117,6 +118,7 @@ namespace lspd {
     struct LibSnapshot {
         const char* soname;
         char path[PATH_MAX];
+        int fd = -1;
     };
 
     struct MapEntry {
@@ -131,6 +133,10 @@ namespace lspd {
 
     static LibSnapshot g_lib_snapshots[] = {
             {"libart.so", ""},
+            {"libbinder.so", ""},
+            {"libselinux.so", ""},
+            {"libnpatch.so", ""},
+            {"libandroid_runtime.so", ""},
             {"libc.so", ""},
     };
 
@@ -142,6 +148,8 @@ namespace lspd {
             "edxposed",
             "xposed",
             "riru",
+            "npatch",
+            "vector",
             "/data/local/tmp",
             "/data/adb/",
             nullptr,
@@ -315,6 +323,24 @@ namespace lspd {
                && g_redirected_fds[fd];
     }
 
+    static bool fd_is_lib_snapshot(int fd) {
+        if (fd < 0) {
+            return false;
+        }
+        for (auto& snapshot : g_lib_snapshots) {
+            if (snapshot.fd == fd) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static const char* neutral_runtime_lib_path() {
+        return sizeof(void*) == 8
+               ? "/apex/com.android.runtime/lib64/bionic/libc.so"
+               : "/apex/com.android.runtime/lib/bionic/libc.so";
+    }
+
     static void mark_redirected_fd(int fd, bool redirected) {
         if (fd >= 0 && fd < static_cast<int>(sizeof(g_redirected_fds) / sizeof(g_redirected_fds[0]))) {
             g_redirected_fds[fd] = redirected;
@@ -334,6 +360,18 @@ namespace lspd {
             return false;
         }
         *out = targetApkPath;
+        return true;
+    }
+
+    static bool try_get_lib_snapshot_visible_path(const char* pathname, std::string* out) {
+        if (pathname == nullptr || out == nullptr || !g_lib_hide_enabled) {
+            return false;
+        }
+        int fd = -1;
+        if (!parse_proc_fd_path(pathname, &fd) || !fd_is_lib_snapshot(fd)) {
+            return false;
+        }
+        *out = neutral_runtime_lib_path();
         return true;
     }
 
@@ -767,7 +805,7 @@ namespace lspd {
             }
         }
 
-        int snapshot_fd = static_cast<int>(syscall(__NR_memfd_create, soname, MFD_CLOEXEC));
+        int snapshot_fd = static_cast<int>(syscall(__NR_memfd_create, "runtime-cache", MFD_CLOEXEC));
         if (snapshot_fd < 0) {
             munmap(file_data, st.st_size);
             return false;
@@ -789,6 +827,12 @@ namespace lspd {
         }
         munmap(file_data, st.st_size);
         snprintf(out_path, PATH_MAX, "/proc/self/fd/%d", snapshot_fd);
+        for (auto& snapshot : g_lib_snapshots) {
+            if (snapshot.soname == soname) {
+                snapshot.fd = snapshot_fd;
+                break;
+            }
+        }
         return true;
     }
 
@@ -810,7 +854,12 @@ namespace lspd {
             return true;
         }
 
-        std::string caller_path = to_lower(info.dli_fname);
+        const char* fname = info.dli_fname;
+        if (strstr(fname, "libnpatch.so") != nullptr) {
+            return true;
+        }
+
+        std::string caller_path = to_lower(fname);
         return caller_path.find("/.jiagu/") != std::string::npos
                || caller_path.find("libjiagu") != std::string::npos
                || caller_path.find("jiagu") != std::string::npos
@@ -833,8 +882,12 @@ namespace lspd {
             }
             std::string content = read_fd_to_string(fd);
             close(fd);
+            content = rewrite_apk_inode_maps_content(content);
+            if (g_lib_hide_enabled) {
+                content = sanitize_maps_like_content(content);
+            }
             return create_memfd_from_string("npatch_apk_maps_view",
-                                            rewrite_apk_inode_maps_content(content));
+                                            content);
         }
         if (is_jiagu_or_stub_caller(caller_pc)) {
             return -1;
@@ -854,6 +907,10 @@ namespace lspd {
                                             sanitize_fdinfo_content(fdinfo_fd, content));
         }
         if (!is_maps_path(pathname) && !is_smaps_path(pathname)) {
+            return -1;
+        }
+
+        if (!g_lib_hide_enabled && !minimal_file_hook_mode) {
             return -1;
         }
 
@@ -1113,6 +1170,11 @@ namespace lspd {
             return -1;
         }
         std::string visible_path;
+        if (try_get_lib_snapshot_visible_path(pathname, &visible_path)) {
+            size_t len = std::min(visible_path.size(), bufsiz);
+            memcpy(buf, visible_path.data(), len);
+            return static_cast<ssize_t>(len);
+        }
         if (try_get_proc_fd_visible_path(pathname, &visible_path)) {
             size_t len = std::min(visible_path.size(), bufsiz);
             memcpy(buf, visible_path.data(), len);
@@ -1142,6 +1204,11 @@ namespace lspd {
             return -1;
         }
         std::string visible_path;
+        if (try_get_lib_snapshot_visible_path(pathname, &visible_path)) {
+            size_t len = std::min(visible_path.size(), bufsiz);
+            memcpy(buf, visible_path.data(), len);
+            return static_cast<ssize_t>(len);
+        }
         if (try_get_proc_fd_visible_path(pathname, &visible_path)) {
             size_t len = std::min(visible_path.size(), bufsiz);
             memcpy(buf, visible_path.data(), len);
@@ -1441,7 +1508,8 @@ namespace lspd {
                                         jstring jOrigApkPath,
                                         jstring jCacheApkPath,
                                         jstring jPkgName,
-                                        bool minimal) {
+                                        bool minimal,
+                                        bool hide) {
 
         if (jOrigApkPath == nullptr || jCacheApkPath == nullptr) {
             LOGE("Invalid arguments: paths cannot be null.");
@@ -1454,6 +1522,7 @@ namespace lspd {
         {
             std::scoped_lock lock(g_path_mutex);
             minimal_file_hook_mode = minimal_file_hook_mode || minimal;
+            g_lib_hide_enabled = g_lib_hide_enabled || hide;
             targetApkPath = strOrig.get();
             redirectApkPath = strRedirect.get();
 
@@ -1463,8 +1532,8 @@ namespace lspd {
             }
         }
 
-        LOGI("Enable OpenAt Hook: {} -> {} (Pkg: {})",
-             targetApkPath.c_str(), redirectApkPath.c_str(), currentPackageName.c_str());
+        LOGI("Enable OpenAt Hook: {} -> {} (Pkg: {}, Hide: {})",
+             targetApkPath.c_str(), redirectApkPath.c_str(), currentPackageName.c_str(), g_lib_hide_enabled);
 
         const bool openat_ok = install_openat_hook("openat", hooked_openat,
                                                    &openat_target, &openat_backup,
@@ -1552,15 +1621,17 @@ namespace lspd {
     LSP_DEF_NATIVE_METHOD(void, SigBypass, enableOpenatHook,
                           jstring jOrigApkPath,
                           jstring jCacheApkPath,
-                          jstring jPkgName) {
-        enable_openat_hook_impl(env, jOrigApkPath, jCacheApkPath, jPkgName, false);
+                          jstring jPkgName,
+                          jboolean jHide) {
+        enable_openat_hook_impl(env, jOrigApkPath, jCacheApkPath, jPkgName, false, jHide);
     }
 
     LSP_DEF_NATIVE_METHOD(void, SigBypass, enableOpenatHookMinimal,
                           jstring jOrigApkPath,
                           jstring jCacheApkPath,
-                          jstring jPkgName) {
-        enable_openat_hook_impl(env, jOrigApkPath, jCacheApkPath, jPkgName, true);
+                          jstring jPkgName,
+                          jboolean jHide) {
+        enable_openat_hook_impl(env, jOrigApkPath, jCacheApkPath, jPkgName, true, jHide);
     }
 
     LSP_DEF_NATIVE_METHOD(void, SigBypass, disableOpenatHook) {
@@ -1572,8 +1643,8 @@ namespace lspd {
 
     // 註冊 JNI 方法
     static JNINativeMethod gMethods[] = {
-            LSP_NATIVE_METHOD(SigBypass, enableOpenatHook, "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V"),
-            LSP_NATIVE_METHOD(SigBypass, enableOpenatHookMinimal, "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V"),
+            LSP_NATIVE_METHOD(SigBypass, enableOpenatHook, "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Z)V"),
+            LSP_NATIVE_METHOD(SigBypass, enableOpenatHookMinimal, "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Z)V"),
             LSP_NATIVE_METHOD(SigBypass, disableOpenatHook, "()V")
     };
 

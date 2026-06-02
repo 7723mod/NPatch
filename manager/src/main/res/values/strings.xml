@@ -118,6 +118,8 @@
     <string name="patch_use_microg_desc">Redirect GMS requests to the community version of MicroG (such as ReVanced GmsCore). Applicable to Google apps like YouTube, requires manually installing the corresponding MicroG service.</string>
     <string name="patch_output_log_to_media">Output Log to Media Directory</string>
     <string name="patch_output_log_to_media_desc">Output the Xposed logs and framework startup logs of the module running to the Media directory.</string>
+    <string name="patch_hide_libs">Hide ART Library</string>
+    <string name="patch_hide_libs_desc">Hide ART and sensitive system libraries from the application to bypass some basic root/environment detections.</string>
     <string name="patch_start">Start Patch</string>
     <string name="patch_return">Return</string>
     <string name="patch_uninstall_text">Due to different signatures, you need to uninstall the original app before installing the patched one.\nMake sure you have backed up personal data.</string>
