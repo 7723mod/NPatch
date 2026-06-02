@@ -48,6 +48,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class NPatch {
@@ -128,6 +130,7 @@ public class NPatch {
     private String packageName;
 
     private static final String ANDROID_MANIFEST_XML = "AndroidManifest.xml";
+    private static final Pattern DEX_NAME_PATTERN = Pattern.compile("^classes(\\d*)\\.dex$");
     private static final String META_INF_PREFIX = "META-INF/";
     private static final String META_INF_MANIFEST = "META-INF/MANIFEST.MF";
     private static final HashSet<String> APK_SIGNATURE_EXTENSIONS = new HashSet<>(Arrays.asList(
@@ -343,22 +346,6 @@ public class NPatch {
                 throw new PatchError("Error when saving config");
             }
 
-            logger.i("Adding metaloader dex...");
-            try (var is = getClass().getClassLoader().getResourceAsStream(Constants.META_LOADER_DEX_ASSET_PATH)) {
-                if (is == null) throw new PatchError("Meta loader dex not found");
-                if (embedOriginal) {
-                    dstZFile.add("classes.dex", is);
-                } else {
-                    var dexCount = srcZFile.entries().stream().filter(entry -> {
-                        var name = entry.getCentralDirectoryHeader().getName();
-                        return name.startsWith("classes") && name.endsWith(".dex");
-                    }).count() + 1; // Used .count() instead of .collect().size() for efficiency
-                    dstZFile.add("classes" + dexCount + ".dex", is);
-                }
-            } catch (Throwable e) {
-                throw new PatchError("Error when adding dex", e);
-            }
-
             if (isInjectProvider){
                 try (var is = getClass().getClassLoader().getResourceAsStream("assets/mtprovider.dex")) {
                     dstZFile.add("assets/npatch/mtprovider.dex", is);
@@ -403,6 +390,7 @@ public class NPatch {
             // create zip link
             logger.d("Creating nested apk link...");
 
+            int maxDexIndex = 0;
             for (StoredEntry entry : srcZFile.entries()) {
                 String name = entry.getCentralDirectoryHeader().getName();
                 if (dstZFile.get(name) != null) continue;
@@ -410,6 +398,7 @@ public class NPatch {
                 if (name.equals("AndroidManifest.xml")) continue;
                 if (isApkSignatureEntry(name))
                     continue;
+                maxDexIndex = Math.max(maxDexIndex, getDexIndex(name));
 
                 boolean linked = false;
                 if (srcZFile instanceof NestedZip) {
@@ -433,10 +422,39 @@ public class NPatch {
                 }
             }
 
+            logger.i("Adding metaloader dex...");
+            try (var is = getClass().getClassLoader().getResourceAsStream(Constants.META_LOADER_DEX_ASSET_PATH)) {
+                if (is == null) throw new PatchError("Meta loader dex not found");
+                String metaloaderDexName = maxDexIndex <= 0 ? "classes.dex" : "classes" + (maxDexIndex + 1) + ".dex";
+                logger.d("Appending metaloader dex as " + metaloaderDexName);
+                dstZFile.add(metaloaderDexName, is, false);
+            } catch (Throwable e) {
+                throw new PatchError("Error when adding dex", e);
+            }
+
             dstZFile.realign();
             logger.i("Writing apk...");
         }
         logger.i("Done. Output APK: " + outputFile.getAbsolutePath());
+    }
+
+    private static int getDexIndex(String name) {
+        if (name == null) {
+            return 0;
+        }
+        Matcher matcher = DEX_NAME_PATTERN.matcher(name);
+        if (!matcher.matches()) {
+            return 0;
+        }
+        String group = matcher.group(1);
+        if (group == null || group.isEmpty()) {
+            return 1;
+        }
+        try {
+            return Integer.parseInt(group);
+        } catch (NumberFormatException ignored) {
+            return 0;
+        }
     }
 
     private static boolean isApkSignatureEntry(String name) {

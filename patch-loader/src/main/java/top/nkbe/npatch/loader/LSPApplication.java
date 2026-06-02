@@ -318,6 +318,10 @@ public class LSPApplication {
                 SigBypass.setPaths(cacheApkPath.toString(), patchedApkPath);
                 SigBypass.setOriginalSignature(config.newPackage, config.originalSignature);
                 loadedApkSourceDir = cacheApkPath.toString();
+                XLog.i(TAG, "LoadedApk source mode=cache"
+                        + ", patchedApkPath=" + patchedApkPath
+                        + ", cacheApkPath=" + cacheApkPath
+                        + ", selected=" + loadedApkSourceDir);
                 if (nativeLibraryDir != null) {
                     appInfo.nativeLibraryDir = nativeLibraryDir.toString();
                 }

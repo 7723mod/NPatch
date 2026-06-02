@@ -23,6 +23,7 @@ import java.io.OutputStream;
 import java.io.FileOutputStream;
 import java.lang.reflect.Method;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -114,15 +115,23 @@ public class LSPAppComponentFactoryStub extends AppComponentFactory {
                     throw new RuntimeException("Should not happen: libnpatch.so not found in assets");
                 }
                 File soFile = createTempSoFile(currentUserId);
-                soFile.deleteOnExit();
                 try (var os = new FileOutputStream(soFile)) {
                     transfer(is, os);
                 }
+                Log.i(TAG, "Keeping native temp file for diagnostics: " + soFile.getAbsolutePath());
                 Log.i(TAG, "Loading native lib from temp file: " + soFile.getAbsolutePath());
                 System.load(soFile.getAbsolutePath());
+                clearDexBuffer();
             }
         } catch (Throwable e) {
             throw new ExceptionInInitializerError(e);
+        }
+    }
+
+    private static void clearDexBuffer() {
+        if (dex != null) {
+            Arrays.fill(dex, (byte) 0);
+            dex = null;
         }
     }
 
