@@ -12,11 +12,8 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Environment
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -76,8 +73,6 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.blur.HazeBlurStyle
-import dev.chrisbanes.haze.blur.HazeColorEffect
 import dev.chrisbanes.haze.blur.blurEffect
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
@@ -88,9 +83,12 @@ import kotlinx.coroutines.launch
 import org.lsposed.manager.ui.compose.repository.RepositoryDetailViewModel
 import top.nkbe.npatch.repo.OnlineModule
 import top.nkbe.npatch.repo.ReleaseAsset
+import top.nkbe.npatch.repo.RepoLoader
 import top.nkbe.npatch.ui.component.GithubMarkdown
 import top.nkbe.npatch.ui.component.NPatchScaffold
+import top.nkbe.npatch.ui.util.backgroundAwareColor
 import top.nkbe.npatch.ui.util.backgroundAwareCardColors
+import top.nkbe.npatch.ui.util.backgroundAwareHazeStyle
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
@@ -129,6 +127,9 @@ import top.nkbe.npatch.R
 import top.nkbe.npatch.repo.Release
 import kotlin.math.min
 
+private val RepoDetailHorizontalPadding = 12.dp
+private const val RepoDetailBackgroundAlpha = 0.84f
+
 fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findActivity()
@@ -152,6 +153,7 @@ fun RepositoryDetailScreen(
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val repoLoader = remember { RepoLoader.getInstance() }
 
     val msgReadme = stringResource(R.string.module_readme)
     val msgReleases = stringResource(R.string.module_releases)
@@ -169,9 +171,9 @@ fun RepositoryDetailScreen(
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val scrollBehavior: ScrollBehavior = MiuixScrollBehavior()
     val hazeState = rememberHazeState()
-    val hazeStyle = HazeBlurStyle(
-        backgroundColor = colorScheme.surface,
-        colorEffect = HazeColorEffect.tint(colorScheme.surface.copy(0.8f))
+    val hazeStyle = backgroundAwareHazeStyle(
+        surfaceColor = colorScheme.surface,
+        backgroundAlpha = RepoDetailBackgroundAlpha
     )
 
     val msgUnknownAuthor = stringResource(R.string.unknown_author)
@@ -208,7 +210,7 @@ fun RepositoryDetailScreen(
                     if (!module?.name.isNullOrEmpty()) {
                         IconButton(onClick = {
                             module?.name?.let {
-                                uriHandler.openUri("https://modules.lsposed.org/module/$it")
+                                uriHandler.openUri(repoLoader.getModulePageUrl(it))
                             }
                         }) {
                             Icon(
@@ -295,13 +297,6 @@ fun RepositoryDetailScreen(
                         start = innerPadding.calculateStartPadding(layoutDirection),
                         end = innerPadding.calculateEndPadding(layoutDirection)
                     )
-                    .hazeEffect(hazeState) {
-                        blurEffect {
-                            style = hazeStyle
-                            blurRadius = 30.dp
-                            noiseFactor = 0f
-                        }
-                    }
                     .padding(bottom = 6.dp)
                     .onGloballyPositioned {
                         with(density) { headerHeight = it.size.height.toDp() }
@@ -311,9 +306,12 @@ fun RepositoryDetailScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = RepoDetailHorizontalPadding)
                         .padding(bottom = 4.dp),
-                    colors = backgroundAwareCardColors()
+                    colors = backgroundAwareCardColors(
+                        color = colorScheme.surfaceContainer,
+                        backgroundAlpha = RepoDetailBackgroundAlpha
+                    )
                 ) {
                     Column(modifier = Modifier.padding(vertical = 12.dp, horizontal = 14.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -328,13 +326,13 @@ fun RepositoryDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "${stringResource(R.string.sort_by_package_name)}：${module?.name}",
+                                    text = "${stringResource(R.string.sort_by_package_name)}: ${module?.name}",
                                     fontSize = 12.sp,
                                     color = colorScheme.onSurfaceVariantSummary,
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "${stringResource(R.string.module_information_collaborators)}：$displayAuthorName",
+                                    text = "${stringResource(R.string.module_information_collaborators)}: $displayAuthorName",
                                     fontSize = 12.sp,
                                     modifier = Modifier.padding(bottom = 1.dp),
                                     color = colorScheme.onSurfaceVariantSummary,
@@ -357,7 +355,10 @@ fun RepositoryDetailScreen(
                                     } ?: false
                                 }
                                 Surface(
-                                    color = colorScheme.onBackgroundVariant.copy(alpha = 0.1f),
+                                    color = backgroundAwareColor(
+                                        colorScheme.surfaceVariant,
+                                        backgroundAlpha = 0.92f
+                                    ),
                                     shape = RoundedCornerShape(50),
                                     modifier = Modifier.height(28.dp)
                                 ) {
@@ -382,7 +383,10 @@ fun RepositoryDetailScreen(
                                 if (hasUpdate) {
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Surface(
-                                        color = colorScheme.primary.copy(alpha = 0.1f),
+                                        color = backgroundAwareColor(
+                                            colorScheme.primary.copy(alpha = 1f),
+                                            backgroundAlpha = 0.18f
+                                        ),
                                         shape = RoundedCornerShape(50),
                                         modifier = Modifier.height(28.dp)
                                     ) {
@@ -403,14 +407,25 @@ fun RepositoryDetailScreen(
                     }
                 }
 
-                TabRow(
-                    tabs = tabs,
-                    selectedTabIndex = pagerState.currentPage,
-                    onTabSelected = { scope.launch { pagerState.animateScrollToPage(it) } },
-                    colors = TabRowDefaults.tabRowColors(backgroundColor = Color.Transparent),
-                    height = tabRowHeight,
-                    modifier = Modifier.padding(horizontal = 12.dp)
-                )
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = RepoDetailHorizontalPadding),
+                    colors = backgroundAwareCardColors(
+                        color = colorScheme.surfaceContainer,
+                        backgroundAlpha = RepoDetailBackgroundAlpha
+                    ),
+                    insideMargin = PaddingValues(0.dp),
+                    showIndication = false
+                ) {
+                    TabRow(
+                        tabs = tabs,
+                        selectedTabIndex = pagerState.currentPage,
+                        onTabSelected = { scope.launch { pagerState.animateScrollToPage(it) } },
+                        colors = TabRowDefaults.tabRowColors(backgroundColor = Color.Transparent),
+                        height = tabRowHeight,
+                    )
+                }
             }
         }
     }
@@ -443,8 +458,13 @@ fun ReadmeTab(
         ) {
             item {
                 Card(
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                    colors = backgroundAwareCardColors(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = RepoDetailHorizontalPadding),
+                    colors = backgroundAwareCardColors(
+                        color = colorScheme.surfaceContainer,
+                        backgroundAlpha = RepoDetailBackgroundAlpha
+                    ),
                 ) {
                     GithubMarkdown(content = content)
                 }
@@ -492,8 +512,15 @@ fun ReleasesTab(
             .overScrollVertical()
             .hazeSource(state = hazeState)
     ) {
-        items(releases.take(visibleItemCount)) { release ->
-            Box(Modifier.padding(horizontal = 12.dp)) {
+        items(
+            items = releases.take(visibleItemCount),
+            key = { it.tagName ?: it.name ?: it.hashCode().toString() }
+        ) { release ->
+            Box(
+                Modifier
+                    .padding(horizontal = RepoDetailHorizontalPadding)
+                    .animateItem(placementSpec = spring(stiffness = Spring.StiffnessLow))
+            ) {
                 ReleaseCard(release, context)
             }
         }
@@ -512,7 +539,7 @@ fun ReleasesTab(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = RepoDetailHorizontalPadding)
                 )
             }
         }
@@ -542,7 +569,10 @@ fun ReleaseCard(release: Release, context: Context) {
     Card(
         modifier = Modifier
             .fillMaxWidth(),
-        colors = backgroundAwareCardColors(),
+        colors = backgroundAwareCardColors(
+            color = colorScheme.surfaceContainer,
+            backgroundAlpha = RepoDetailBackgroundAlpha
+        ),
     ) {
         Column {
             Row(
@@ -581,11 +611,7 @@ fun ReleaseCard(release: Release, context: Context) {
             val hasAssets = !release.releaseAssets.isNullOrEmpty()
             val hasDescription = !release.descriptionHTML.isNullOrEmpty()
 
-            AnimatedVisibility(
-                visible = hasAssets || hasDescription,
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically()
-            ) {
+            if (hasAssets || hasDescription) {
                 Column {
                     if (hasDescription) {
                         Column {
@@ -660,8 +686,11 @@ fun InfoTab(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp),
-                    colors = backgroundAwareCardColors(),
+                        .padding(horizontal = RepoDetailHorizontalPadding),
+                    colors = backgroundAwareCardColors(
+                        color = colorScheme.surfaceContainer,
+                        backgroundAlpha = RepoDetailBackgroundAlpha
+                    ),
                 ) {
                     if (!module.homepageUrl.isNullOrEmpty()) {
                         InfoRowItem(
@@ -706,8 +735,11 @@ fun InfoTab(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp),
-                        colors = backgroundAwareCardColors(),
+                            .padding(horizontal = RepoDetailHorizontalPadding),
+                        colors = backgroundAwareCardColors(
+                            color = colorScheme.surfaceContainer,
+                            backgroundAlpha = RepoDetailBackgroundAlpha
+                        ),
                     ) {
                         Column {
                             collaborators.forEachIndexed { index, collaborator ->
@@ -719,7 +751,7 @@ fun InfoTab(
                                     summary = collaborator.login,
                                     onClick = {
                                         val url = "https://github.com/${collaborator.login}"
-                                        module.homepageUrl?.let { url ->
+                                        collaborator.login?.let {
                                             uriHandler.openUri(url)
                                         }
                                     }

@@ -266,6 +266,8 @@
     <string name="download_asset">Download</string>
     <string name="package_name">Package name</string>
     <string name="author">Author</string>
+    <string name="repo_filter_scope_title">Filter by applicable app</string>
+    <string name="repo_filter_clear">Clear app filter</string>
     <string name="time_just_now">Just now</string>
     <string name="time_minutes_ago">%d minutes ago</string>
     <string name="time_hours_ago">%d hours ago</string>

@@ -1,5 +1,6 @@
 package top.nkbe.npatch.ui.viewmodel
 
+import androidx.compose.runtime.snapshotFlow
 import androidx.core.content.pm.PackageInfoCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import nkbe.util.NeoPackageManager
+import nkbe.util.NeoPackageManager.AppInfo
 import top.nkbe.npatch.lspApp
 import top.nkbe.npatch.repo.OnlineModule
 import top.nkbe.npatch.repo.RepoLoader
@@ -25,6 +27,20 @@ data class RepoUiModel(
     val updatableVersion: String?,
     val installedVersion: String?,
     val stargazerCount: Int
+)
+
+data class RepoScopeTarget(
+    val packageName: String,
+    val label: String,
+    val appInfo: AppInfo
+)
+
+private data class RepoFilterState(
+    val modules: List<OnlineModule>,
+    val query: String,
+    val sort: RepoSort,
+    val upgradableFirst: Boolean,
+    val scopeFilter: String?
 )
 
 enum class RepoSort {
@@ -41,6 +57,7 @@ class RepositoryViewModel : ViewModel(), RepoLoader.RepoListener {
     private val _searchQuery = MutableStateFlow("")
     private val _refreshTrigger = MutableStateFlow(0)
     private val _sortOrder = MutableStateFlow(RepoSort.UPDATED)
+    private val _scopeFilter = sharedScopeFilter
 
     private val _upgradableFirst = MutableStateFlow(true)
     val upgradableFirst = _upgradableFirst.asStateFlow()
@@ -49,22 +66,69 @@ class RepositoryViewModel : ViewModel(), RepoLoader.RepoListener {
     val isRefreshing = _isRefreshing.asStateFlow()
 
     val sortOrder: StateFlow<RepoSort> = _sortOrder
+    val scopeFilter: StateFlow<String?> = _scopeFilter
 
-    val uiModels: StateFlow<List<RepoUiModel>> = combine(
+    val availableScopeTargets: StateFlow<List<RepoScopeTarget>> = combine(
+        _modules,
+        _refreshTrigger,
+        snapshotFlow { NeoPackageManager.appList }
+    ) { modules, _, appList ->
+        val scopedPackageNames = modules
+            .flatMap { it.scope ?: emptyList() }
+            .toSet()
+
+        appList
+            .asSequence()
+            .filter { it.app.packageName in scopedPackageNames }
+            .map { RepoScopeTarget(it.app.packageName, it.label, it) }
+            .sortedBy { it.label.lowercase() }
+            .toList()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val selectedScopeTarget: StateFlow<RepoScopeTarget?> = combine(
+        availableScopeTargets,
+        _scopeFilter
+    ) { targets, selectedPackage ->
+        targets.firstOrNull { it.packageName == selectedPackage }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    private val filterState = combine(
         _modules,
         _searchQuery,
         _sortOrder,
         _upgradableFirst,
-        _refreshTrigger
-    ) { modules, query, sort, upgradableFirst, _ ->
+        _scopeFilter
+    ) { modules, query, sort, upgradableFirst, scopeFilter ->
+        RepoFilterState(
+            modules = modules,
+            query = query,
+            sort = sort,
+            upgradableFirst = upgradableFirst,
+            scopeFilter = scopeFilter
+        )
+    }
 
-        val filtered = if (query.isEmpty()) {
-            modules
+    val uiModels: StateFlow<List<RepoUiModel>> = combine(
+        filterState,
+        _refreshTrigger,
+        snapshotFlow { NeoPackageManager.appList }
+    ) { state, _, appList ->
+        val filteredByScope = if (state.scopeFilter.isNullOrEmpty()) {
+            state.modules
         } else {
-            modules.filter {
-                (it.name?.contains(query, ignoreCase = true) == true) ||
-                        (it.description?.contains(query, ignoreCase = true) == true) ||
-                        (it.summary?.contains(query, ignoreCase = true) == true)
+            state.modules.filter { module ->
+                module.scope?.contains(state.scopeFilter) == true
+            }
+        }
+
+        val filtered = if (state.query.isEmpty()) {
+            filteredByScope
+        } else {
+            filteredByScope.filter {
+                (it.scope?.any { scope -> scope.contains(state.query, ignoreCase = true) } == true) ||
+                    (it.name?.contains(state.query, ignoreCase = true) == true) ||
+                    (it.description?.contains(state.query, ignoreCase = true) == true) ||
+                    (it.summary?.contains(state.query, ignoreCase = true) == true)
             }
         }
 
@@ -72,7 +136,7 @@ class RepositoryViewModel : ViewModel(), RepoLoader.RepoListener {
             val pkgName = module.name ?: ""
 
             // 使用 NeoPackageManager 判断是否安装
-            val installedAppInfo = NeoPackageManager.appList.find { it.app.packageName == pkgName }
+            val installedAppInfo = appList.find { it.app.packageName == pkgName }
             val isInstalled = installedAppInfo != null
 
             // 获取本地安装的版本号
@@ -107,12 +171,12 @@ class RepositoryViewModel : ViewModel(), RepoLoader.RepoListener {
 
         // 排序逻辑保持不变
         uiList = uiList.sortedWith(Comparator { a, b ->
-            if (upgradableFirst) {
+            if (state.upgradableFirst) {
                 if (a.isUpgradable && !b.isUpgradable) return@Comparator -1
                 if (!a.isUpgradable && b.isUpgradable) return@Comparator 1
             }
 
-            when (sort) {
+            when (state.sort) {
                 RepoSort.UPDATED -> compareValues(b.module.latestReleaseTime, a.module.latestReleaseTime)
                 RepoSort.CREATED -> compareValues(b.module.createdAt, a.module.createdAt)
                 RepoSort.NAME -> compareValues(a.module.name, b.module.name)
@@ -163,6 +227,10 @@ class RepositoryViewModel : ViewModel(), RepoLoader.RepoListener {
         _searchQuery.value = query
     }
 
+    fun setScopeFilter(packageName: String?) {
+        _scopeFilter.value = packageName
+    }
+
     override fun onRepoLoaded() {
         loadModules()
         _isRefreshing.value = false
@@ -180,5 +248,9 @@ class RepositoryViewModel : ViewModel(), RepoLoader.RepoListener {
     override fun onCleared() {
         super.onCleared()
         repoLoader.removeListener(this)
+    }
+
+    companion object {
+        private val sharedScopeFilter = MutableStateFlow<String?>(null)
     }
 }

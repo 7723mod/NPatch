@@ -37,4 +37,9 @@ sealed interface Route : NavKey {
     data class RepoDetail(
         val packageName: String
     ) : Route
+
+    @Serializable
+    data class RepoScopeFilter(
+        val selectedPackageName: String? = null
+    ) : Route
 }

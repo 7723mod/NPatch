@@ -1,5 +1,8 @@
 package org.lsposed.manager.ui.compose.repository
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.ExperimentalFoundationApi
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
@@ -39,12 +42,13 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import top.nkbe.npatch.R
+import top.nkbe.npatch.repo.RepoLoader
 import top.nkbe.npatch.ui.component.AccessibleMenuItem
+import top.nkbe.npatch.ui.component.NPatchScaffold
 import top.nkbe.npatch.ui.component.SearchBarFake
 import top.nkbe.npatch.ui.component.SearchBox
 import top.nkbe.npatch.ui.component.SearchPager
 import top.nkbe.npatch.ui.component.SearchStatus
-import top.nkbe.npatch.ui.component.NPatchScaffold
 import top.nkbe.npatch.ui.page.Navigator
 import top.nkbe.npatch.ui.page.Route
 import top.nkbe.npatch.ui.util.backgroundAwareCardColors
@@ -65,14 +69,13 @@ import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
-import top.yukonga.miuix.kmp.overlay.OverlayListPopup
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Download
 import top.yukonga.miuix.kmp.icon.extended.Favorites
 import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.icon.extended.Recent
 import top.yukonga.miuix.kmp.icon.extended.Sort
+import top.yukonga.miuix.kmp.overlay.OverlayListPopup
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.utils.MiuixPopupUtils.Companion.MiuixPopupHost
@@ -80,6 +83,9 @@ import top.yukonga.miuix.kmp.utils.PressFeedbackType
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
+
+private val RepoHorizontalPadding = 12.dp
+private const val RepoBackgroundAlpha = 0.82f
 
 @Composable
 fun RepositoryScreen(
@@ -93,6 +99,7 @@ fun RepositoryScreen(
     val currentSort by viewModel.sortOrder.collectAsStateWithLifecycle()
     val isUpgradableFirst by viewModel.upgradableFirst.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val selectedScopeTarget by viewModel.selectedScopeTarget.collectAsStateWithLifecycle()
 
     val pullToRefreshState = rememberPullToRefreshState()
     val scrollBehavior = MiuixScrollBehavior()
@@ -101,7 +108,7 @@ fun RepositoryScreen(
     }
 
     val hazeState = rememberHazeState()
-    val hazeStyle = backgroundAwareHazeStyle()
+    val hazeStyle = backgroundAwareHazeStyle(backgroundAlpha = RepoBackgroundAlpha)
 
     val showSortMenu = remember { mutableStateOf(false) }
     val sortOptions = listOf(
@@ -110,6 +117,7 @@ fun RepositoryScreen(
         stringResource(R.string.sort_by_name),
         stringResource(R.string.sort_by_stars)
     )
+    val scopeFilterTitle = stringResource(R.string.repo_filter_scope_title)
 
     LaunchedEffect(searchStatus.searchText) {
         viewModel.onSearchQueryChanged(searchStatus.searchText)
@@ -144,6 +152,15 @@ fun RepositoryScreen(
                                 onDismissRequest = { showSortMenu.value = false }
                             ) {
                                 ListPopupColumn {
+                                    AccessibleMenuItem(
+                                        text = scopeFilterTitle,
+                                        summary = selectedScopeTarget?.label ?: stringResource(R.string.off),
+                                        selected = selectedScopeTarget != null,
+                                        onClick = {
+                                            showSortMenu.value = false
+                                            navigator.navigate(Route.RepoScopeFilter(selectedScopeTarget?.packageName))
+                                        }
+                                    )
                                     AccessibleMenuItem(
                                         text = stringResource(R.string.sort_upgradable_first),
                                         selected = isUpgradableFirst,
@@ -222,23 +239,23 @@ fun RepositoryScreen(
                 topAppBarScrollBehavior = scrollBehavior,
                 refreshTexts = refreshTexts,
                 contentPadding = padding,
-                content = {
-                    RepoListContent(
-                        uiModels = uiModels,
-                        onRepoClick = { navigator.navigate(Route.RepoDetail(it)) },
-                        contentPadding = PaddingValues(
-                            top = innerPadding.calculateTopPadding() + boxHeight.value,
-                            bottom = innerPadding.calculateBottomPadding() + 24.dp
-                        ),
-                        hazeState = hazeState,
-                        scrollBehavior = scrollBehavior
-                    )
-                }
-            )
+            ) {
+                RepoListContent(
+                    uiModels = uiModels,
+                    onRepoClick = { navigator.navigate(Route.RepoDetail(it)) },
+                    contentPadding = PaddingValues(
+                        top = innerPadding.calculateTopPadding() + boxHeight.value,
+                        bottom = innerPadding.calculateBottomPadding() + 24.dp
+                    ),
+                    hazeState = hazeState,
+                    scrollBehavior = scrollBehavior
+                )
+            }
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RepoListContent(
     uiModels: List<RepoUiModel>,
@@ -271,9 +288,11 @@ fun RepoListContent(
                 items = uiModels,
                 key = { it.module.name ?: it.hashCode() }
             ) { item ->
-                RepositoryItem(item = item, onClick = {
-                    item.module.name?.let(onRepoClick)
-                })
+                Box(modifier = Modifier.animateItem(placementSpec = spring(stiffness = Spring.StiffnessLow))) {
+                    RepositoryItem(item = item, onClick = {
+                        item.module.name?.let(onRepoClick)
+                    })
+                }
             }
         }
     }
@@ -282,14 +301,13 @@ fun RepoListContent(
 @Composable
 fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
     val context = LocalContext.current
+    val repoLoader = remember { RepoLoader.getInstance() }
     val module = item.module
     val appName = module.description ?: module.name ?: "Unknown"
     val packageName = module.name ?: ""
 
-    val releaseTimeStr = item.module.latestReleaseTime
-
-    val updatedTime = remember(releaseTimeStr) {
-        getRelativeTime(context, releaseTimeStr)
+    val updatedTime = remember(item.module.latestReleaseTime) {
+        getRelativeTime(context, item.module.latestReleaseTime)
     }
 
     val showMenu = remember { mutableStateOf(false) }
@@ -298,9 +316,12 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp)
+                .padding(horizontal = RepoHorizontalPadding)
                 .padding(bottom = 12.dp),
-            colors = backgroundAwareCardColors(),
+            colors = backgroundAwareCardColors(
+                color = colorScheme.surfaceContainer,
+                backgroundAlpha = RepoBackgroundAlpha
+            ),
             insideMargin = PaddingValues(16.dp),
             showIndication = true,
             pressFeedbackType = PressFeedbackType.Sink,
@@ -344,7 +365,7 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
 
                 Column {
                     Text(
-                        text = "${stringResource(R.string.package_name)}：$packageName",
+                        text = "${stringResource(R.string.package_name)}: $packageName",
                         fontSize = 12.sp,
                         fontWeight = FontWeight(550),
                         color = colorScheme.onSurfaceVariantSummary,
@@ -355,7 +376,7 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
                     if (author != null) {
                         Spacer(modifier = Modifier.width(2.dp))
                         Text(
-                            text = "${stringResource(R.string.author)}：$author",
+                            text = "${stringResource(R.string.author)}: $author",
                             fontSize = 12.sp,
                             modifier = Modifier.padding(bottom = 1.dp),
                             fontWeight = FontWeight(550),
@@ -377,11 +398,13 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
                     maxLines = 4,
                 )
             }
+
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = 8.dp),
                 thickness = 0.5.dp,
                 color = colorScheme.outline.copy(alpha = 0.5f)
             )
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -427,12 +450,11 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
             ) {
                 ListPopupColumn {
                     AccessibleMenuItem(
-                        text = androidx.compose.ui.res.stringResource(R.string.menu_open_in_browser),
+                        text = stringResource(R.string.menu_open_in_browser),
                         onClick = {
-                            val url = "https://modules.lsposed.org/module/${item.module.name}"
                             val intent = Intent(
                                 Intent.ACTION_VIEW,
-                                url.toUri()
+                                repoLoader.getModulePageUrl(packageName).toUri()
                             )
                             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             context.startActivity(intent)
@@ -440,21 +462,15 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
                         }
                     )
                     AccessibleMenuItem(
-                        text = androidx.compose.ui.res.stringResource(R.string.download_latest_version),
+                        text = stringResource(R.string.download_latest_version),
                         onClick = {
-                            val url = if (!module.sourceUrl.isNullOrEmpty()) {
-                                if (module.sourceUrl!!.endsWith("/")) {
-                                    "${module.sourceUrl}releases/latest"
-                                } else {
-                                    "${module.sourceUrl}/releases/latest"
-                                }
-                            } else {
-                                "https://modules.lsposed.org/module/${item.module.name}"
-                            }
-                            val intent = Intent(
-                                Intent.ACTION_VIEW,
-                                url.toUri()
-                            )
+                            val url = repoLoader.getReleases(packageName)
+                                .firstOrNull()
+                                ?.releaseAssets
+                                ?.firstOrNull()
+                                ?.downloadUrl
+                                ?: repoLoader.getModulePageUrl(packageName)
+                            val intent = Intent(Intent.ACTION_VIEW, url.toUri())
                             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             context.startActivity(intent)
                             showMenu.value = false
@@ -468,15 +484,14 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
 
 fun getRelativeTime(context: Context, timeString: String?): String {
     if (timeString == null) return "N/A"
-    try {
+    return try {
         val instant = java.time.Instant.parse(timeString)
         val time = instant.toEpochMilli()
         val now = System.currentTimeMillis()
         val diff = now - time
-
         val oneYearMillis = 365L * 24 * 60 * 60 * 1000
 
-        return when {
+        when {
             diff < 60 * 1000 -> context.getString(R.string.time_just_now)
             diff < 60 * 60 * 1000 -> context.getString(R.string.time_minutes_ago, diff / (60 * 1000))
             diff < 24 * 60 * 60 * 1000 -> context.getString(R.string.time_hours_ago, diff / (60 * 60 * 1000))
@@ -494,6 +509,6 @@ fun getRelativeTime(context: Context, timeString: String?): String {
             }
         }
     } catch (_: Exception) {
-        return "N/A"
+        "N/A"
     }
 }

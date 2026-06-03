@@ -28,9 +28,10 @@ val LocalFloatingGlassBottomBarBlur = compositionLocalOf { true }
 fun backgroundAwareCardColors(
     color: Color = MiuixTheme.colorScheme.surface,
     contentColor: Color = MiuixTheme.colorScheme.onSurface,
+    backgroundAlpha: Float = BG_SURFACE_ALPHA,
 ): CardColors {
     val adjusted = if (LocalBackgroundImagePath.current.isNotEmpty()) {
-        color.copy(alpha = BG_SURFACE_ALPHA)
+        color.copy(alpha = backgroundAlpha)
     } else {
         color
     }
@@ -41,9 +42,12 @@ fun backgroundAwareCardColors(
 }
 
 @Composable
-fun backgroundAwareColor(color: Color): Color {
+fun backgroundAwareColor(
+    color: Color,
+    backgroundAlpha: Float = BG_SURFACE_ALPHA,
+): Color {
     return if (LocalBackgroundImagePath.current.isNotEmpty()) {
-        color.copy(alpha = BG_SURFACE_ALPHA)
+        color.copy(alpha = backgroundAlpha)
     } else {
         color
     }
@@ -52,10 +56,14 @@ fun backgroundAwareColor(color: Color): Color {
 @Composable
 fun backgroundAwareHazeStyle(
     surfaceColor: Color = MiuixTheme.colorScheme.surface,
+    backgroundAlpha: Float = BG_SURFACE_ALPHA,
+    tintAlpha: Float = HAZE_TINT_ALPHA,
 ): HazeBlurStyle {
     val hasBackground = LocalBackgroundImagePath.current.isNotEmpty()
     return HazeBlurStyle(
         backgroundColor = if (hasBackground) Color.Transparent else surfaceColor,
-        colorEffect = HazeColorEffect.tint(surfaceColor.copy(alpha = if (hasBackground) BG_SURFACE_ALPHA else HAZE_TINT_ALPHA))
+        colorEffect = HazeColorEffect.tint(
+            surfaceColor.copy(alpha = if (hasBackground) backgroundAlpha else tintAlpha)
+        )
     )
 }

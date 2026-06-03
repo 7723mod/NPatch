@@ -257,6 +257,8 @@
     <string name="download_asset">下载</string>
     <string name="package_name">包名</string>
     <string name="author">作者</string>
+    <string name="repo_filter_scope_title">按适用应用筛选</string>
+    <string name="repo_filter_clear">清除应用筛选</string>
     <string name="time_just_now">刚刚</string>
     <string name="time_minutes_ago">%d分钟前</string>
     <string name="time_hours_ago">%d小时前</string>

@@ -3,6 +3,8 @@ package top.nkbe.npatch.repo
 import android.content.Context
 import android.util.Log
 import com.google.gson.Gson
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.OkHttpClient
@@ -15,9 +17,9 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
-import kotlin.collections.forEach
 
 class RepoLoader private constructor() {
 
@@ -29,8 +31,8 @@ class RepoLoader private constructor() {
     class ModuleVersion(val versionCode: Long, val versionName: String) {
         fun upgradable(installedVersionCode: Long, installedVersionName: String?): Boolean {
             val safeVersionName = installedVersionName?.replace(' ', '_') ?: ""
-            return this.versionCode > installedVersionCode ||
-                    (this.versionCode == installedVersionCode && this.versionName != safeVersionName)
+            return versionCode > installedVersionCode ||
+                (versionCode == installedVersionCode && versionName != safeVersionName)
         }
     }
 
@@ -45,19 +47,14 @@ class RepoLoader private constructor() {
 
     private val channels: Array<String> = try {
         resources.getStringArray(R.array.update_channel_values)
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         arrayOf("release", "beta", "snapshot")
     }
 
     companion object {
         private const val TAG = "RepoLoader"
-        private const val originRepoUrl = "https://modules.lsposed.org/"
-        private const val backupRepoUrl = "https://modules-blogcdn.lsposed.org/"
-        private const val secondBackupRepoUrl = "https://modules-cloudflare.lsposed.org/"
+        private const val repoBaseUrl = "https://repo.fpfast.top/repo/"
 
-        private var repoUrl = originRepoUrl
-
-        // 剥离原版 App.java 的依赖，直接在内部维护网络和线程池
         private val okHttpClient = OkHttpClient()
         private val executorService = Executors.newCachedThreadPool()
 
@@ -79,28 +76,18 @@ class RepoLoader private constructor() {
     fun loadRemoteData() {
         isRepoLoaded = false
         try {
-            val request = Request.Builder().url(repoUrl + "modules.json").build()
+            val request = Request.Builder().url("${repoBaseUrl}modules").build()
             okHttpClient.newCall(request).execute().use { response ->
-                if (response.isSuccessful) {
-                    response.body.string().let { bodyString ->
-                        Files.write(repoFile, bodyString.toByteArray(StandardCharsets.UTF_8))
-                        loadLocalData(false)
-                    }
+                if (!response.isSuccessful) {
+                    throw IOException("HTTP ${response.code}")
                 }
+                val bodyString = response.body.string()
+                Files.write(repoFile, bodyString.toByteArray(StandardCharsets.UTF_8))
+                loadLocalData(false)
             }
         } catch (e: Throwable) {
             Log.e(TAG, "load remote data", e)
             listeners.forEach { it.onThrowable(e) }
-            when (repoUrl) {
-                originRepoUrl -> {
-                    repoUrl = backupRepoUrl
-                    loadRemoteData()
-                }
-                backupRepoUrl -> {
-                    repoUrl = secondBackupRepoUrl
-                    loadRemoteData()
-                }
-            }
         }
     }
 
@@ -116,8 +103,7 @@ class RepoLoader private constructor() {
             if (Files.exists(repoFile)) {
                 val encoded = Files.readAllBytes(repoFile)
                 val bodyString = String(encoded, StandardCharsets.UTF_8)
-                val gson = Gson()
-                val repoModules = gson.fromJson(bodyString, Array<OnlineModule>::class.java)
+                val repoModules = parseRepoModules(bodyString)
 
                 val modules = HashMap<String, OnlineModule>()
                 repoModules.forEach { module ->
@@ -140,6 +126,49 @@ class RepoLoader private constructor() {
             listeners.forEach { it.onRepoLoaded() }
             if (doUpdateRemote) loadRemoteData()
         }
+    }
+
+    private fun parseRepoModules(bodyString: String): Array<OnlineModule> {
+        val trimmed = bodyString.trim()
+        if (trimmed.startsWith("[")) {
+            return Gson().fromJson(trimmed, Array<OnlineModule>::class.java)
+        }
+
+        val root = JsonParser.parseString(trimmed).asJsonObject
+        val modulesArray = root.getAsJsonArray("modules") ?: return emptyArray()
+        return Array(modulesArray.size()) { index ->
+            mapFpaModuleSummary(modulesArray[index].asJsonObject)
+        }
+    }
+
+    private fun mapFpaModuleSummary(json: JsonObject): OnlineModule {
+        val module = OnlineModule()
+        val packageName = json.optString("pkg")
+        val versionCode = json.optLong("new_version_code")
+        val versionName = json.optString("new_version")
+        val latestReleaseTime = epochMillisToIso(json.optLong("new_update_time"))
+
+        module.name = packageName
+        module.description = json.optString("desc")
+        module.summary = json.optString("summary")
+        module.readmeHTML = json.optString("readme_html")
+        module.readme = json.optString("readme_text")
+        module.createdAt = epochMillisToIso(json.optLong("createTime"))
+        module.updatedAt = latestReleaseTime
+        module.latestReleaseTime = latestReleaseTime
+        module.homepageUrl = packageName?.let(::getModulePageUrl)
+        module.collaborators = listOf(parseAuthor(json.optString("author")))
+        module.scope =
+            buildList {
+                addAll(json.optStringList("xp89scope"))
+                addAll(json.optStringList("xp100scope"))
+            }.distinct()
+
+        if (versionCode > 0L && !versionName.isNullOrEmpty()) {
+            module.latestRelease = "$versionCode-$versionName"
+        }
+
+        return module
     }
 
     @Synchronized
@@ -169,7 +198,7 @@ class RepoLoader private constructor() {
                 module.name?.let { name ->
                     versions[name] = ModuleVersion(verCode, verName)
                 }
-            } catch (e: NumberFormatException) {
+            } catch (_: NumberFormatException) {
                 continue
             }
         }
@@ -234,43 +263,117 @@ class RepoLoader private constructor() {
     }
 
     fun loadRemoteReleases(packageName: String) {
-        val request = Request.Builder().url("${repoUrl}module/$packageName.json").build()
+        val request = Request.Builder().url("${repoBaseUrl}info/$packageName").build()
         okHttpClient.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 Log.e(TAG, "${call.request().url} ${e.message}")
-                when (repoUrl) {
-                    originRepoUrl -> {
-                        repoUrl = backupRepoUrl
-                        loadRemoteReleases(packageName)
-                    }
-                    backupRepoUrl -> {
-                        repoUrl = secondBackupRepoUrl
-                        loadRemoteReleases(packageName)
-                    }
-                    else -> {
-                        listeners.forEach { it.onThrowable(e) }
-                    }
-                }
+                listeners.forEach { it.onThrowable(e) }
             }
 
             override fun onResponse(call: Call, response: Response) {
-                if (response.isSuccessful) {
-                    response.body.string().let { bodyString ->
-                        try {
-                            val gson = Gson()
-                            val module = gson.fromJson(bodyString, OnlineModule::class.java)
-                            module.releasesLoaded = true
-                            (onlineModules as HashMap)[packageName] = module
-                            listeners.forEach { it.onModuleReleasesLoaded(module) }
-                        } catch (t: Throwable) {
-                            Log.e(TAG, Log.getStackTraceString(t))
-                            listeners.forEach { it.onThrowable(t) }
-                        }
+                if (!response.isSuccessful) {
+                    listeners.forEach { it.onThrowable(IOException("HTTP ${response.code}")) }
+                    return
+                }
+
+                response.body.string().let { bodyString ->
+                    try {
+                        val module = (onlineModules[packageName] ?: OnlineModule().apply {
+                            name = packageName
+                        })
+                        val root = JsonParser.parseString(bodyString).asJsonObject
+                        val versions = root.getAsJsonArray("modules")
+                        val releases = versions?.map { mapFpaRelease(packageName, it.asJsonObject) } ?: emptyList()
+                        module.releases = releases
+                        module.releasesLoaded = true
+                        (onlineModules as HashMap)[packageName] = module
+                        listeners.forEach { it.onModuleReleasesLoaded(module) }
+                    } catch (t: Throwable) {
+                        Log.e(TAG, Log.getStackTraceString(t))
+                        listeners.forEach { it.onThrowable(t) }
                     }
                 }
             }
         })
     }
+
+    private fun mapFpaRelease(packageName: String, json: JsonObject): Release {
+        val release = Release()
+        val versionCode = json.optLong("version_code")
+        val versionName = json.optString("version")
+        val tag = json.optString("tag")
+        val fileName = json.optString("file_name")
+        val versionTime = epochMillisToIso(json.optLong("version_time"))
+
+        release.name =
+            buildString {
+                if (!versionName.isNullOrEmpty()) append(versionName)
+                if (versionCode > 0L) {
+                    if (isNotEmpty()) append(" ")
+                    append("($versionCode)")
+                }
+            }.ifEmpty { tag }
+        release.tagName = tag
+        release.createdAt = versionTime
+        release.publishedAt = versionTime
+        release.updatedAt = versionTime
+        release.description = json.optString("desc_text")
+        release.descriptionHTML = json.optString("desc_html")
+        release.releaseAssets =
+            if (tag.isNullOrEmpty() || fileName.isNullOrEmpty()) {
+                emptyList()
+            } else {
+                listOf(
+                    ReleaseAsset().apply {
+                        name = fileName
+                        downloadUrl = getModuleFileUrl(packageName, tag, fileName)
+                    }
+                )
+            }
+        return release
+    }
+
+    private fun parseAuthor(author: String?): Collaborator {
+        val collaborator = Collaborator()
+        val raw = author?.trim().orEmpty()
+        val match = Regex("""^(.+?)\(([^()]+)\)$""").find(raw)
+        if (match != null) {
+            collaborator.name = match.groupValues[1].trim()
+            collaborator.login = match.groupValues[2].trim()
+        } else if (raw.isNotEmpty()) {
+            collaborator.name = raw
+        }
+        return collaborator
+    }
+
+    private fun epochMillisToIso(value: Long): String? {
+        if (value <= 0L) return null
+        return Instant.ofEpochMilli(value).toString()
+    }
+
+    private fun JsonObject.optString(name: String): String? {
+        val element = get(name) ?: return null
+        if (element.isJsonNull) return null
+        return element.asString
+    }
+
+    private fun JsonObject.optLong(name: String): Long {
+        val element = get(name) ?: return 0L
+        if (element.isJsonNull) return 0L
+        return runCatching { element.asLong }.getOrDefault(0L)
+    }
+
+    private fun JsonObject.optStringList(name: String): List<String> {
+        val array = getAsJsonArray(name) ?: return emptyList()
+        return array.mapNotNull { element ->
+            if (element == null || element.isJsonNull) null else element.asString
+        }
+    }
+
+    fun getModulePageUrl(packageName: String): String = "${repoBaseUrl}info/$packageName"
+
+    fun getModuleFileUrl(packageName: String, tag: String, fileName: String): String =
+        "${repoBaseUrl}file/$packageName/$tag/$fileName"
 
     fun addListener(listener: RepoListener) {
         listeners.add(listener)
