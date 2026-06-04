@@ -43,6 +43,9 @@ class RepoLoader private constructor() {
     var isRepoLoaded = false
         private set
 
+    val hasLocalRepo: Boolean
+        get() = Files.exists(repoFile)
+
     private val resources = lspApp.resources
 
     private val channels: Array<String> = try {

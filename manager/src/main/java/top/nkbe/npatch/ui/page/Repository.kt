@@ -99,6 +99,7 @@ fun RepositoryScreen(
     val currentSort by viewModel.sortOrder.collectAsStateWithLifecycle()
     val isUpgradableFirst by viewModel.upgradableFirst.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val isInitialLoading by viewModel.isInitialLoading.collectAsStateWithLifecycle()
     val selectedScopeTarget by viewModel.selectedScopeTarget.collectAsStateWithLifecycle()
 
     val pullToRefreshState = rememberPullToRefreshState()
@@ -209,7 +210,8 @@ fun RepositoryScreen(
                             onRepoClick = { navigator.navigate(Route.RepoDetail(it)) },
                             contentPadding = searchPadding,
                             hazeState = hazeState,
-                            scrollBehavior = scrollBehavior
+                            scrollBehavior = scrollBehavior,
+                            isInitialLoading = isInitialLoading
                         )
                     }
                 }
@@ -248,7 +250,8 @@ fun RepositoryScreen(
                         bottom = innerPadding.calculateBottomPadding() + 24.dp
                     ),
                     hazeState = hazeState,
-                    scrollBehavior = scrollBehavior
+                    scrollBehavior = scrollBehavior,
+                    isInitialLoading = isInitialLoading
                 )
             }
         }
@@ -267,7 +270,15 @@ fun RepoListContent(
 ) {
     if (isInitialLoading && uiModels.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            InfiniteProgressIndicator()
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                InfiniteProgressIndicator()
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = stringResource(R.string.repo_loading_mirror),
+                    color = colorScheme.onSurfaceVariantSummary,
+                    style = MiuixTheme.textStyles.body2
+                )
+            }
         }
     } else if (uiModels.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

@@ -259,6 +259,7 @@
     <string name="module_release_load_more">Show older versions</string>
     <string name="module_release_no_more">No more release</string>
     <string name="repo_load_failed">Failed to load module repo: %s</string>
+    <string name="repo_loading_mirror">Loading mirror repository…</string>
     <plurals name="module_release_assets_download_count">
         <item quantity="one">%d download</item>
         <item quantity="other">%d downloads</item>

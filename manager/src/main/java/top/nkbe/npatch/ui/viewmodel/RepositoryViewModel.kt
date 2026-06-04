@@ -65,6 +65,13 @@ class RepositoryViewModel : ViewModel(), RepoLoader.RepoListener {
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing = _isRefreshing.asStateFlow()
 
+    val isInitialLoading: StateFlow<Boolean> = combine(
+        _isRefreshing,
+        _modules
+    ) { refreshing, modules ->
+        (refreshing || !repoLoader.isRepoLoaded) && modules.isEmpty()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), !repoLoader.hasLocalRepo)
+
     val sortOrder: StateFlow<RepoSort> = _sortOrder
     val scopeFilter: StateFlow<String?> = _scopeFilter
 

@@ -250,6 +250,7 @@
     <string name="module_release_load_more">顯示較舊版本</string>
     <string name="module_release_no_more">沒有更多版本了</string>
     <string name="repo_load_failed">無法載入模組庫：%s</string>
+    <string name="repo_loading_mirror">正在載入鏡像模組庫…</string>
     <plurals name="module_release_assets_download_count">
         <item quantity="one">%d 次下載</item>
         <item quantity="other">%d 次下載</item>
@@ -257,6 +258,8 @@
     <string name="download_asset">下載</string>
     <string name="package_name">套件名稱</string>
     <string name="author">作者</string>
+    <string name="repo_filter_scope_title">按適用應用程式篩選</string>
+    <string name="repo_filter_clear">清除應用篩選</string>
     <string name="time_just_now">剛剛</string>
     <string name="time_minutes_ago">%d分鐘前</string>
     <string name="time_hours_ago">%d小時前</string>

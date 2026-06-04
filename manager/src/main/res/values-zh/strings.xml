@@ -250,6 +250,7 @@
     <string name="module_release_load_more">显示更早版本</string>
     <string name="module_release_no_more">没有更多版本</string>
     <string name="repo_load_failed">无法加载模块仓库：%s</string>
+    <string name="repo_loading_mirror">正在加载镜像仓库…</string>
     <plurals name="module_release_assets_download_count">
         <item quantity="one">%d 次下载</item>
         <item quantity="other">%d 次下载</item>
