@@ -10,6 +10,7 @@
 #include "common/logging.h"
 #include "core/context.h"
 #include "patch_loader.h"
+#include "proc_fd_path.h"
 #include "utils/hook_helper.hpp"
 #include "utils/jni_helper.hpp"
 #include <dlfcn.h>
@@ -1199,24 +1200,35 @@ namespace lspd {
             errno = ENOSYS;
             return -1;
         }
-        if (is_dev_fuse_path(pathname)) {
+        ProcFdReadlinkatPath effective_path;
+        prepare_proc_fd_readlinkat_path(&effective_path, dirfd, pathname,
+                                        [](const char* link_path, char* resolved_path, size_t size) -> ssize_t {
+                                            return syscall(__NR_readlinkat,
+                                                           AT_FDCWD,
+                                                           link_path,
+                                                           resolved_path,
+                                                           size);
+                                        });
+        if (is_dev_fuse_path(effective_path.path())) {
             errno = ENOENT;
             return -1;
         }
         std::string visible_path;
-        if (try_get_lib_snapshot_visible_path(pathname, &visible_path)) {
+        if (try_get_lib_snapshot_visible_path(effective_path.path(), &visible_path)) {
             size_t len = std::min(visible_path.size(), bufsiz);
             memcpy(buf, visible_path.data(), len);
             return static_cast<ssize_t>(len);
         }
-        if (try_get_proc_fd_visible_path(pathname, &visible_path)) {
+        if (try_get_proc_fd_visible_path(effective_path.path(), &visible_path)) {
             size_t len = std::min(visible_path.size(), bufsiz);
             memcpy(buf, visible_path.data(), len);
             return static_cast<ssize_t>(len);
         }
         std::string redirected_path_storage;
-        const char* redirected_path = get_visible_or_redirected_path(pathname, false, &redirected_path_storage);
-        ssize_t rc = readlinkat_backup(dirfd, redirected_path, buf, bufsiz);
+        const char* redirected_path = get_visible_or_redirected_path(effective_path.path(),
+                                                                     false,
+                                                                     &redirected_path_storage);
+        ssize_t rc = readlinkat_backup(effective_path.dirfd, redirected_path, buf, bufsiz);
         if (rc > 0) {
             std::string raw(buf, static_cast<size_t>(rc));
             std::string mapped_storage;

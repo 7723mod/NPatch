@@ -3,6 +3,7 @@
 #include "common/logging.h"
 #include "core/native_api.h"
 #include "native_util.h"
+#include "proc_fd_path.h"
 #include "utils/jni_helper.hpp"
 
 #include <cstddef>
@@ -15,6 +16,7 @@
 #include <linux/seccomp.h>
 #include <mutex>
 #include <signal.h>
+#include <string>
 #include <sys/prctl.h>
 #include <sys/syscall.h>
 #include <ucontext.h>
@@ -128,14 +130,26 @@ namespace lspd {
         return false;
     }
 
-    static bool emulate_redirected_readlinkat(const char* pathname, char* buffer, size_t buffer_size,
+    static bool emulate_redirected_readlinkat(int dirfd, const char* pathname, char* buffer, size_t buffer_size,
                                               ssize_t* out_result) {
         if (pathname == nullptr || buffer == nullptr || out_result == nullptr || buffer_size == 0) {
             return false;
         }
 
+        ProcFdReadlinkatPath effective_path;
+        prepare_proc_fd_readlinkat_path(&effective_path, dirfd, pathname,
+                                        [](const char* link_path, char* resolved_path, size_t size) -> ssize_t {
+                                            return static_cast<ssize_t>(syscall(__NR_readlinkat,
+                                                                               AT_FDCWD,
+                                                                               link_path,
+                                                                               resolved_path,
+                                                                               size,
+                                                                               0,
+                                                                               kSyscallReplayToken));
+                                        });
+
         int fd = -1;
-        if (!parse_proc_fd_path(pathname, &fd)
+        if (!parse_proc_fd_path(effective_path.path(), &fd)
                 || fd < 0
                 || fd >= static_cast<int>(std::size(g_redirected_fds))
                 || !g_redirected_fds[fd]
@@ -190,7 +204,7 @@ namespace lspd {
             auto* pathname = reinterpret_cast<const char*>(ctx->uc_mcontext.regs[1]);
             auto* buffer = reinterpret_cast<char*>(ctx->uc_mcontext.regs[2]);
             ssize_t emulated_result = -1;
-            if (emulate_redirected_readlinkat(pathname, buffer, ctx->uc_mcontext.regs[3],
+            if (emulate_redirected_readlinkat(ctx->uc_mcontext.regs[0], pathname, buffer, ctx->uc_mcontext.regs[3],
                                               &emulated_result)) {
                 ctx->uc_mcontext.regs[0] = emulated_result;
                 return;
