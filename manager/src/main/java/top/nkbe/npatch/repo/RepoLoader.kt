@@ -23,7 +23,7 @@ import java.util.concurrent.Executors
 
 class RepoLoader private constructor() {
 
-    var onlineModules: Map<String, OnlineModule> = HashMap()
+    var onlineModules: Map<String, OnlineModule> = ConcurrentHashMap()
         private set
 
     private var latestVersion: Map<String, ModuleVersion> = ConcurrentHashMap()
@@ -105,7 +105,7 @@ class RepoLoader private constructor() {
                 val bodyString = String(encoded, StandardCharsets.UTF_8)
                 val repoModules = parseRepoModules(bodyString)
 
-                val modules = HashMap<String, OnlineModule>()
+                val modules = ConcurrentHashMap<String, OnlineModule>()
                 repoModules.forEach { module ->
                     module.name?.let { name ->
                         modules[name] = module
@@ -286,7 +286,7 @@ class RepoLoader private constructor() {
                         val releases = versions?.map { mapFpaRelease(packageName, it.asJsonObject) } ?: emptyList()
                         module.releases = releases
                         module.releasesLoaded = true
-                        (onlineModules as HashMap)[packageName] = module
+                        (onlineModules as MutableMap)[packageName] = module
                         listeners.forEach { it.onModuleReleasesLoaded(module) }
                     } catch (t: Throwable) {
                         Log.e(TAG, Log.getStackTraceString(t))

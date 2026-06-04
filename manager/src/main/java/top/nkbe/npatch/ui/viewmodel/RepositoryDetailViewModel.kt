@@ -46,9 +46,10 @@ class RepositoryDetailViewModel : ViewModel(), RepoLoader.RepoListener {
 
     val isUpdateAvailable: StateFlow<Boolean> =
         combine(_module, _releases, _installedState) { online, releases, installed ->
-            if (online == null || installed == null) return@combine false
+            val pkgName = online?.name ?: return@combine false
+            if (installed == null) return@combine false
 
-            val latestVer = repoLoader.getModuleLatestVersion(online.name!!)
+            val latestVer = repoLoader.getModuleLatestVersion(pkgName)
             if (latestVer != null) return@combine latestVer.upgradable(installed.versionCode, installed.versionName)
 
             // 手动对比
