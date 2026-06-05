@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import nkbe.util.NeoPackageManager
 import nkbe.util.NeoPackageManager.AppInfo
@@ -120,6 +121,8 @@ class RepositoryViewModel : ViewModel(), RepoLoader.RepoListener {
         _refreshTrigger,
         snapshotFlow { NeoPackageManager.appList }
     ) { state, _, appList ->
+        val appMap = appList.associateBy { it.app.packageName }
+
         val filteredByScope = if (state.scopeFilter.isNullOrEmpty()) {
             state.modules
         } else {
@@ -139,25 +142,16 @@ class RepositoryViewModel : ViewModel(), RepoLoader.RepoListener {
             }
         }
 
-        var uiList = filtered.map { module ->
+        val uiList = filtered.map { module ->
             val pkgName = module.name ?: ""
 
-            // 使用 NeoPackageManager 判断是否安装
-            val installedAppInfo = appList.find { it.app.packageName == pkgName }
+            // 使用 pre-indexed Map 提高搜尋效率 (O(1))
+            val installedAppInfo = appMap[pkgName]
             val isInstalled = installedAppInfo != null
 
             // 获取本地安装的版本号
-            var installedVersionName: String? = null
-            var installedVersionCode = 0L
-            if (isInstalled) {
-                try {
-                    val packageInfo = lspApp.packageManager.getPackageInfo(pkgName, 0)
-                    installedVersionName = packageInfo.versionName
-                    installedVersionCode = PackageInfoCompat.getLongVersionCode(packageInfo)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
+            val installedVersionName = installedAppInfo?.versionName
+            val installedVersionCode = installedAppInfo?.versionCode ?: 0L
 
             // 获取线上最新版本并判断是否可更新
             val latestVersion = repoLoader.getModuleLatestVersion(pkgName)
@@ -174,10 +168,7 @@ class RepositoryViewModel : ViewModel(), RepoLoader.RepoListener {
                 installedVersion = installedVersionName,
                 stargazerCount = module.stargazerCount ?: 0
             )
-        }
-
-        // 排序逻辑保持不变
-        uiList = uiList.sortedWith(Comparator { a, b ->
+        }.sortedWith(Comparator { a, b ->
             if (state.upgradableFirst) {
                 if (a.isUpgradable && !b.isUpgradable) return@Comparator -1
                 if (!a.isUpgradable && b.isUpgradable) return@Comparator 1
@@ -192,7 +183,9 @@ class RepositoryViewModel : ViewModel(), RepoLoader.RepoListener {
         })
 
         uiList
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }
+    .flowOn(Dispatchers.Default)
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val searchQuery: StateFlow<String> = _searchQuery
 

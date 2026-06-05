@@ -17,6 +17,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardColors
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Surface
 import top.nkbe.npatch.ui.util.backgroundAwareCardColors
@@ -37,6 +38,7 @@ fun AppItem(
     description: String = "",
     warningText: String? = null,
     isEnabled: Boolean = true,
+    cardColors: CardColors = backgroundAwareCardColors(),
     onClick: () -> Unit = {},
     onLongPress: () -> Unit = {}
 ) {
@@ -48,7 +50,7 @@ fun AppItem(
             .fillMaxWidth()
             .padding(horizontal = 12.dp)
             .padding(bottom = 8.dp),
-        colors = backgroundAwareCardColors(),
+        colors = cardColors,
         insideMargin = PaddingValues(12.dp),
         showIndication = true,
         pressFeedbackType = PressFeedbackType.Sink,

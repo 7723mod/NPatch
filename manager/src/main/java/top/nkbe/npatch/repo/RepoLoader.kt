@@ -13,13 +13,18 @@ import okhttp3.Response
 import top.nkbe.npatch.R
 import top.nkbe.npatch.lspApp
 import java.io.IOException
+import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 class RepoLoader private constructor() {
 
@@ -38,6 +43,8 @@ class RepoLoader private constructor() {
 
     private val repoFile: Path = Paths.get(lspApp.filesDir.absolutePath, "repo.json")
     private val listeners = ConcurrentHashMap.newKeySet<RepoListener>()
+    private val loadLock = ReentrantLock()
+    private val isRefreshing = AtomicBoolean(false)
 
     @Volatile
     var isRepoLoaded = false
@@ -75,72 +82,80 @@ class RepoLoader private constructor() {
         }
     }
 
-    @Synchronized
     fun loadRemoteData() {
-        isRepoLoaded = false
-        try {
-            val request = Request.Builder().url("${repoBaseUrl}modules").build()
-            okHttpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    throw IOException("HTTP ${response.code}")
-                }
-                val bodyString = response.body.string()
-                Files.write(repoFile, bodyString.toByteArray(StandardCharsets.UTF_8))
-                loadLocalData(false)
-            }
-        } catch (e: Throwable) {
-            Log.e(TAG, "load remote data", e)
-            listeners.forEach { it.onThrowable(e) }
-        }
-    }
-
-    @Synchronized
-    fun loadLocalData(updateRemoteRepo: Boolean) {
-        isRepoLoaded = false
-        var doUpdateRemote = updateRemoteRepo
-        try {
-            if (Files.notExists(repoFile)) {
-                loadRemoteData()
-                doUpdateRemote = false
-            }
-            if (Files.exists(repoFile)) {
-                val encoded = Files.readAllBytes(repoFile)
-                val bodyString = String(encoded, StandardCharsets.UTF_8)
-                val repoModules = parseRepoModules(bodyString)
-
-                val modules = ConcurrentHashMap<String, OnlineModule>()
-                repoModules.forEach { module ->
-                    module.name?.let { name ->
-                        modules[name] = module
+        if (isRefreshing.getAndSet(true)) return
+        executorService.submit {
+            try {
+                val request = Request.Builder().url("${repoBaseUrl}modules").build()
+                okHttpClient.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        throw IOException("HTTP ${response.code}")
                     }
+                    response.body.byteStream().use { input ->
+                        Files.copy(input, repoFile, StandardCopyOption.REPLACE_EXISTING)
+                    }
+                    loadLocalData(false)
                 }
-
-                val prefs = lspApp.getSharedPreferences("${lspApp.packageName}_preferences", Context.MODE_PRIVATE)
-                val channel = prefs.getString("update_channel", channels[0]) ?: channels[0]
-
-                updateLatestVersion(repoModules, channel)
-                onlineModules = modules
+            } catch (e: Throwable) {
+                Log.e(TAG, "load remote data", e)
+                listeners.forEach { it.onThrowable(e) }
+            } finally {
+                isRefreshing.set(false)
             }
-        } catch (t: Throwable) {
-            Log.e(TAG, Log.getStackTraceString(t))
-            listeners.forEach { it.onThrowable(t) }
-        } finally {
-            isRepoLoaded = true
-            listeners.forEach { it.onRepoLoaded() }
-            if (doUpdateRemote) loadRemoteData()
         }
     }
 
-    private fun parseRepoModules(bodyString: String): Array<OnlineModule> {
-        val trimmed = bodyString.trim()
-        if (trimmed.startsWith("[")) {
-            return Gson().fromJson(trimmed, Array<OnlineModule>::class.java)
-        }
+    fun loadLocalData(updateRemoteRepo: Boolean) {
+        loadLock.withLock {
+            var doUpdateRemote = updateRemoteRepo
+            try {
+                if (Files.notExists(repoFile)) {
+                    loadRemoteData()
+                    doUpdateRemote = false
+                }
+                if (Files.exists(repoFile)) {
+                    val repoModules = Files.newInputStream(repoFile).use { input ->
+                        InputStreamReader(input, StandardCharsets.UTF_8).use { reader ->
+                            parseRepoModules(reader)
+                        }
+                    }
 
-        val root = JsonParser.parseString(trimmed).asJsonObject
-        val modulesArray = root.getAsJsonArray("modules") ?: return emptyArray()
-        return Array(modulesArray.size()) { index ->
-            mapFpaModuleSummary(modulesArray[index].asJsonObject)
+                    val modules = ConcurrentHashMap<String, OnlineModule>()
+                    repoModules.forEach { module ->
+                        module.name?.let { name ->
+                            modules[name] = module
+                        }
+                    }
+
+                    val prefs = lspApp.getSharedPreferences("${lspApp.packageName}_preferences", Context.MODE_PRIVATE)
+                    val channel = prefs.getString("update_channel", channels[0]) ?: channels[0]
+
+                    updateLatestVersion(repoModules, channel)
+                    onlineModules = modules
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, Log.getStackTraceString(t))
+                listeners.forEach { it.onThrowable(t) }
+            } finally {
+                isRepoLoaded = true
+                listeners.forEach { it.onRepoLoaded() }
+                if (doUpdateRemote) loadRemoteData()
+            }
+        }
+    }
+
+    private fun parseRepoModules(reader: InputStreamReader): Array<OnlineModule> {
+        // We still need to check if it's an array or object
+        // For simplicity, we can peek or just try parsing as JsonElement
+        val element = JsonParser.parseReader(reader)
+        return if (element.isJsonArray) {
+            Gson().fromJson(element, Array<OnlineModule>::class.java)
+        } else {
+            val root = element.asJsonObject
+            val modulesArray = root.getAsJsonArray("modules") ?: return emptyArray()
+            Array(modulesArray.size()) { index ->
+                mapFpaModuleSummary(modulesArray[index].asJsonObject)
+            }
         }
     }
 

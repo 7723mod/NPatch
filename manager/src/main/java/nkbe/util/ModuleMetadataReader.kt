@@ -1,6 +1,7 @@
 package nkbe.util
 
 import android.content.pm.ApplicationInfo
+import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
@@ -70,26 +71,19 @@ object ModuleMetadataReader {
     private const val MODERN_TARGET_API_VERSION = 101
     private const val LEGACY_MAX_API_VERSION = 94
 
-    fun read(appInfo: ApplicationInfo, packageManager: PackageManager): ModuleMetadataSnapshot? {
+    fun read(packageInfo: PackageInfo, packageManager: PackageManager): ModuleMetadataSnapshot? {
+        val appInfo = packageInfo.applicationInfo ?: return null
         val apkPath = appInfo.sourceDir ?: return null
         val apkFile = File(apkPath)
         if (!apkFile.exists()) return null
 
-        val packageInfo = runCatching {
-            packageManager.getPackageArchiveInfo(apkFile.absolutePath, PackageManager.GET_META_DATA)
-        }.getOrNull()
-        packageInfo?.applicationInfo?.apply {
-            sourceDir = apkFile.absolutePath
-            publicSourceDir = apkFile.absolutePath
-        }
-
-        // Patched apps can embed module assets for their own runtime, but they are not standalone
-        // Xposed modules and should stay in app management instead of the module list.
-        if (packageInfo?.applicationInfo?.metaData?.containsKey("npatch") == true) {
+        // For installed apps, we already have the metadata if it was passed in.
+        // We only need to check npatch metadata to exclude patched apps from the module list.
+        if (appInfo.metaData?.containsKey("npatch") == true) {
             return null
         }
 
-        val legacyMeta = packageInfo?.applicationInfo?.metaData
+        val legacyMeta = appInfo.metaData
         val modernProps = Properties()
         val modernJavaInitList = mutableListOf<String>()
         val modernNativeInitList = mutableListOf<String>()
@@ -168,17 +162,17 @@ object ModuleMetadataReader {
         if (!hasModernMetadata && !hasLegacyEntrypoint && !hasLegacyMetadata) return null
 
         val displayName = firstNonEmpty(
-            loadLabel(packageInfo?.applicationInfo, packageManager),
+            loadLabel(appInfo, packageManager),
             legacyMeta?.get(LEGACY_KEY_NAME)?.toString(),
             appInfo.packageName,
         )
         val description = firstNonEmpty(
-            loadDescription(packageInfo?.applicationInfo, packageManager),
+            loadDescription(appInfo, packageManager),
             legacyMeta?.get(LEGACY_KEY_DESCRIPTION)?.toString(),
         )
 
         return ModuleMetadataSnapshot(
-            packageName = packageInfo?.packageName ?: appInfo.packageName,
+            packageName = appInfo.packageName,
             displayName = displayName,
             description = description,
             minApiVersion = minApiVersion,
@@ -191,6 +185,18 @@ object ModuleMetadataReader {
             nativeInitList = nativeInitList.toList(),
             pipeline = pipeline,
         )
+    }
+
+    // Read metadata from an APK file that is not necessarily installed.
+    fun read(apkFile: File, packageManager: PackageManager): ModuleMetadataSnapshot? {
+        val packageInfo = runCatching {
+            packageManager.getPackageArchiveInfo(apkFile.absolutePath, PackageManager.GET_META_DATA)
+        }.getOrNull() ?: return null
+        packageInfo.applicationInfo?.apply {
+            sourceDir = apkFile.absolutePath
+            publicSourceDir = apkFile.absolutePath
+        }
+        return read(packageInfo, packageManager)
     }
 
     private fun loadProperties(zipFile: ZipFile, properties: Properties) {

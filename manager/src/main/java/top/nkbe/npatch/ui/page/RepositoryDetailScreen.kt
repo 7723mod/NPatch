@@ -454,7 +454,8 @@ fun ReadmeTab(
                 .scrollEndHaptic()
                 .overScrollVertical()
                 .hazeSource(state = hazeState),
-            contentPadding = contentPadding
+            contentPadding = contentPadding,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
                 Card(
@@ -678,7 +679,8 @@ fun InfoTab(
             .scrollEndHaptic()
             .overScrollVertical()
             .hazeSource(state = hazeState),
-        contentPadding = contentPadding
+        contentPadding = contentPadding,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
 
         if (!module.homepageUrl.isNullOrEmpty() || !module.sourceUrl.isNullOrEmpty()) {
@@ -886,7 +888,10 @@ fun ReleaseAssetItem(
 
         IconButton(
             modifier = Modifier.padding(bottom = bottomPadding),
-            backgroundColor = colorScheme.secondaryContainer.copy(alpha = 0.5f),
+            backgroundColor = backgroundAwareColor(
+                colorScheme.secondaryContainer,
+                backgroundAlpha = 0.72f
+            ),
             minHeight = 35.dp,
             minWidth = 35.dp,
             onClick = {
@@ -907,7 +912,10 @@ fun ReleaseAssetItem(
 
         IconButton(
             modifier = Modifier.padding(end = 12.dp, bottom = bottomPadding),
-            backgroundColor = colorScheme.secondaryContainer.copy(alpha = 0.8f),
+            backgroundColor = backgroundAwareColor(
+                colorScheme.secondaryContainer,
+                backgroundAlpha = 0.9f
+            ),
             minHeight = 35.dp,
             minWidth = 35.dp,
             enabled = !isDownloading,

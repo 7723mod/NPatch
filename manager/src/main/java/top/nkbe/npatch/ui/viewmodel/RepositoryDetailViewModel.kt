@@ -1,8 +1,8 @@
 package org.lsposed.manager.ui.compose.repository
 
-import androidx.core.content.pm.PackageInfoCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import nkbe.util.NeoPackageManager
 import top.nkbe.npatch.lspApp
 import top.nkbe.npatch.repo.OnlineModule
@@ -73,18 +74,12 @@ class RepositoryDetailViewModel : ViewModel(), RepoLoader.RepoListener {
 
     // 封装一个获取本地安装状态的辅助方法
     private fun getInstalledState(packageName: String): InstalledState? {
-        val isInstalled = NeoPackageManager.appList.any { it.app.packageName == packageName }
-        if (!isInstalled) return null
+        val appInfo = NeoPackageManager.appList.find { it.app.packageName == packageName } ?: return null
 
-        return try {
-            val packageInfo = lspApp.packageManager.getPackageInfo(packageName, 0)
-            InstalledState(
-                versionCode = PackageInfoCompat.getLongVersionCode(packageInfo),
-                versionName = packageInfo.versionName ?: ""
-            )
-        } catch (e: Exception) {
-            null
-        }
+        return InstalledState(
+            versionCode = appInfo.versionCode,
+            versionName = appInfo.versionName
+        )
     }
 
     fun loadModule(packageName: String) {
@@ -97,7 +92,9 @@ class RepositoryDetailViewModel : ViewModel(), RepoLoader.RepoListener {
 
             loadReleases(packageName)
         } else {
-            repoLoader.loadRemoteData()
+            viewModelScope.launch(Dispatchers.IO) {
+                repoLoader.loadRemoteData()
+            }
         }
     }
 

@@ -145,6 +145,12 @@ object ShizukuApi {
         return iPackageManager.getInstalledApplications(flags, userId).list
     }
 
+    fun getInstalledPackages(flags: Int): List<PackageInfo> {
+        ensureReady()
+        val userId = Process.myUserHandle().hashCode()
+        return iPackageManager.getInstalledPackages(flags.toLong(), userId).list
+    }
+
     fun createPackageInstallerSession(
         params: PackageInstaller.SessionParams
     ): PackageInstaller.Session {

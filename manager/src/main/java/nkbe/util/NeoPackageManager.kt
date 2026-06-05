@@ -56,6 +56,8 @@ object NeoPackageManager {
     class AppInfo(
         val app: ApplicationInfo,
         val label: String,
+        val versionName: String,
+        val versionCode: Long,
         val moduleMetadata: ModuleMetadataSnapshot? = null,
     ) : Parcelable {
         val isXposedModule: Boolean
@@ -73,35 +75,42 @@ object NeoPackageManager {
     suspend fun fetchAppList() {
         val result = withContext(Dispatchers.IO) {
             val pm = lspApp.packageManager
-            val applicationList: List<ApplicationInfo>
+            val packages: List<android.content.pm.PackageInfo>
 
             if (ShizukuApi.isReady) {
                 Log.i(TAG, "Fetching app list using Shizuku API")
-                applicationList = runCatching {
-                    ShizukuApi.getInstalledApplications()
+                packages = runCatching {
+                    ShizukuApi.getInstalledPackages(PackageManager.GET_META_DATA)
                 }.getOrElse { t ->
-                    Log.e(TAG, "Shizuku failed to fetch app list, falling back to standard PM", t)
-                    pm.getInstalledApplications(PackageManager.GET_META_DATA)
+                    Log.e(TAG, "Shizuku failed to fetch package list, falling back to standard PM", t)
+                    pm.getInstalledPackages(PackageManager.GET_META_DATA)
                 }
             } else {
                 Log.i(TAG, "Fetching app list using standard PackageManager")
-                applicationList = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+                packages = pm.getInstalledPackages(PackageManager.GET_META_DATA)
             }
 
             val collection = coroutineScope {
-                applicationList.map { appInfo ->
+                packages.map { pkgInfo ->
                     async(appScanDispatcher) {
+                        val appInfo = pkgInfo.applicationInfo ?: return@async null
                         val label = runCatching { pm.getApplicationLabel(appInfo).toString() }
                             .getOrElse { throwable ->
                                 Log.w(TAG, "Failed to load label for ${appInfo.packageName}", throwable)
                                 appInfo.packageName
                             }
                         val moduleMetadata = runCatching {
-                            ModuleMetadataReader.read(appInfo, pm)
+                            ModuleMetadataReader.read(pkgInfo, pm)
                         }.getOrNull()
-                        AppInfo(appInfo, label, moduleMetadata)
+                        AppInfo(
+                            app = appInfo,
+                            label = label,
+                            versionName = pkgInfo.versionName ?: "",
+                            versionCode = androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(pkgInfo),
+                            moduleMetadata = moduleMetadata
+                        )
                     }
-                }.awaitAll().toMutableList()
+                }.awaitAll().filterNotNull().toMutableList()
             }
 
             collection.sortWith(compareBy(Collator.getInstance(Locale.getDefault()), AppInfo::label))
@@ -264,9 +273,10 @@ object NeoPackageManager {
 
                     var uriPrimary: ApplicationInfo? = null
                     candidates.forEach { candidate ->
-                        val appInfo = lspApp.packageManager.getPackageArchiveInfo(
+                        val pkgInfo = lspApp.packageManager.getPackageArchiveInfo(
                             candidate.absolutePath, PackageManager.GET_META_DATA
-                        )?.applicationInfo
+                        )
+                        val appInfo = pkgInfo?.applicationInfo
                         appInfo?.sourceDir = candidate.absolutePath
                         if (appInfo == null || uriPrimary != null) {
                             splits.add(candidate.absolutePath)
@@ -275,7 +285,15 @@ object NeoPackageManager {
                         uriPrimary = appInfo
                         if (primary == null) primary = appInfo
                         val label = lspApp.packageManager.getApplicationLabel(appInfo).toString()
-                        appInfos.add(AppInfo(appInfo, label))
+                        appInfos.add(
+                            AppInfo(
+                                app = appInfo,
+                                label = label,
+                                versionName = pkgInfo.versionName ?: "",
+                                versionCode = androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(pkgInfo),
+                                moduleMetadata = ModuleMetadataReader.read(pkgInfo, lspApp.packageManager)
+                            )
+                        )
                     }
                 }
 

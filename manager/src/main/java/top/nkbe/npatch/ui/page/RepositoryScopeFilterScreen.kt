@@ -1,5 +1,8 @@
 package top.nkbe.npatch.ui.page
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,6 +47,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 private val RepoScopeHorizontalPadding = 12.dp
 private const val RepoScopeBackgroundAlpha = 0.82f
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RepositoryScopeFilterScreen(
     selectedPackageName: String?,
@@ -116,30 +120,40 @@ fun RepositoryScopeFilterScreen(
                     items = targets,
                     key = { it.packageName }
                 ) { target ->
-                    AppItem(
-                        icon = {
-                            Image(
-                                bitmap = NeoPackageManager.getIcon(target.appInfo),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(RoundedCornerShape(14.dp))
-                            )
-                        },
-                        label = target.label,
-                        packageName = target.packageName,
-                        trailingContent = {
-                            if (selectedScope == target.packageName) {
-                                Icon(
-                                    imageVector = MiuixIcons.Regular.Ok,
+                    Box(
+                        modifier = Modifier.animateItem(
+                            placementSpec = spring(stiffness = Spring.StiffnessLow)
+                        )
+                    ) {
+                        AppItem(
+                            icon = {
+                                Image(
+                                    bitmap = NeoPackageManager.getIcon(target.appInfo),
                                     contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
-                                    tint = MiuixTheme.colorScheme.primary
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(RoundedCornerShape(14.dp))
                                 )
-                            }
-                        },
-                        onClick = { select(target.packageName) }
-                    )
+                            },
+                            label = target.label,
+                            packageName = target.packageName,
+                            trailingContent = {
+                                if (selectedScope == target.packageName) {
+                                    Icon(
+                                        imageVector = MiuixIcons.Regular.Ok,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = MiuixTheme.colorScheme.primary
+                                    )
+                                }
+                            },
+                            cardColors = backgroundAwareCardColors(
+                                color = MiuixTheme.colorScheme.surfaceContainer,
+                                backgroundAlpha = RepoScopeBackgroundAlpha
+                            ),
+                            onClick = { select(target.packageName) }
+                        )
+                    }
                 }
             }
         }
