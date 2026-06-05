@@ -8,6 +8,7 @@ import android.app.LoadedApk;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.content.res.CompatibilityInfo;
 import android.os.Build;
 import android.os.Handler;
@@ -133,6 +134,30 @@ public class LSPApplication {
         }
     }
 
+    private static int resolveSigBypassLevel(ApplicationInfo appInfo, int fallbackLevel) {
+        if (appInfo == null || appInfo.packageName == null) {
+            return fallbackLevel;
+        }
+        try {
+            var systemContext = activityThread.getSystemContext();
+            if (systemContext == null) {
+                return fallbackLevel;
+            }
+            var metaData = systemContext.getPackageManager()
+                    .getApplicationInfo(appInfo.packageName, PackageManager.GET_META_DATA)
+                    .metaData;
+            String encoded = metaData == null ? null : metaData.getString("npatch");
+            if (encoded == null) {
+                return fallbackLevel;
+            }
+            String json = new String(android.util.Base64.decode(encoded, android.util.Base64.DEFAULT), StandardCharsets.UTF_8);
+            return new JSONObject(json).optInt("sigBypassLevel", fallbackLevel);
+        } catch (Throwable e) {
+            Log.w(TAG, "Failed to resolve signature bypass level from manifest metadata", e);
+            return fallbackLevel;
+        }
+    }
+
     private static void registerModuleCallerPrefixes(ILSPApplicationService service) {
         if (service == null) return;
         try {
@@ -250,7 +275,7 @@ public class LSPApplication {
         }
 
         switchAllClassLoader();
-        SigBypass.doSigBypass(context, config.sigBypassLevel);
+        SigBypass.doSigBypass(context, config.lspConfig.sigBypassLevel);
 
         if (config.useMicroG) {
             logInfo("Activating MicroG redirect via NPatch");
@@ -303,16 +328,18 @@ public class LSPApplication {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+            // Keep the effective bypass level out of the editable config.json copy.
+            config.lspConfig.sigBypassLevel = resolveSigBypassLevel(appInfo, config.sigBypassLevel);
             XLog.init(config.newPackage, ActivityThread.currentProcessName(), config.outputLog);
             logInfo("Loaded patch config for " + config.newPackage + ", useManager=" + config.useManager + ", outputLog=" + config.outputLog);
             Log.i(TAG, "Use manager: " + config.useManager);
-            Log.i(TAG, "Signature bypass level: " + config.sigBypassLevel);
+            Log.i(TAG, "Signature bypass level: " + config.lspConfig.sigBypassLevel);
 
             CacheCleaner.handlePatchUpgrade(appInfo, patchedApkPath);
             CacheCleaner.sweepLibNpatchCache(appInfo);
 
             String loadedApkSourceDir = patchedApkPath;
-            if (config.sigBypassLevel >= Constants.SIGBYPASS_BASIC) {
+            if (config.lspConfig.sigBypassLevel >= Constants.SIGBYPASS_BASIC) {
                 Path cacheApkPath = OriginApkHelper.prepareOriginApk(appInfo, baseClassLoader);
                 Path nativeLibraryDir = OriginApkHelper.prepareNativeLibraryDir(appInfo, cacheApkPath, patchedApkPath);
                 SigBypass.setPaths(cacheApkPath.toString(), patchedApkPath);
@@ -331,7 +358,7 @@ public class LSPApplication {
                     Log.w(TAG, "Failed to sweep origin apk cache", e);
                 }
             }
-            if (config.sigBypassLevel >= Constants.SIGBYPASS_HIGH) {
+            if (config.lspConfig.sigBypassLevel >= Constants.SIGBYPASS_HIGH) {
                 appInfo.appComponentFactory = config.appComponentFactory;
             } else {
                 appInfo.appComponentFactory = null;

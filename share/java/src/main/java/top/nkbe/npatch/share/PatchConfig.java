@@ -43,6 +43,5 @@ public class PatchConfig {
         this.hideLibs = hideLibs;
 
         this.lspConfig = LSPConfig.instance;
-        this.lspConfig.sigBypassLevel = sigBypassLevel;
     }
 }
