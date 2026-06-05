@@ -10,6 +10,7 @@ public class Constants {
     final static public String EMBEDDED_MODULES_ASSET_PATH = "assets/npatch/modules/";
 
     final static public String PATCH_FILE_SUFFIX = "-npatched.apk";
+    final static public String PATCH_ARCHIVE_SUFFIX = "-npatched.apks";
     final static public String PROXY_APP_COMPONENT_FACTORY = "top.nkbe.npatch.metaloader.LSPAppComponentFactoryStub";
     final static public String MANAGER_PACKAGE_NAME = "top.nkbe.npatch";
     final static public String REAL_GMS_PACKAGE_NAME = "com.google.android.gms";

@@ -19,6 +19,7 @@ public class ManifestParser {
     public static Pair parseManifestFile(InputStream is) throws IOException {
         AxmlParser parser = new AxmlParser(Utils.getBytesFromInputStream(is));
         String packageName = null;
+        String splitName = null;
         String appComponentFactory = null;
         int minSdkVersion = 0;
         List<String> permissions = new ArrayList<>();
@@ -42,6 +43,9 @@ public class ManifestParser {
                         if ("manifest".equals(name)) {
                             if ("package".equals(attrName)) {
                                 packageName = parser.getAttrValue(i).toString();
+                            }
+                            if ("split".equals(attrName) || attrNameRes == 0x01010549) {
+                                splitName = parser.getAttrValue(i).toString();
                             }
                         }
 
@@ -95,7 +99,7 @@ public class ManifestParser {
             return null;
         }
 
-        Pair pair = new Pair(packageName, appComponentFactory, minSdkVersion);
+        Pair pair = new Pair(packageName, splitName, appComponentFactory, minSdkVersion);
         pair.setPermissions(permissions);
         pair.setUse_permissions(use_permissions);
         pair.setAuthorities(authorities);
@@ -114,6 +118,7 @@ public class ManifestParser {
 
     public static class Pair {
         public String packageName;
+        public String splitName;
         public String appComponentFactory;
 
         public int minSdkVersion;
@@ -122,7 +127,12 @@ public class ManifestParser {
         public List<String> authorities;
 
         public Pair(String packageName, String appComponentFactory, int minSdkVersion) {
+            this(packageName, null, appComponentFactory, minSdkVersion);
+        }
+
+        public Pair(String packageName, String splitName, String appComponentFactory, int minSdkVersion) {
             this.packageName = packageName;
+            this.splitName = splitName;
             this.appComponentFactory = appComponentFactory;
             this.minSdkVersion = minSdkVersion;
         }

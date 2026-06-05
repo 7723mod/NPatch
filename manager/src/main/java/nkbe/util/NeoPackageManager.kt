@@ -181,14 +181,31 @@ object NeoPackageManager {
                         val uri = Configs.storageDirectory?.toUri() ?: throw IOException("Uri is null")
                         val root = DocumentFile.fromTreeUri(lspApp, uri) ?: throw IOException("DocumentFile is null")
                         root.listFiles().forEach { file ->
-                            if (file.name?.endsWith(Constants.PATCH_FILE_SUFFIX) != true) return@forEach
-                            Log.d(TAG, "Add ${file.name}")
-                            val input = lspApp.contentResolver.openInputStream(file.uri)
-                                ?: throw IOException("Cannot open input stream")
-                            input.use {
-                                session.openWrite(file.name!!, 0, file.length()).use { output ->
-                                    input.copyTo(output, COPY_BUFFER_SIZE)
-                                    session.fsync(output)
+                            val fileName = file.name ?: return@forEach
+                            when {
+                                fileName.endsWith(Constants.PATCH_FILE_SUFFIX) -> {
+                                    Log.d(TAG, "Add $fileName")
+                                    val input = lspApp.contentResolver.openInputStream(file.uri)
+                                        ?: throw IOException("Cannot open input stream")
+                                    input.use {
+                                        session.openWrite(fileName, 0, file.length()).use { output ->
+                                            input.copyTo(output, COPY_BUFFER_SIZE)
+                                            session.fsync(output)
+                                        }
+                                    }
+                                }
+
+                                fileName.endsWith(Constants.PATCH_ARCHIVE_SUFFIX) -> {
+                                    Log.d(TAG, "Extract and add $fileName")
+                                    val copiedArchive = copyDocumentToTempFile(file.uri, sanitizeVisibleFileName(fileName))
+                                    extractApkArchive(copiedArchive, fileName).forEach { extractedFile ->
+                                        extractedFile.inputStream().use { input ->
+                                            session.openWrite(extractedFile.name, 0, extractedFile.length()).use { output ->
+                                                input.copyTo(output, COPY_BUFFER_SIZE)
+                                                session.fsync(output)
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -330,16 +347,7 @@ object NeoPackageManager {
             .ifEmpty { "archive" }
 
         ZipFile(archiveFile).use { zipFile ->
-            val entries = Collections.list(zipFile.entries())
-                .filter { entry ->
-                    !entry.isDirectory && entry.name.lowercase(Locale.ROOT).endsWith(".apk")
-                }
-                .sortedWith(
-                    compareBy<java.util.zip.ZipEntry> { entry ->
-                        val name = entry.name.substringAfterLast('/').lowercase(Locale.ROOT)
-                        if (name == "base.apk") 0 else 1
-                    }.thenBy { entry -> entry.name.lowercase(Locale.ROOT) }
-                )
+            val entries = selectInstallableApkEntries(Collections.list(zipFile.entries()))
             if (entries.isEmpty()) {
                 throw IOException("No APK entries found in archive: $archiveName")
             }
@@ -363,6 +371,77 @@ object NeoPackageManager {
         }
         archiveFile.delete()
         return extracted
+    }
+
+    private fun selectInstallableApkEntries(entries: List<java.util.zip.ZipEntry>): List<java.util.zip.ZipEntry> {
+        val apkEntries = entries
+            .filter { entry -> !entry.isDirectory && entry.name.lowercase(Locale.ROOT).endsWith(".apk") }
+            .sortedBy { entry -> normalizeZipPath(entry.name) }
+        if (apkEntries.isEmpty()) return emptyList()
+
+        val baseEntry = apkEntries
+            .filter { entry -> isBaseApkName(entry.name.substringAfterLast('/')) }
+            .minWithOrNull(compareBy<java.util.zip.ZipEntry> { baseEntryPriority(it.name) }.thenBy { normalizeZipPath(it.name) })
+        if (baseEntry != null) {
+            val baseDir = zipParent(baseEntry.name)
+            return apkEntries
+                .filter { entry ->
+                    zipParent(entry.name) == baseDir &&
+                        !entry.name.substringAfterLast('/').lowercase(Locale.ROOT).startsWith("standalone")
+                }
+                .sortedWith(compareBy<java.util.zip.ZipEntry> { baseEntryPriority(it.name) }.thenBy { normalizeZipPath(it.name) })
+        }
+
+        val standaloneEntries = apkEntries.filter { entry ->
+            entry.name.substringAfterLast('/').lowercase(Locale.ROOT).startsWith("standalone")
+        }
+        if (standaloneEntries.isNotEmpty()) {
+            return listOf(
+                standaloneEntries.minWithOrNull(
+                    compareBy<java.util.zip.ZipEntry> { standaloneEntryPriority(it.name) }
+                        .thenBy { normalizeZipPath(it.name) }
+                )!!
+            )
+        }
+
+        return apkEntries
+            .groupBy { entry -> zipParent(entry.name) }
+            .values
+            .maxWithOrNull(
+                compareBy<List<java.util.zip.ZipEntry>> { it.size }
+                    .thenByDescending { group -> group.count { entry -> entry.name.substringAfterLast('/').contains("config.", ignoreCase = true) } }
+                    .thenBy { group -> group.minOf { entry -> normalizeZipPath(entry.name).length } }
+            )
+            ?.sortedBy { entry -> normalizeZipPath(entry.name) }
+            ?: emptyList()
+    }
+
+    private fun normalizeZipPath(path: String): String = path.replace('\\', '/').lowercase(Locale.ROOT)
+
+    private fun zipParent(path: String): String = normalizeZipPath(path).substringBeforeLast('/', "")
+
+    private fun isBaseApkName(name: String): Boolean {
+        val lowerName = name.lowercase(Locale.ROOT)
+        return lowerName == "base.apk" || (lowerName.startsWith("base-") && lowerName.endsWith(".apk"))
+    }
+
+    private fun baseEntryPriority(path: String): Int {
+        val lowerName = path.substringAfterLast('/').lowercase(Locale.ROOT)
+        return when {
+            lowerName == "base.apk" -> 0
+            lowerName == "base-master.apk" -> 1
+            lowerName.startsWith("base-") -> 2
+            else -> 3
+        }
+    }
+
+    private fun standaloneEntryPriority(path: String): Int {
+        val lowerName = path.substringAfterLast('/').lowercase(Locale.ROOT)
+        return when {
+            "universal" in lowerName -> 0
+            "master" in lowerName -> 1
+            else -> 2
+        }
     }
 
     private fun sanitizeVisibleFileName(name: String): String {
