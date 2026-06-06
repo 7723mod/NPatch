@@ -66,7 +66,9 @@ public class LSPLoader {
         installModuleSelfPathCompatibility();
         installNativeModuleServiceProxy();
         XposedInit.loadModules(ActivityThread.currentActivityThread());
-        dispatchModernLifecycle(loadedApk);
+        ApplicationInfo moduleCompatibleAppInfo =
+                SigBypass.createModuleCompatibleApplicationInfo(loadedApk.getApplicationInfo());
+        dispatchModernLifecycle(loadedApk, moduleCompatibleAppInfo);
 
         XposedInit.loadedPackagesInProcess.add(loadedApk.getPackageName());
         setPackageNameForResDir(loadedApk.getPackageName(), loadedApk.getResDir());
@@ -75,7 +77,9 @@ public class LSPLoader {
         lpparam.packageName = loadedApk.getPackageName();
         lpparam.processName = ActivityThread.currentProcessName();
         lpparam.classLoader = loadedApk.getClassLoader();
-        lpparam.appInfo = loadedApk.getApplicationInfo();
+        lpparam.appInfo = moduleCompatibleAppInfo != null
+                ? moduleCompatibleAppInfo
+                : loadedApk.getApplicationInfo();
         lpparam.isFirstApplication = true;
         XC_LoadPackage.callAll(lpparam);
     }
@@ -472,10 +476,12 @@ public class LSPLoader {
         } catch (Throwable ignored) { return null; }
     }
 
-    private static void dispatchModernLifecycle(LoadedApk loadedApk) {
+    private static void dispatchModernLifecycle(LoadedApk loadedApk, ApplicationInfo moduleCompatibleAppInfo) {
         try {
             String packageName = loadedApk.getPackageName();
-            ApplicationInfo appInfo = loadedApk.getApplicationInfo();
+            ApplicationInfo appInfo = moduleCompatibleAppInfo != null
+                    ? moduleCompatibleAppInfo
+                    : loadedApk.getApplicationInfo();
             ClassLoader classLoader = loadedApk.getClassLoader();
             Object appComponentFactory = createAppComponentFactory(appInfo, classLoader);
 

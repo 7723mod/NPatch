@@ -166,7 +166,7 @@ public class SigBypass {
         }
     }
 
-    private static boolean matchesPatchedApplicationInfo(Context context, ApplicationInfo applicationInfo) {
+    private static boolean matchesTargetApplicationInfo(Context context, ApplicationInfo applicationInfo) {
         if (applicationInfo == null) return false;
         if (redirectApkPath != null) {
             if (redirectApkPath.equals(applicationInfo.sourceDir)
@@ -174,25 +174,23 @@ public class SigBypass {
                 return true;
             }
         }
+        if (visibleApkPath != null) {
+            if (visibleApkPath.equals(applicationInfo.sourceDir)
+                    || visibleApkPath.equals(applicationInfo.publicSourceDir)) {
+                return true;
+            }
+        }
         return context != null && context.getPackageName().equals(applicationInfo.packageName);
     }
 
-    private static void replaceApplicationInfoPaths(Context context, ApplicationInfo applicationInfo) {
-        if (applicationInfo == null || visibleApkPath == null) return;
-        if (!matchesPatchedApplicationInfo(context, applicationInfo)) return;
-
-        applicationInfo.sourceDir = visibleApkPath;
-        applicationInfo.publicSourceDir = visibleApkPath;
-        setReflectivePathField(applicationInfo, "scanSourceDir", visibleApkPath);
-        setReflectivePathField(applicationInfo, "scanPublicSourceDir", visibleApkPath);
-        setReflectivePathField(applicationInfo, "baseCodePath", visibleApkPath);
-        setReflectivePathField(applicationInfo, "baseResourcePath", visibleApkPath);
+    private static void replaceSplitPaths(ApplicationInfo applicationInfo, String fromPath, String toPath) {
+        if (applicationInfo == null || fromPath == null || toPath == null) return;
         try {
             Object splitSourceDirs = XposedHelpers.getObjectField(applicationInfo, "splitSourceDirs");
             if (splitSourceDirs instanceof String[] splitPaths) {
                 for (int i = 0; i < splitPaths.length; i++) {
-                    if (redirectApkPath != null && redirectApkPath.equals(splitPaths[i])) {
-                        splitPaths[i] = visibleApkPath;
+                    if (fromPath.equals(splitPaths[i])) {
+                        splitPaths[i] = toPath;
                     }
                 }
             }
@@ -202,13 +200,39 @@ public class SigBypass {
             Object splitPublicSourceDirs = XposedHelpers.getObjectField(applicationInfo, "splitPublicSourceDirs");
             if (splitPublicSourceDirs instanceof String[] splitPaths) {
                 for (int i = 0; i < splitPaths.length; i++) {
-                    if (redirectApkPath != null && redirectApkPath.equals(splitPaths[i])) {
-                        splitPaths[i] = visibleApkPath;
+                    if (fromPath.equals(splitPaths[i])) {
+                        splitPaths[i] = toPath;
                     }
                 }
             }
         } catch (Throwable ignored) {
         }
+    }
+
+    private static void replaceApplicationInfoPaths(Context context, ApplicationInfo applicationInfo) {
+        if (applicationInfo == null || visibleApkPath == null) return;
+        if (!matchesTargetApplicationInfo(context, applicationInfo)) return;
+
+        applicationInfo.sourceDir = visibleApkPath;
+        applicationInfo.publicSourceDir = visibleApkPath;
+        setReflectivePathField(applicationInfo, "scanSourceDir", visibleApkPath);
+        setReflectivePathField(applicationInfo, "scanPublicSourceDir", visibleApkPath);
+        setReflectivePathField(applicationInfo, "baseCodePath", visibleApkPath);
+        setReflectivePathField(applicationInfo, "baseResourcePath", visibleApkPath);
+        replaceSplitPaths(applicationInfo, redirectApkPath, visibleApkPath);
+    }
+
+    private static void replaceModuleApplicationInfoPaths(Context context, ApplicationInfo applicationInfo) {
+        if (applicationInfo == null || redirectApkPath == null) return;
+        if (!matchesTargetApplicationInfo(context, applicationInfo)) return;
+
+        applicationInfo.sourceDir = redirectApkPath;
+        applicationInfo.publicSourceDir = redirectApkPath;
+        setReflectivePathField(applicationInfo, "scanSourceDir", redirectApkPath);
+        setReflectivePathField(applicationInfo, "scanPublicSourceDir", redirectApkPath);
+        setReflectivePathField(applicationInfo, "baseCodePath", redirectApkPath);
+        setReflectivePathField(applicationInfo, "baseResourcePath", redirectApkPath);
+        replaceSplitPaths(applicationInfo, visibleApkPath, redirectApkPath);
     }
 
     private static String mapToVisiblePath(String path) {
@@ -218,6 +242,17 @@ public class SigBypass {
         String zipPrefix = redirectApkPath + "!/";
         if (path.startsWith(zipPrefix)) {
             return visibleApkPath + path.substring(redirectApkPath.length());
+        }
+        return path;
+    }
+
+    private static String mapToRedirectPath(String path) {
+        if (path == null || visibleApkPath == null || redirectApkPath == null) return path;
+        if (path.equals(visibleApkPath)) return redirectApkPath;
+        if (path.equals(visibleApkPath + " (deleted)")) return redirectApkPath + " (deleted)";
+        String zipPrefix = visibleApkPath + "!/";
+        if (path.startsWith(zipPrefix)) {
+            return redirectApkPath + path.substring(visibleApkPath.length());
         }
         return path;
     }
@@ -244,25 +279,25 @@ public class SigBypass {
         XC_MethodHook stringPathHook = new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
-                if (isModuleCaller()) return;
+                boolean moduleCaller = isModuleCaller();
                 Object result = param.getResult();
                 if (!(result instanceof String path)) return;
-                String visiblePath = mapToVisiblePath(path);
-                if (!path.equals(visiblePath)) {
-                    param.setResult(visiblePath);
+                String mappedPath = moduleCaller ? mapToRedirectPath(path) : mapToVisiblePath(path);
+                if (!path.equals(mappedPath)) {
+                    param.setResult(mappedPath);
                 }
             }
         };
         XC_MethodHook filePathHook = new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
-                if (isModuleCaller()) return;
+                boolean moduleCaller = isModuleCaller();
                 Object result = param.getResult();
                 if (!(result instanceof File file)) return;
                 String filePath = file.getPath();
-                String visiblePath = mapToVisiblePath(filePath);
-                if (!filePath.equals(visiblePath)) {
-                    param.setResult(new File(visiblePath));
+                String mappedPath = moduleCaller ? mapToRedirectPath(filePath) : mapToVisiblePath(filePath);
+                if (!filePath.equals(mappedPath)) {
+                    param.setResult(new File(mappedPath));
                 }
             }
         };
@@ -281,11 +316,10 @@ public class SigBypass {
         }
     }
 
-    private static void replaceSignature(Context context, PackageInfo packageInfo) {
+    private static void replaceSigningDetails(Context context, PackageInfo packageInfo) {
         if (packageInfo == null) return;
         boolean hasSignature = (packageInfo.signatures != null && packageInfo.signatures.length != 0)
                 || packageInfo.signingInfo != null;
-        replaceApplicationInfoPaths(context, packageInfo.applicationInfo);
         if (!hasSignature) return;
 
         String packageName = packageInfo.packageName;
@@ -326,6 +360,23 @@ public class SigBypass {
                 Log.w(TAG, "fail to reinforce signingInfo for " + packageName, e);
             }
         }
+    }
+
+    private static void replacePackageInfo(Context context, PackageInfo packageInfo, boolean moduleCaller) {
+        if (packageInfo == null) return;
+        if (moduleCaller) {
+            replaceModuleApplicationInfoPaths(context, packageInfo.applicationInfo);
+        } else {
+            replaceApplicationInfoPaths(context, packageInfo.applicationInfo);
+        }
+        replaceSigningDetails(context, packageInfo);
+    }
+
+    public static ApplicationInfo createModuleCompatibleApplicationInfo(ApplicationInfo applicationInfo) {
+        if (applicationInfo == null) return null;
+        ApplicationInfo copy = new ApplicationInfo(applicationInfo);
+        replaceModuleApplicationInfoPaths(null, copy);
+        return copy;
     }
 
     private static void clearMapFieldQuietly(Class<?> clazz, String fieldName) {
@@ -406,7 +457,7 @@ public class SigBypass {
             XposedHelpers.findAndHookConstructor(PackageInfo.class, Parcel.class, new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) {
-                    replaceSignature(context, (PackageInfo) param.thisObject);
+                    replacePackageInfo(context, (PackageInfo) param.thisObject, isModuleCaller());
                 }
             });
             packageInfoConstructorHooked = true;
@@ -427,7 +478,7 @@ public class SigBypass {
                 @Override
                 public PackageInfo createFromParcel(Parcel source) {
                     PackageInfo packageInfo = originalCreator.createFromParcel(source);
-                    replaceSignature(context, packageInfo);
+                    replacePackageInfo(context, packageInfo, isModuleCaller());
                     return packageInfo;
                 }
 
@@ -453,7 +504,7 @@ public class SigBypass {
                 protected void afterHookedMethod(MethodHookParam param) {
                     Object result = param.getResult();
                     if (result instanceof PackageInfo packageInfo) {
-                        replaceSignature(context, packageInfo);
+                        replacePackageInfo(context, packageInfo, isModuleCaller());
                     }
                 }
             });
@@ -469,8 +520,11 @@ public class SigBypass {
             XposedHelpers.findAndHookConstructor(ApplicationInfo.class, Parcel.class, new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) {
-                    if (isModuleCaller()) return;
-                    replaceApplicationInfoPaths(context, (ApplicationInfo) param.thisObject);
+                    if (isModuleCaller()) {
+                        replaceModuleApplicationInfoPaths(context, (ApplicationInfo) param.thisObject);
+                    } else {
+                        replaceApplicationInfoPaths(context, (ApplicationInfo) param.thisObject);
+                    }
                 }
             });
             applicationInfoConstructorHooked = true;
@@ -485,8 +539,7 @@ public class SigBypass {
             XC_MethodHook hook = new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) {
-                    if (isModuleCaller()) return;
-                    replaceSignature(context, (PackageInfo) param.getResult());
+                    replacePackageInfo(context, (PackageInfo) param.getResult(), isModuleCaller());
                 }
             };
             boolean hookedAny = false;
@@ -511,8 +564,11 @@ public class SigBypass {
             XC_MethodHook hook = new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) {
-                    if (isModuleCaller()) return;
-                    replaceApplicationInfoPaths(context, (ApplicationInfo) param.getResult());
+                    if (isModuleCaller()) {
+                        replaceModuleApplicationInfoPaths(context, (ApplicationInfo) param.getResult());
+                    } else {
+                        replaceApplicationInfoPaths(context, (ApplicationInfo) param.getResult());
+                    }
                 }
             };
             boolean hookedAny = false;
@@ -537,7 +593,15 @@ public class SigBypass {
         XC_MethodHook pathHook = new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
-                if (isModuleCaller()) return;
+                Object result = param.getResult();
+                if (!(result instanceof String path)) return;
+                if (isModuleCaller()) {
+                    String redirectPath = mapToRedirectPath(path);
+                    if (!path.equals(redirectPath)) {
+                        param.setResult(redirectPath);
+                    }
+                    return;
+                }
                 if (shouldSpoofPath(param.thisObject, context, param.getResult())) {
                     param.setResult(visibleApkPath);
                 }
@@ -582,18 +646,17 @@ public class SigBypass {
             XC_MethodHook hook = new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
-                    if (visibleApkPath == null) return;
+                    if (visibleApkPath == null || redirectApkPath == null) return;
                     Object apkPath = param.args.length == 0 ? null : param.args[0];
                     if (!(apkPath instanceof String path) || !path.equals(visibleApkPath)) {
                         return;
                     }
-                    if (isModuleCaller()) return;
                     param.args[0] = redirectApkPath;
                 }
 
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) {
-                    replaceSignature(context, (PackageInfo) param.getResult());
+                    replacePackageInfo(context, (PackageInfo) param.getResult(), isModuleCaller());
                 }
             };
             XposedBridge.hookAllMethods(PackageManager.class, "getPackageArchiveInfo", hook);
