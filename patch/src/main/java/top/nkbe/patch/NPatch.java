@@ -559,15 +559,16 @@ public class NPatch {
 
         if (!targetPackage.equals(originPackage)) {
             property.addManifestAttribute(new AttributeItem(NodeValue.Manifest.PACKAGE, targetPackage).setNamespace(null));
+            property.setAuthorityMapper(authority -> remapAuthority(authority, originPackage, targetPackage));
         }
 
-        modules.forEach(module -> {
-            property.addMetaData(new ModificationProperty.MetaData("xposedmodule", "true"));
-            property.addMetaData(new ModificationProperty.MetaData("xposeddescription", "NPatch Embed Module"));
-            property.addMetaData(new ModificationProperty.MetaData("xposedminversion", "93"));
-        });
+        if (!modules.isEmpty()) {
+            addOrReplaceMetaData(property, "xposedmodule", "true");
+            addOrReplaceMetaData(property, "xposeddescription", "NPatch Embed Module");
+            addOrReplaceMetaData(property, "xposedminversion", "93");
+        }
 
-        property.addMetaData(new ModificationProperty.MetaData("npatch", metadata));
+        addOrReplaceMetaData(property, "npatch", metadata);
 
         // 注入 MicroG 偽裝簽名與權限
         if (useMicroG && originalSignature != null && !originalSignature.isEmpty()) {
@@ -577,7 +578,7 @@ public class NPatch {
                 for (byte b : sigBytes) {
                     hex.append(String.format("%02x", b));
                 }
-                property.addMetaData(new ModificationProperty.MetaData("fake-signature", hex.toString()));
+                addOrReplaceMetaData(property, "fake-signature", hex.toString());
                 property.addUsesPermission("android.permission.FAKE_PACKAGE_SIGNATURE");
                 logger.d("Added fake-signature metadata for MicroG compatibility");
             } catch (Exception e) {
@@ -591,13 +592,15 @@ public class NPatch {
 
         // 處理注入 Provider 的邏輯
         if (isInjectProvider){
+            String injectedAuthority = targetPackage + ".MTDataFilesProvider";
             HashMap<String,String> providerMap = new HashMap<>();
             providerMap.put("name","bin.mt.file.content.MTDataFilesProvider");
             providerMap.put("permission","android.permission.MANAGE_DOCUMENTS");
             providerMap.put("exported","true");
-            providerMap.put("authorities", targetPackage + ".MTDataFilesProvider");
+            providerMap.put("authorities", injectedAuthority);
             providerMap.put("grantUriPermissions","true");
 
+            property.addDeleteProviderAuthorities(injectedAuthority);
             property.addProvider(providerMap,"android.content.action.DOCUMENTS_PROVIDER");
 
         }
@@ -608,5 +611,23 @@ public class NPatch {
         } finally {
             if (is != null) is.close();
         }
+    }
+
+    private static void addOrReplaceMetaData(ModificationProperty property, String name, String value) {
+        property.addDeleteMetaData(name);
+        property.addMetaData(new ModificationProperty.MetaData(name, value));
+    }
+
+    private static String remapAuthority(String authority, String originPackage, String targetPackage) {
+        if (authority == null || originPackage == null || targetPackage == null || originPackage.equals(targetPackage)) {
+            return authority;
+        }
+        if (authority.equals(originPackage)) {
+            return targetPackage;
+        }
+        if (authority.startsWith(originPackage + ".")) {
+            return targetPackage + authority.substring(originPackage.length());
+        }
+        return authority;
     }
 }
