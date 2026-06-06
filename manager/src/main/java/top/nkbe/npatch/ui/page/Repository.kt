@@ -109,7 +109,7 @@ fun RepositoryScreen(
     }
 
     val hazeState = rememberHazeState()
-    val hazeStyle = backgroundAwareHazeStyle(backgroundAlpha = RepoBackgroundAlpha)
+    val hazeStyle = backgroundAwareHazeStyle()
 
     val showSortMenu = remember { mutableStateOf(false) }
     val sortOptions = listOf(
@@ -244,10 +244,7 @@ fun RepositoryScreen(
                 RepoListContent(
                     uiModels = uiModels,
                     onRepoClick = { navigator.navigate(Route.RepoDetail(it)) },
-                    contentPadding = PaddingValues(
-                        top = innerPadding.calculateTopPadding() + boxHeight.value,
-                        bottom = innerPadding.calculateBottomPadding() + 24.dp
-                    ),
+                    contentPadding = padding,
                     hazeState = hazeState,
                     scrollBehavior = scrollBehavior,
                     isInitialLoading = isInitialLoading
