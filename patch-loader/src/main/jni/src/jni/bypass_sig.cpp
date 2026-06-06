@@ -887,6 +887,10 @@ namespace lspd {
                && caller_path.find("libnpatch.so") == std::string::npos;
     }
 
+    static bool should_redirect_apk_contents(const void* caller_pc) {
+        return !minimal_file_hook_mode && !is_npatch_module_native_caller(caller_pc);
+    }
+
     static int open_sanitized_proc_file(const char* pathname, const void* caller_pc) {
         if (pathname == nullptr) {
             return -1;
@@ -1002,7 +1006,7 @@ namespace lspd {
                     return sanitized_fd;
                 }
             }
-            if (!minimal_file_hook_mode && !is_npatch_module_native_caller(caller_pc)) {
+            if (should_redirect_apk_contents(caller_pc)) {
                 redirected_path = resolve_redirect_path(pathname);
                 if (redirected_path != pathname && redirected_path != nullptr) {
                     LOGD("SigBypass: Redirecting {}('{}') -> '{}'",
@@ -1053,7 +1057,7 @@ namespace lspd {
                     return sanitized_fd;
                 }
             }
-            if (!is_npatch_module_native_caller(caller_pc)) {
+            if (should_redirect_apk_contents(caller_pc)) {
                 redirected_path = resolve_redirect_path(pathname);
                 if (redirected_path != pathname && redirected_path != nullptr) {
                     LOGD("SigBypass: Redirecting {}('{}') -> '{}'",
@@ -1097,7 +1101,7 @@ namespace lspd {
                     close(sanitized_fd);
                 }
             }
-            if (!minimal_file_hook_mode && !is_npatch_module_native_caller(caller_pc)) {
+            if (should_redirect_apk_contents(caller_pc)) {
                 redirected_path = resolve_redirect_path(pathname);
                 if (redirected_path != pathname && redirected_path != nullptr) {
                     LOGD("SigBypass: Redirecting fopen('%s') -> '%s'", pathname, redirected_path);
@@ -1137,10 +1141,11 @@ namespace lspd {
     }
 
     static int hooked___open_2(const char* pathname, int flags) {
+        const void* caller_pc = __builtin_return_address(0);
         if (!g_openat_reentry) {
             g_openat_reentry = true;
             if (is_read_only_open(flags)) {
-                int sanitized_fd = open_sanitized_proc_file(pathname, __builtin_return_address(0));
+                int sanitized_fd = open_sanitized_proc_file(pathname, caller_pc);
                 if (sanitized_fd >= 0) {
                     LOGD("SigBypass: Serve sanitized __open_2 for {}", pathname);
                     g_openat_reentry = false;
@@ -1155,7 +1160,10 @@ namespace lspd {
             return -1;
         }
         std::string redirected_path_storage;
-        const char* redirected_path = get_visible_or_redirected_path(pathname, false, &redirected_path_storage);
+        const char* redirected_path = pathname;
+        if (should_redirect_apk_contents(caller_pc)) {
+            redirected_path = get_visible_or_redirected_path(pathname, false, &redirected_path_storage);
+        }
         int result = __open_2_backup(redirected_path, flags);
         if (result >= 0 && redirected_path != nullptr && pathname != nullptr) {
             mark_redirected_fd(result, redirected_path != pathname);

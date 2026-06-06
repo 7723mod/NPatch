@@ -8,6 +8,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cerrno>
 #include <cstring>
 #include <fcntl.h>
 #include <linux/audit.h>
@@ -31,8 +32,68 @@ namespace lspd {
     static char g_target_path[PATH_MAX] = {0};
     static char g_redirect_path[PATH_MAX] = {0};
     static bool g_redirected_fds[4096] = {false};
+    static constexpr size_t kRedirectedFdCapacity =
+            sizeof(g_redirected_fds) / sizeof(g_redirected_fds[0]);
     static std::mutex g_path_mutex;
+    static std::mutex g_sigsys_handler_mutex;
+    static struct sigaction g_previous_sigsys_action = {};
+    static bool g_has_previous_sigsys_action = false;
     static constexpr uint32_t kSyscallReplayToken = 0xABCDEF00u;
+
+    static bool is_tracked_fd(int fd) {
+        return fd >= 0 && fd < static_cast<int>(kRedirectedFdCapacity);
+    }
+
+    static void mark_redirected_fd(int fd, bool redirected) {
+        if (is_tracked_fd(fd)) {
+            g_redirected_fds[fd] = redirected;
+        }
+    }
+
+    static long syscall_result_for_context(long result) {
+        if (result >= 0) {
+            return result;
+        }
+
+        const int syscall_errno = errno;
+        if (syscall_errno > 0) {
+            return -syscall_errno;
+        }
+        return result;
+    }
+
+    static long replay_openat(long dirfd, const char* pathname, long flags, long mode) {
+        errno = 0;
+        return syscall_result_for_context(syscall(__NR_openat,
+                                                 dirfd,
+                                                 pathname,
+                                                 flags,
+                                                 mode,
+                                                 0,
+                                                 kSyscallReplayToken));
+    }
+
+    static long replay_readlinkat(long dirfd, const char* pathname, char* buffer, long buffer_size) {
+        errno = 0;
+        return syscall_result_for_context(syscall(__NR_readlinkat,
+                                                 dirfd,
+                                                 pathname,
+                                                 buffer,
+                                                 buffer_size,
+                                                 0,
+                                                 kSyscallReplayToken));
+    }
+
+    static long replay_close(long fd) {
+        errno = 0;
+        return syscall_result_for_context(syscall(__NR_close,
+                                                 fd,
+                                                 0,
+                                                 0,
+                                                 0,
+                                                 0,
+                                                 kSyscallReplayToken));
+    }
 
     static void copy_path(char* dest, const char* src) {
         if (src == nullptr) {
@@ -98,7 +159,7 @@ namespace lspd {
                 return false;
             }
             fd = fd * 10 + (*p - '0');
-            if (fd >= static_cast<int>(std::size(g_redirected_fds))) {
+            if (!is_tracked_fd(fd)) {
                 return false;
             }
         }
@@ -139,19 +200,15 @@ namespace lspd {
         ProcFdReadlinkatPath effective_path;
         prepare_proc_fd_readlinkat_path(&effective_path, dirfd, pathname,
                                         [](const char* link_path, char* resolved_path, size_t size) -> ssize_t {
-                                            return static_cast<ssize_t>(syscall(__NR_readlinkat,
-                                                                               AT_FDCWD,
-                                                                               link_path,
-                                                                               resolved_path,
-                                                                               size,
-                                                                               0,
-                                                                               kSyscallReplayToken));
+                                            return static_cast<ssize_t>(replay_readlinkat(AT_FDCWD,
+                                                                                          link_path,
+                                                                                          resolved_path,
+                                                                                          size));
                                         });
 
         int fd = -1;
         if (!parse_proc_fd_path(effective_path.path(), &fd)
-                || fd < 0
-                || fd >= static_cast<int>(std::size(g_redirected_fds))
+                || !is_tracked_fd(fd)
                 || !g_redirected_fds[fd]
                 || g_target_path[0] == '\0') {
             return false;
@@ -166,37 +223,61 @@ namespace lspd {
         return true;
     }
 
-    static void sigsys_handler(int signo, siginfo_t*, void* context) {
-        if (signo != SIGSYS) return;
+    static void call_previous_sigsys_handler(int signo, siginfo_t* info, void* context) {
+        if (!g_has_previous_sigsys_action) {
+            signal(SIGSYS, SIG_DFL);
+            raise(SIGSYS);
+            return;
+        }
+
+        if ((g_previous_sigsys_action.sa_flags & SA_SIGINFO) != 0
+                && g_previous_sigsys_action.sa_sigaction != nullptr) {
+            g_previous_sigsys_action.sa_sigaction(signo, info, context);
+            return;
+        }
+
+        if (g_previous_sigsys_action.sa_handler == SIG_IGN) {
+            return;
+        }
+        if (g_previous_sigsys_action.sa_handler != nullptr
+                && g_previous_sigsys_action.sa_handler != SIG_DFL) {
+            g_previous_sigsys_action.sa_handler(signo);
+            return;
+        }
+
+        signal(SIGSYS, SIG_DFL);
+        raise(SIGSYS);
+    }
+
+    static void sigsys_handler(int signo, siginfo_t* info, void* context) {
+        const int saved_errno = errno;
+        if (signo != SIGSYS || context == nullptr) {
+            call_previous_sigsys_handler(signo, info, context);
+            errno = saved_errno;
+            return;
+        }
 
         auto* ctx = reinterpret_cast<ucontext_t*>(context);
         if (ctx->uc_mcontext.regs[8] == __NR_openat) {
             auto* pathname = reinterpret_cast<const char*>(ctx->uc_mcontext.regs[1]);
             bool may_redirect = is_read_only_open(static_cast<int>(ctx->uc_mcontext.regs[2]));
-            long result = syscall(__NR_openat,
-                                  ctx->uc_mcontext.regs[0],
-                                  pathname,
-                                  ctx->uc_mcontext.regs[2],
-                                  ctx->uc_mcontext.regs[3],
-                                  ctx->uc_mcontext.regs[4],
-                                  kSyscallReplayToken);
+            long result = replay_openat(ctx->uc_mcontext.regs[0],
+                                        pathname,
+                                        ctx->uc_mcontext.regs[2],
+                                        ctx->uc_mcontext.regs[3]);
             if (may_redirect
                     && result >= 0
                     && g_redirect_path[0] != '\0'
                     && path_matches_target_fd(static_cast<int>(result))) {
-                syscall(__NR_close, result);
-                result = syscall(__NR_openat,
-                                 ctx->uc_mcontext.regs[0],
-                                 g_redirect_path,
-                                 ctx->uc_mcontext.regs[2],
-                                 ctx->uc_mcontext.regs[3],
-                                 ctx->uc_mcontext.regs[4],
-                                 kSyscallReplayToken);
-                if (result >= 0 && result < static_cast<long>(std::size(g_redirected_fds))) {
-                    g_redirected_fds[result] = true;
-                }
+                replay_close(result);
+                result = replay_openat(ctx->uc_mcontext.regs[0],
+                                       g_redirect_path,
+                                       ctx->uc_mcontext.regs[2],
+                                       ctx->uc_mcontext.regs[3]);
+                mark_redirected_fd(static_cast<int>(result), result >= 0);
             }
             ctx->uc_mcontext.regs[0] = result;
+            errno = saved_errno;
             return;
         }
 
@@ -207,20 +288,32 @@ namespace lspd {
             if (emulate_redirected_readlinkat(ctx->uc_mcontext.regs[0], pathname, buffer, ctx->uc_mcontext.regs[3],
                                               &emulated_result)) {
                 ctx->uc_mcontext.regs[0] = emulated_result;
+                errno = saved_errno;
                 return;
             }
 
-            ctx->uc_mcontext.regs[0] = syscall(__NR_readlinkat,
-                                               ctx->uc_mcontext.regs[0],
-                                               pathname,
-                                               buffer,
-                                               ctx->uc_mcontext.regs[3],
-                                               ctx->uc_mcontext.regs[4],
-                                               kSyscallReplayToken);
+            ctx->uc_mcontext.regs[0] = replay_readlinkat(ctx->uc_mcontext.regs[0],
+                                                         pathname,
+                                                         buffer,
+                                                         ctx->uc_mcontext.regs[3]);
+            errno = saved_errno;
+            return;
         }
+
+        if (ctx->uc_mcontext.regs[8] == __NR_close) {
+            const int fd = static_cast<int>(ctx->uc_mcontext.regs[0]);
+            mark_redirected_fd(fd, false);
+            ctx->uc_mcontext.regs[0] = replay_close(fd);
+            errno = saved_errno;
+            return;
+        }
+
+        call_previous_sigsys_handler(signo, info, context);
+        errno = saved_errno;
     }
 
     static bool ensure_sigsys_handler() {
+        std::scoped_lock lock(g_sigsys_handler_mutex);
         if (g_sigsys_handler_ready) {
             return true;
         }
@@ -229,11 +322,12 @@ namespace lspd {
         memset(&sa, 0, sizeof(sa));
         sa.sa_sigaction = sigsys_handler;
         sa.sa_flags = SA_SIGINFO;
-        if (sigaction(SIGSYS, &sa, nullptr) < 0) {
+        if (sigaction(SIGSYS, &sa, &g_previous_sigsys_action) < 0) {
             LOGE("FunPatch: failed to register SIGSYS handler");
             return false;
         }
 
+        g_has_previous_sigsys_action = true;
         g_sigsys_handler_ready = true;
         return true;
     }
@@ -248,8 +342,9 @@ namespace lspd {
                 BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, AUDIT_ARCH_AARCH64, 1, 0),
                 BPF_STMT(BPF_RET + BPF_K, SECCOMP_RET_KILL_PROCESS),
                 BPF_STMT(BPF_LD + BPF_W + BPF_ABS, offsetof(struct seccomp_data, nr)),
-                BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, __NR_openat, 2, 0),
-                BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, __NR_readlinkat, 1, 0),
+                BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, __NR_openat, 3, 0),
+                BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, __NR_readlinkat, 2, 0),
+                BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, __NR_close, 1, 0),
                 BPF_STMT(BPF_RET + BPF_K, SECCOMP_RET_ALLOW),
                 BPF_STMT(BPF_LD + BPF_W + BPF_ABS,
                          offsetof(struct seccomp_data, args[5])),
