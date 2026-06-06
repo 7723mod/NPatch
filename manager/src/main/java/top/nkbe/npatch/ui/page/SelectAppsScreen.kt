@@ -40,6 +40,8 @@ import top.nkbe.npatch.ui.component.SearchBox
 import top.nkbe.npatch.ui.component.SearchPager
 import top.nkbe.npatch.ui.component.SearchStatus
 import top.nkbe.npatch.ui.component.NPatchScaffold
+import top.nkbe.npatch.ui.component.NPatchPullToRefresh
+import top.nkbe.npatch.ui.component.NPatchTopAppBar
 import top.nkbe.npatch.ui.util.backgroundAwareHazeStyle
 import top.nkbe.npatch.ui.viewmodel.SelectAppsViewModel
 import androidx.compose.ui.state.ToggleableState
@@ -49,9 +51,7 @@ import top.yukonga.miuix.kmp.basic.FloatingActionButton
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
@@ -114,7 +114,7 @@ fun SelectAppsScreen(
     NPatchScaffold(
         topBar = {
             searchStatus.TopAppBarAnim(hazeState = hazeState, hazeStyle = hazeStyle) {
-                TopAppBar(
+                NPatchTopAppBar(
                     title = title,
                     scrollBehavior = scrollBehavior,
                     navigationIcon = {
@@ -213,7 +213,7 @@ private fun SelectAppsList(
     onSingleSelect: (AppInfo) -> Unit
 ) {
     val pullToRefreshState = rememberPullToRefreshState()
-    PullToRefresh(
+    NPatchPullToRefresh(
         isRefreshing = viewModel.isRefreshing,
         pullToRefreshState = pullToRefreshState,
         onRefresh = onRefresh,

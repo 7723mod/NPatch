@@ -46,8 +46,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -86,15 +86,19 @@ private val FloatingBottomBarVerticalPadding = 4.dp
 fun RowScope.FloatingGlassBottomBarItem(
     onClick: () -> Unit,
     selected: Boolean = false,
+    label: String,
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val scale = LocalFloatingBottomBarTabScale.current
     Column(
         modifier
-            .semantics(mergeDescendants = true) { this.selected = selected }
             .defaultMinSize(minWidth = FloatingBottomBarItemMinWidth)
             .clip(CircleShape)
+            .clearAndSetSemantics {
+                this.selected = selected
+                contentDescription = label
+            }
             .clickable(
                 interactionSource = null,
                 indication = null,

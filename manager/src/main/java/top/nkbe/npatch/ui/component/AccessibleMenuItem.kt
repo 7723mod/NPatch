@@ -12,13 +12,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import top.nkbe.npatch.R
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -33,9 +31,6 @@ fun AccessibleMenuItem(
     selected: Boolean = false,
     onClick: () -> Unit,
 ) {
-    val selectedLabel = stringResource(R.string.accessibility_selected)
-    val spokenLabel = if (selected) "$text, $selectedLabel" else text
-
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -43,7 +38,7 @@ fun AccessibleMenuItem(
             .clickable(onClick = onClick)
             .semantics(mergeDescendants = true) {
                 role = Role.Button
-                contentDescription = spokenLabel
+                this.selected = selected
             }
             .padding(horizontal = 16.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),

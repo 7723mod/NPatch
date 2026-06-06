@@ -128,33 +128,11 @@ class SearchStatus(val label: String) {
         hazeStyle: HazeBlurStyle? = null,
         content: @Composable () -> Unit
     ) {
-        val hasBackgroundImage = LocalBackgroundImagePath.current.isNotEmpty()
         val topAppBarAlpha = animateFloatAsState(
             if (visible) 1f else 0f,
             animationSpec = tween(if (visible) 550 else 0, easing = FastOutSlowInEasing),
         )
         Box(modifier = modifier) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .then(
-                        if (hazeState != null && hazeStyle != null) {
-                            Modifier.hazeEffect(hazeState) {
-                                blurEffect {
-                                    style = hazeStyle
-                                    blurRadius = 30.dp
-                                    noiseFactor = 0f
-                                }
-                            }
-                        } else {
-                            if (hasBackgroundImage) {
-                                Modifier.background(colorScheme.surface.copy(alpha = BG_SURFACE_ALPHA))
-                            } else {
-                                Modifier.background(colorScheme.surface)
-                            }
-                        }
-                    )
-            )
             Box(
                 modifier = Modifier
                     .alpha(topAppBarAlpha.value)

@@ -45,6 +45,8 @@ import top.nkbe.npatch.R
 import top.nkbe.npatch.repo.RepoLoader
 import top.nkbe.npatch.ui.component.AccessibleMenuItem
 import top.nkbe.npatch.ui.component.NPatchScaffold
+import top.nkbe.npatch.ui.component.NPatchPullToRefresh
+import top.nkbe.npatch.ui.component.NPatchTopAppBar
 import top.nkbe.npatch.ui.component.SearchBarFake
 import top.nkbe.npatch.ui.component.SearchBox
 import top.nkbe.npatch.ui.component.SearchPager
@@ -64,10 +66,8 @@ import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
-import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Download
@@ -135,8 +135,7 @@ fun RepositoryScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             searchStatus.TopAppBarAnim(hazeState = hazeState, hazeStyle = hazeStyle) {
-                TopAppBar(
-                    color = Color.Transparent,
+                NPatchTopAppBar(
                     title = stringResource(R.string.module_repo),
                     scrollBehavior = scrollBehavior,
                     actions = {
@@ -197,8 +196,8 @@ fun RepositoryScreen(
             searchStatus.SearchPager(
                 searchBarTopPadding = dynamicTopPadding,
                 defaultResult = {
-                    val searchPadding = PaddingValues(bottom = 24.dp)
-                    PullToRefresh(
+                    val searchPadding = PaddingValues(top = 8.dp, bottom = 24.dp)
+                    NPatchPullToRefresh(
                         isRefreshing = isRefreshing,
                         onRefresh = { viewModel.refresh() },
                         pullToRefreshState = pullToRefreshState,
@@ -231,10 +230,10 @@ fun RepositoryScreen(
             }
         ) { boxHeight ->
             val padding = PaddingValues(
-                top = innerPadding.calculateTopPadding() + boxHeight.value,
+                top = innerPadding.calculateTopPadding() + boxHeight.value + 8.dp,
                 bottom = innerPadding.calculateBottomPadding() + 24.dp
             )
-            PullToRefresh(
+            NPatchPullToRefresh(
                 isRefreshing = isRefreshing,
                 onRefresh = { viewModel.refresh() },
                 pullToRefreshState = pullToRefreshState,

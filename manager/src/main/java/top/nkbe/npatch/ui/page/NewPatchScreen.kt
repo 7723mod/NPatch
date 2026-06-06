@@ -22,6 +22,7 @@ import top.nkbe.npatch.ui.page.newpatch.ConfiguringTopBar
 import top.nkbe.npatch.ui.page.newpatch.DoPatchBody
 import top.nkbe.npatch.ui.page.newpatch.PatchOptionsBody
 import top.nkbe.npatch.ui.component.NPatchScaffold
+import top.nkbe.npatch.ui.component.NPatchTopAppBar
 import top.nkbe.npatch.ui.util.LocalSnackbarHost
 import top.nkbe.npatch.ui.viewmodel.NewPatchViewModel
 import top.nkbe.npatch.ui.viewmodel.NewPatchViewModel.PatchState
@@ -29,7 +30,6 @@ import top.nkbe.npatch.ui.viewmodel.NewPatchViewModel.ViewAction
 import top.nkbe.npatch.ui.page.SelectAppsResult
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
 
 const val ACTION_STORAGE = 0
@@ -138,8 +138,8 @@ fun NewPatchScreen(
                 // 只有当包名匹配，且动作是 添加 或 替换 时才认为是安装成功
                 PatchState.PATCHING,
                 PatchState.FINISHED,
-                PatchState.ERROR -> TopAppBar(title = viewModel.patchApp.app.packageName, scrollBehavior = scrollBehavior)
-                else -> TopAppBar(title = "", scrollBehavior = scrollBehavior)
+                PatchState.ERROR -> NPatchTopAppBar(title = viewModel.patchApp.app.packageName, scrollBehavior = scrollBehavior)
+                else -> NPatchTopAppBar(title = "", scrollBehavior = scrollBehavior)
             }
         },
         floatingActionButton = {

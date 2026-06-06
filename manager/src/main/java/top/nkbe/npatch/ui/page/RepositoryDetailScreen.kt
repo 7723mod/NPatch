@@ -73,8 +73,6 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.blur.blurEffect
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.delay
@@ -86,9 +84,9 @@ import top.nkbe.npatch.repo.ReleaseAsset
 import top.nkbe.npatch.repo.RepoLoader
 import top.nkbe.npatch.ui.component.GithubMarkdown
 import top.nkbe.npatch.ui.component.NPatchScaffold
+import top.nkbe.npatch.ui.component.NPatchTopAppBar
 import top.nkbe.npatch.ui.util.backgroundAwareColor
 import top.nkbe.npatch.ui.util.backgroundAwareCardColors
-import top.nkbe.npatch.ui.util.backgroundAwareHazeStyle
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
@@ -104,7 +102,6 @@ import top.yukonga.miuix.kmp.basic.TabRow
 import top.yukonga.miuix.kmp.basic.TabRowDefaults
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -171,10 +168,6 @@ fun RepositoryDetailScreen(
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val scrollBehavior: ScrollBehavior = MiuixScrollBehavior()
     val hazeState = rememberHazeState()
-    val hazeStyle = backgroundAwareHazeStyle(
-        surfaceColor = colorScheme.surface,
-        backgroundAlpha = RepoDetailBackgroundAlpha
-    )
 
     val msgUnknownAuthor = stringResource(R.string.unknown_author)
     val displayAuthorName = remember(module, msgUnknownAuthor) {
@@ -188,15 +181,7 @@ fun RepositoryDetailScreen(
     val uriHandler = LocalUriHandler.current
     NPatchScaffold(
         topBar = {
-            TopAppBar(
-                modifier = Modifier.hazeEffect(hazeState) {
-                    blurEffect {
-                        style = hazeStyle
-                        blurRadius = 30.dp
-                        noiseFactor = 0f
-                    }
-                },
-                color = Color.Transparent,
+            NPatchTopAppBar(
                 title = stringResource(R.string.module_app_info),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -254,7 +239,7 @@ fun RepositoryDetailScreen(
             ) { page ->
                 val currentTab = tabs.getOrNull(page)
                 val pageInnerPadding = PaddingValues(
-                    top = innerPadding.calculateTopPadding() + dynamicTopPadding + headerHeight + 6.dp,
+                    top = innerPadding.calculateTopPadding() + dynamicTopPadding + headerHeight + 12.dp,
                     bottom = innerPadding.calculateBottomPadding() + WindowInsets.systemBars.asPaddingValues()
                         .calculateBottomPadding(),
                     start = innerPadding.calculateStartPadding(layoutDirection),
@@ -307,6 +292,7 @@ fun RepositoryDetailScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = RepoDetailHorizontalPadding)
+                        .padding(top = 8.dp)
                         .padding(bottom = 4.dp),
                     colors = backgroundAwareCardColors(
                         color = colorScheme.surfaceContainer,

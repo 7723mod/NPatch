@@ -32,6 +32,7 @@ import nkbe.util.NeoPackageManager
 import top.nkbe.npatch.R
 import top.nkbe.npatch.ui.component.AccessibleMenuItem
 import top.nkbe.npatch.ui.component.AppItem
+import top.nkbe.npatch.ui.component.NPatchPullToRefresh
 import top.nkbe.npatch.ui.viewmodel.manage.ModuleManageViewModel
 import top.nkbe.npatch.ui.util.ensureVisibleByMix
 import top.nkbe.npatch.ui.util.relativeLuminance
@@ -39,7 +40,6 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
-import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.Surface
 import top.yukonga.miuix.kmp.basic.Text
@@ -110,7 +110,7 @@ fun ModuleManageBody(
         }
     }
 
-    PullToRefresh(
+    NPatchPullToRefresh(
         isRefreshing = viewModel.isRefreshing,
         onRefresh = { viewModel.refresh() },
         pullToRefreshState = pullToRefreshState,

@@ -36,12 +36,12 @@ import top.nkbe.npatch.ui.component.SearchBox
 import top.nkbe.npatch.ui.component.SearchPager
 import top.nkbe.npatch.ui.component.SearchStatus
 import top.nkbe.npatch.ui.component.NPatchScaffold
+import top.nkbe.npatch.ui.component.NPatchTopAppBar
 import top.nkbe.npatch.ui.util.LocalFloatingGlassBottomBar
 import top.nkbe.npatch.ui.util.backgroundAwareHazeStyle
 import top.nkbe.npatch.ui.viewmodel.manage.ModuleManageViewModel
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.TabRow
 import top.yukonga.miuix.kmp.basic.TabRowDefaults
 
@@ -104,10 +104,9 @@ fun ManageScreen(
     NPatchScaffold(
         topBar = {
             searchStatus.TopAppBarAnim(hazeState = hazeState, hazeStyle = hazeStyle) {
-                TopAppBar(
+                NPatchTopAppBar(
                     title = stringResource(R.string.screen_manage),
                     scrollBehavior = scrollBehavior,
-                    color = Color.Transparent
                 )
             }
         },
@@ -146,7 +145,7 @@ fun ManageScreen(
                         state = pagerState,
                         modifier = Modifier.fillMaxSize()
                     ) { page ->
-                        val contentPadding = PaddingValues(top = dynamicTopPadding, bottom = 0.dp)
+                        val contentPadding = PaddingValues(top = dynamicTopPadding + 8.dp, bottom = 0.dp)
                         when (page) {
                             0 -> AppManageBody(navigator, searchStatus.searchText, contentPadding, scrollBehavior,hazeState)
                             1 -> ModuleManageBody(
@@ -188,7 +187,7 @@ fun ManageScreen(
                 modifier = Modifier.fillMaxSize()
             ) { page ->
                 val contentPadding = PaddingValues(
-                    top = innerPadding.calculateTopPadding() + boxHeight.value,
+                    top = innerPadding.calculateTopPadding() + boxHeight.value + 8.dp,
                     bottom = innerPadding.calculateBottomPadding()
                 )
                 when (page) {

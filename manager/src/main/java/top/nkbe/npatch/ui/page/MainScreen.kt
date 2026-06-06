@@ -1,16 +1,25 @@
 package top.nkbe.npatch.ui.page
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
@@ -20,8 +29,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -36,7 +51,7 @@ import top.nkbe.npatch.ui.util.LocalFloatingGlassBottomBar
 import top.nkbe.npatch.ui.util.LocalFloatingGlassBottomBarBlur
 import top.nkbe.npatch.ui.util.backgroundAwareCardColors
 import top.yukonga.miuix.kmp.basic.NavigationBar
-import top.yukonga.miuix.kmp.basic.NavigationBarItem
+import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -114,7 +129,8 @@ fun MainScreen(
                                     onSelectedTabChange(index)
                                     scope.launch { pagerState.animateScrollToPage(index) }
                                 },
-                                selected = isSelected
+                                selected = isSelected,
+                                label = label
                             ) {
                                 FloatingGlassBottomBarIcon(
                                     selected = isSelected,
@@ -130,7 +146,8 @@ fun MainScreen(
                 NavigationBar(modifier = Modifier.background(backgroundAwareCardColors().color)) {
                     tabs.forEachIndexed { index, tab ->
                         val isSelected = settledPage == index
-                        NavigationBarItem(
+                        val label = stringResource(tab.labelRes)
+                        MainNavigationBarItem(
                             selected = isSelected,
                             onClick = {
                                 onSelectedTabChange(index)
@@ -139,7 +156,7 @@ fun MainScreen(
                                 }
                             },
                             icon = if (isSelected) tab.selectedIcon else tab.unselectedIcon,
-                            label = stringResource(tab.labelRes)
+                            label = label
                         )
                     }
                 }
@@ -176,5 +193,60 @@ fun MainScreen(
                 MainTab.Settings -> SettingsScreen()
             }
         }
+    }
+}
+
+@Composable
+private fun RowScope.MainNavigationBarItem(
+    selected: Boolean,
+    onClick: () -> Unit,
+    icon: ImageVector,
+    label: String,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val onSurfaceContainerColor = MiuixTheme.colorScheme.onSurfaceContainer
+    val tint = when {
+        isPressed -> if (selected) {
+            onSurfaceContainerColor.copy(alpha = 0.5f)
+        } else {
+            onSurfaceContainerColor.copy(alpha = 0.6f)
+        }
+
+        selected -> onSurfaceContainerColor
+        else -> onSurfaceContainerColor.copy(alpha = 0.4f)
+    }
+    val fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+
+    Column(
+        modifier = Modifier
+            .height(64.dp)
+            .weight(1f)
+            .selectable(
+                selected = selected,
+                onClick = onClick,
+                role = Role.Tab,
+                interactionSource = interactionSource,
+                indication = null,
+            ),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Top,
+    ) {
+        Image(
+            modifier = Modifier
+                .padding(top = 8.dp)
+                .size(26.dp),
+            imageVector = icon,
+            contentDescription = null,
+            colorFilter = ColorFilter.tint(tint),
+        )
+        Text(
+            modifier = Modifier.padding(bottom = 8.dp),
+            text = label,
+            color = tint,
+            textAlign = TextAlign.Center,
+            fontSize = 12.sp,
+            fontWeight = fontWeight,
+        )
     }
 }

@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import top.nkbe.npatch.R
 import top.nkbe.npatch.share.Constants
+import top.nkbe.npatch.ui.component.NPatchTopAppBar
 import top.nkbe.npatch.ui.component.SelectionColumn
 import top.nkbe.npatch.ui.component.SelectionColumnScope.SelectionItem
 import top.nkbe.npatch.ui.component.settings.SettingsEditor
@@ -30,7 +31,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun ConfiguringTopBar(scrollBehavior: ScrollBehavior, onBackClick: () -> Unit) {
-    TopAppBar(
+    NPatchTopAppBar(
         title = stringResource(R.string.screen_new_patch),
         scrollBehavior = scrollBehavior,
         navigationIcon = {
@@ -52,8 +53,15 @@ fun ConfiguringFab() {
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.padding(horizontal = 16.dp)
         ) {
-            Icon(Icons.Outlined.AutoFixHigh, null)
-            Text(stringResource(R.string.patch_start))
+            Icon(
+                imageVector = Icons.Outlined.AutoFixHigh,
+                contentDescription = null,
+                tint = MiuixTheme.colorScheme.onPrimary
+            )
+            Text(
+                text = stringResource(R.string.patch_start),
+                color = MiuixTheme.colorScheme.onPrimary
+            )
         }
     }
 }

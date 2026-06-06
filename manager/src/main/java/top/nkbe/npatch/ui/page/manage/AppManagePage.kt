@@ -53,6 +53,7 @@ import top.nkbe.npatch.share.LSPConfig
 
 import top.nkbe.npatch.ui.component.AccessibleMenuItem
 import top.nkbe.npatch.ui.component.AppItem
+import top.nkbe.npatch.ui.component.NPatchPullToRefresh
 import top.nkbe.npatch.ui.page.ACTION_APPLIST
 import top.nkbe.npatch.ui.page.ACTION_STORAGE
 import top.nkbe.npatch.ui.page.Navigator
@@ -69,7 +70,6 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
-import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
@@ -181,7 +181,7 @@ fun AppManageBody(
         }
     }
 
-    PullToRefresh(
+    NPatchPullToRefresh(
         isRefreshing = viewModel.isRefreshing,
         onRefresh = { viewModel.dispatch(AppManageViewModel.ViewAction.Refresh) },
         pullToRefreshState = pullToRefreshState,
