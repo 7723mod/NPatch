@@ -26,8 +26,7 @@ data class RepoUiModel(
     val isInstalled: Boolean,
     val isUpgradable: Boolean,
     val updatableVersion: String?,
-    val installedVersion: String?,
-    val stargazerCount: Int
+    val installedVersion: String?
 )
 
 data class RepoScopeTarget(
@@ -47,8 +46,7 @@ private data class RepoFilterState(
 enum class RepoSort {
     UPDATED,
     CREATED,
-    NAME,
-    STARS
+    NAME
 }
 
 class RepositoryViewModel : ViewModel(), RepoLoader.RepoListener {
@@ -165,8 +163,7 @@ class RepositoryViewModel : ViewModel(), RepoLoader.RepoListener {
                 isInstalled = isInstalled,
                 isUpgradable = isUpgradable,
                 updatableVersion = latestVersion?.versionName,
-                installedVersion = installedVersionName,
-                stargazerCount = module.stargazerCount ?: 0
+                installedVersion = installedVersionName
             )
         }.sortedWith(Comparator { a, b ->
             if (state.upgradableFirst) {
@@ -178,7 +175,6 @@ class RepositoryViewModel : ViewModel(), RepoLoader.RepoListener {
                 RepoSort.UPDATED -> compareValues(b.module.latestReleaseTime, a.module.latestReleaseTime)
                 RepoSort.CREATED -> compareValues(b.module.createdAt, a.module.createdAt)
                 RepoSort.NAME -> compareValues(a.module.name, b.module.name)
-                RepoSort.STARS -> compareValues(b.stargazerCount, a.stargazerCount)
             }
         })
 

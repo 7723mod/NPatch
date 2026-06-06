@@ -222,7 +222,6 @@
 
     <!-- Modules Repo-->
     <string name="sort_by_name">Application name</string>
-    <string name="sort_by_stars">Stars</string>
     <string name="sort_by_package_name">Package name</string>
     <string name="sort_by_install_time">Install time</string>
     <string name="sort_by_update_time">Update time</string>

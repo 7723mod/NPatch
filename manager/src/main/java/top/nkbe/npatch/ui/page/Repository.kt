@@ -71,7 +71,6 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Download
-import top.yukonga.miuix.kmp.icon.extended.Favorites
 import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.icon.extended.Recent
 import top.yukonga.miuix.kmp.icon.extended.Sort
@@ -115,8 +114,7 @@ fun RepositoryScreen(
     val sortOptions = listOf(
         stringResource(R.string.sort_by_update_time),
         stringResource(R.string.sort_by_install_time),
-        stringResource(R.string.sort_by_name),
-        stringResource(R.string.sort_by_stars)
+        stringResource(R.string.sort_by_name)
     )
     val scopeFilterTitle = stringResource(R.string.repo_filter_scope_title)
 
@@ -173,8 +171,7 @@ fun RepositoryScreen(
                                         val targetSort = when (index) {
                                             0 -> RepoSort.UPDATED
                                             1 -> RepoSort.CREATED
-                                            2 -> RepoSort.NAME
-                                            else -> RepoSort.STARS
+                                            else -> RepoSort.NAME
                                         }
                                         AccessibleMenuItem(
                                             text = text,
@@ -415,24 +412,8 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.End
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = MiuixIcons.Regular.Favorites,
-                        contentDescription = stringResource(R.string.sort_by_stars),
-                        tint = colorScheme.onSurfaceVariantSummary.copy(alpha = 0.7f),
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "${item.stargazerCount}",
-                        style = MiuixTheme.textStyles.body2,
-                        color = colorScheme.onSurfaceVariantSummary.copy(alpha = 0.7f),
-                        fontSize = 12.sp
-                    )
-                }
-
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = MiuixIcons.Regular.Recent,

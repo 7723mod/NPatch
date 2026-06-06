@@ -213,7 +213,6 @@
 
     <!-- Modules Repo-->
     <string name="sort_by_name">應用程式名稱</string>
-    <string name="sort_by_stars">星標</string>
     <string name="sort_by_package_name">套件名稱</string>
     <string name="sort_by_install_time">安裝時間</string>
     <string name="sort_by_update_time">更新時間</string>
