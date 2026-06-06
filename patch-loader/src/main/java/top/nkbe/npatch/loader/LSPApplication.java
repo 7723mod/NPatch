@@ -121,6 +121,35 @@ public class LSPApplication {
         }
     }
 
+    private static void restoreVisibleLoadedApkResources(LoadedApk loadedApk, String visibleApkPath) {
+        if (loadedApk == null || visibleApkPath == null) return;
+
+        setLoadedApkPathField(loadedApk, "mResDir", visibleApkPath);
+        setLoadedApkPathArrayField(loadedApk, "mSplitResDirs", visibleApkPath, visibleApkPath);
+    }
+
+    private static void setLoadedApkPathField(LoadedApk loadedApk, String fieldName, String value) {
+        try {
+            XposedHelpers.setObjectField(loadedApk, fieldName, value);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private static void setLoadedApkPathArrayField(LoadedApk loadedApk, String fieldName, String fromValue, String toValue) {
+        try {
+            Object value = XposedHelpers.getObjectField(loadedApk, fieldName);
+            if (!(value instanceof String[] paths)) {
+                return;
+            }
+            for (int i = 0; i < paths.length; i++) {
+                if (paths[i] == null || paths[i].equals(fromValue)) {
+                    paths[i] = toValue;
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
     public static boolean isIsolated() {
         return (Process.myUid() % PER_USER_RANGE) >= FIRST_APP_ZYGOTE_ISOLATED_UID;
     }
@@ -337,6 +366,7 @@ public class LSPApplication {
 
             CacheCleaner.handlePatchUpgrade(appInfo, patchedApkPath);
             CacheCleaner.sweepLibNpatchCache(appInfo);
+            CacheCleaner.sweepLegacyNpatchCache(appInfo);
 
             String loadedApkSourceDir = patchedApkPath;
             if (config.lspConfig.sigBypassLevel >= Constants.SIGBYPASS_BASIC) {
@@ -391,6 +421,7 @@ public class LSPApplication {
             appInfo.publicSourceDir = loadedApkSourceDir;
             appLoadedApk = activityThread.getPackageInfoNoCheck(appInfo, compatInfo);
             appLoadedApk.getClassLoader();
+            restoreVisibleLoadedApkResources(appLoadedApk, patchedApkPath);
 
             if (config.injectProvider && providerPath != null) {
                 try {

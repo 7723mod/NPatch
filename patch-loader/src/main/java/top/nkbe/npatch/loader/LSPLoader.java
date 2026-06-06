@@ -377,7 +377,7 @@ public class LSPLoader {
             if (app == null) return null;
             
             File cacheRoot = app.getCacheDir();
-            File moduleRoot = new File(new File(cacheRoot, "npatch/native"), module.packageName.replace(".", "_"));
+            File moduleRoot = new File(new File(cacheRoot, "native"), module.packageName.replace(".", "_"));
             File apkFile = new File(module.apkPath);
             String stamp = apkFile.lastModified() + "-" + apkFile.length();
             File targetDir = new File(moduleRoot, stamp);

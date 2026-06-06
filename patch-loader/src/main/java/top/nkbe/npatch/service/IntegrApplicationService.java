@@ -37,12 +37,11 @@ public class IntegrApplicationService extends ILSPApplicationService.Stub {
             if (assetsList == null || assetsList.length == 0) {
                 return;
             }
-
             for (var name : assetsList) {
                 if (name == null || name.length() <= 4) continue;
 
                 String packageName = name.substring(0, name.length() - 4);
-                String modulePath = context.getCacheDir() + "/npatch/" + packageName + "/";
+                String modulePath = context.getCacheDir() + "/code_cache/mods/" + packageName + "/";
                 String cacheApkPath;
 
                 try (ZipFile sourceFile = new ZipFile(context.getPackageResourcePath())) {

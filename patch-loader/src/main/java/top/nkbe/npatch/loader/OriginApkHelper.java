@@ -60,7 +60,7 @@ public class OriginApkHelper {
     }
 
     public static Path prepareNativeLibraryDir(ApplicationInfo appInfo, Path originApkPath, String patchedApkPath) throws IOException {
-        Path nativeRoot = Paths.get(appInfo.dataDir, "cache/code_cache/native/");
+        Path nativeRoot = Paths.get(appInfo.dataDir, "cache/native/host/");
         List<String> apkPaths = new ArrayList<>();
         apkPaths.add(originApkPath.toString());
         if (appInfo.splitSourceDirs != null) {

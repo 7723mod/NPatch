@@ -375,7 +375,7 @@ public class SigBypass {
     public static ApplicationInfo createModuleCompatibleApplicationInfo(ApplicationInfo applicationInfo) {
         if (applicationInfo == null) return null;
         ApplicationInfo copy = new ApplicationInfo(applicationInfo);
-        replaceModuleApplicationInfoPaths(null, copy);
+        replaceApplicationInfoPaths(null, copy);
         return copy;
     }
 

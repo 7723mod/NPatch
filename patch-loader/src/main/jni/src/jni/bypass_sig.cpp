@@ -869,6 +869,24 @@ namespace lspd {
                || caller_path.find("360") != std::string::npos;
     }
 
+    static bool is_npatch_module_native_caller(const void* caller_pc) {
+        if (caller_pc == nullptr) {
+            return false;
+        }
+
+        Dl_info info = {};
+        if (dladdr(caller_pc, &info) == 0 || info.dli_fname == nullptr || info.dli_fname[0] == '\0') {
+            return false;
+        }
+
+        std::string caller_path = to_lower(info.dli_fname);
+        const bool module_native = caller_path.find("/cache/native/") != std::string::npos
+                                   && caller_path.find("/cache/native/host/") == std::string::npos;
+        return (caller_path.find("/cache/code_cache/mods/") != std::string::npos
+                || module_native)
+               && caller_path.find("libnpatch.so") == std::string::npos;
+    }
+
     static int open_sanitized_proc_file(const char* pathname, const void* caller_pc) {
         if (pathname == nullptr) {
             return -1;
@@ -984,7 +1002,7 @@ namespace lspd {
                     return sanitized_fd;
                 }
             }
-            if (!minimal_file_hook_mode) {
+            if (!minimal_file_hook_mode && !is_npatch_module_native_caller(caller_pc)) {
                 redirected_path = resolve_redirect_path(pathname);
                 if (redirected_path != pathname && redirected_path != nullptr) {
                     LOGD("SigBypass: Redirecting {}('{}') -> '{}'",
@@ -1035,10 +1053,12 @@ namespace lspd {
                     return sanitized_fd;
                 }
             }
-            redirected_path = resolve_redirect_path(pathname);
-            if (redirected_path != pathname && redirected_path != nullptr) {
-                LOGD("SigBypass: Redirecting {}('{}') -> '{}'",
-                     symbol_name, pathname, redirected_path);
+            if (!is_npatch_module_native_caller(caller_pc)) {
+                redirected_path = resolve_redirect_path(pathname);
+                if (redirected_path != pathname && redirected_path != nullptr) {
+                    LOGD("SigBypass: Redirecting {}('{}') -> '{}'",
+                         symbol_name, pathname, redirected_path);
+                }
             }
             g_openat_reentry = false;
         }
@@ -1077,7 +1097,7 @@ namespace lspd {
                     close(sanitized_fd);
                 }
             }
-            if (!minimal_file_hook_mode) {
+            if (!minimal_file_hook_mode && !is_npatch_module_native_caller(caller_pc)) {
                 redirected_path = resolve_redirect_path(pathname);
                 if (redirected_path != pathname && redirected_path != nullptr) {
                     LOGD("SigBypass: Redirecting fopen('%s') -> '%s'", pathname, redirected_path);

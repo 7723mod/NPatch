@@ -87,12 +87,13 @@ public class CacheCleaner {
                 });
     }
 
+    public static void sweepLegacyNpatchCache(ApplicationInfo appInfo) {
+        if (appInfo == null || appInfo.dataDir == null) return;
+        deleteRecursive(new File(appInfo.dataDir, "cache/npatch"));
+    }
+
     public static void sweepModuleNativeCache(ApplicationInfo appInfo, Map<String, String> activeModuleApkPaths) {
         if (appInfo == null || appInfo.dataDir == null) return;
-
-        File nativeRoot = new File(appInfo.dataDir, "cache/npatch/native");
-        File[] moduleDirs = nativeRoot.listFiles();
-        if (moduleDirs == null) return;
 
         Map<String, String> activeDirToStamp = new HashMap<>();
         if (activeModuleApkPaths != null) {
@@ -105,9 +106,20 @@ public class CacheCleaner {
             });
         }
 
+        sweepModuleNativeRoot(new File(appInfo.dataDir, "cache/native"), activeDirToStamp);
+        sweepLegacyNpatchCache(appInfo);
+    }
+
+    private static void sweepModuleNativeRoot(File nativeRoot, Map<String, String> activeDirToStamp) {
+        File[] moduleDirs = nativeRoot.listFiles();
+        if (moduleDirs == null) return;
+
         for (File moduleDir : moduleDirs) {
             if (!moduleDir.isDirectory()) {
                 deleteRecursive(moduleDir);
+                continue;
+            }
+            if ("host".equals(moduleDir.getName())) {
                 continue;
             }
 
@@ -138,7 +150,9 @@ public class CacheCleaner {
         }
 
         deleteRecursive(new File(codeCache, "native"));
-        deleteRecursive(new File(cacheRoot, "npatch/native"));
+        deleteRecursive(new File(codeCache, "mods"));
+        deleteRecursive(new File(cacheRoot, "native"));
+        deleteRecursive(new File(cacheRoot, "npatch"));
 
         // Sweep all but the newest libnpatch-*.so (current process has it mmaped).
         File[] libs = cacheRoot.listFiles((dir, name) ->
