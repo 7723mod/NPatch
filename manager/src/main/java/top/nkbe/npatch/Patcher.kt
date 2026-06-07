@@ -13,6 +13,8 @@ import top.nkbe.npatch.patch.NPatch
 import top.nkbe.npatch.patch.util.Logger
 import java.io.File
 import java.io.IOException
+import java.io.OutputStream
+import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
@@ -59,18 +61,14 @@ object Patcher {
                 ?: throw IOException("Uri is null")
             val root = DocumentFile.fromTreeUri(lspApp, uri)
                 ?: throw IOException("DocumentFile is null")
-            root.listFiles().forEach {
-                val name = it.name ?: return@forEach
-                if (name.endsWith(Constants.PATCH_FILE_SUFFIX) || name.endsWith(Constants.PATCH_ARCHIVE_SUFFIX)) {
-                    it.delete()
-                }
-            }
             lspApp.targetApkFiles?.clear()
             val apkFileList = arrayListOf<File>()
-            lspApp.tmpApkDir.walk()
+            lspApp.tmpApkDir.listFiles()
+                .orEmpty()
                 .filter { it.isFile && it.name.endsWith(Constants.PATCH_FILE_SUFFIX) }
                 .forEach { tempApkFile ->
                     val cachedApkFile = File(lspApp.externalCacheDir, tempApkFile.name)
+                    if (cachedApkFile.exists()) cachedApkFile.delete()
                     if (tempApkFile.renameTo(cachedApkFile).not()) {
                         tempApkFile.copyTo(cachedApkFile, overwrite = true)
                         tempApkFile.delete()
@@ -95,17 +93,11 @@ object Patcher {
                 logger.i("Patched apk is saved to ${root.uri.lastPathSegment}/${patchedApkFile.name}")
             } else {
                 val archiveName = buildArchiveName(options.newPackageName)
-                val cachedArchiveFile = File(lspApp.externalCacheDir, archiveName)
-                if (cachedArchiveFile.exists()) cachedArchiveFile.delete()
-                createApksArchive(cachedArchiveFile, apkFileList)
-
                 root.findFile(archiveName)?.delete()
                 val finalArchive = root.createFile("application/octet-stream", archiveName)
                     ?: throw IOException("Unable to create output file: $archiveName")
                 lspApp.contentResolver.openOutputStream(finalArchive.uri)?.use { output ->
-                    cachedArchiveFile.inputStream().use { input ->
-                        input.copyTo(output)
-                    }
+                    createApksArchive(output, apkFileList)
                 } ?: throw IOException("Unable to open an output stream: ${finalArchive.uri}")
                 logger.i("Patched archive is saved to ${root.uri.lastPathSegment}/$archiveName")
             }
@@ -116,8 +108,9 @@ object Patcher {
         return packageName.replace(Regex("[\\\\/:*?\"<>|]"), "_") + Constants.PATCH_ARCHIVE_SUFFIX
     }
 
-    private fun createApksArchive(archiveFile: File, apkFiles: List<File>) {
-        ZipOutputStream(archiveFile.outputStream().buffered()).use { zip ->
+    private fun createApksArchive(output: OutputStream, apkFiles: List<File>) {
+        ZipOutputStream(output.buffered()).use { zip ->
+            zip.setLevel(Deflater.NO_COMPRESSION)
             apkFiles.sortedBy { it.name }.forEach { apkFile ->
                 zip.putNextEntry(ZipEntry(apkFile.name))
                 apkFile.inputStream().use { input ->

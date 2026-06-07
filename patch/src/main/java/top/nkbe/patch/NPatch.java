@@ -272,15 +272,6 @@ public class NPatch {
                 throw new PatchError("Failed to register signer", e);
             }
 
-            String originalSignature = null;
-            if (sigbypassLevel > Constants.SIGBYPASS_NONE) {
-                originalSignature = ApkSignatureHelper.getApkSignInfo(srcApkFile.getAbsolutePath());
-                if (originalSignature == null || originalSignature.isEmpty()) {
-                    throw new PatchError("get original signature failed");
-                }
-                logger.d("Original signature\n" + originalSignature);
-            }
-
             // copy out manifest file from zlib
             var manifestEntry = srcZFile.get(ANDROID_MANIFEST_XML);
             if (manifestEntry == null)
@@ -332,6 +323,15 @@ public class NPatch {
             }
 
             logger.i("Patching apk...");
+            String originalSignature = null;
+            if (sigbypassLevel > Constants.SIGBYPASS_NONE) {
+                originalSignature = ApkSignatureHelper.getApkSignInfo(srcApkFile.getAbsolutePath());
+                if (originalSignature == null || originalSignature.isEmpty()) {
+                    throw new PatchError("get original signature failed");
+                }
+                logger.d("Original signature\n" + originalSignature);
+            }
+
             // modify manifest
             final var config = new PatchConfig(useManager, debuggableFlag, overrideVersionCode, sigbypassLevel, originalSignature, appComponentFactory, isInjectProvider, outputLog, newPackage, useMicroG, hideLibs && sigbypassLevel > Constants.SIGBYPASS_NONE);
             final var configBytes = new Gson().toJson(config).getBytes(StandardCharsets.UTF_8);
