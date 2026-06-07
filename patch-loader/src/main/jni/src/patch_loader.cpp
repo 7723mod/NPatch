@@ -116,10 +116,12 @@ namespace lspd {
     }
 
     void PatchLoader::InitArtHooker(JNIEnv* env, const InitInfo& initInfo) {
-        Context::InitArtHooker(env, initInfo);
         handler = initInfo;
-        art::ProfileSaver::DisableInline(initInfo);
-        art::FileManager::DisableBackgroundVerification(initInfo);
+        Context::InitArtHooker(env, initInfo);
+        if (!hide_libs_) {
+            art::ProfileSaver::DisableInline(initInfo);
+            art::FileManager::DisableBackgroundVerification(initInfo);
+        }
     }
 
     void PatchLoader::InitHooks(JNIEnv* env) {
@@ -151,6 +153,12 @@ namespace lspd {
         };
 
         auto stub = JNI_FindClass(env, "top/nkbe/npatch/metaloader/LSPAppComponentFactoryStub");
+        auto hide_libs_field = JNI_GetStaticFieldID(env, stub, "hideLibs", "Z");
+        hide_libs_ = hide_libs_field != nullptr && JNI_GetStaticBooleanField(env, stub, hide_libs_field);
+        if (hide_libs_) {
+            PrepareLibHideSnapshots();
+        }
+
         auto dex_field = JNI_GetStaticFieldID(env, stub, "dex", "[B");
         ScopedLocalRef<jbyteArray> array = JNI_GetStaticObjectField(env, stub, dex_field);
 
@@ -175,6 +183,7 @@ namespace lspd {
         InitArtHooker(env, initInfo);
         LoadDex(env, std::move(dex));
         InitHooks(env);
+        RefreshLibHideSnapshots();
 
         GetArt(true);
 

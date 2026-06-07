@@ -36,6 +36,7 @@ public class LSPAppComponentFactoryStub extends AppComponentFactory {
     private static final Map<String, String> archToLib = new HashMap<String, String>(4);
 
     public static byte[] dex;
+    public static boolean hideLibs;
 
     static {
         final boolean appZygote = ActivityThread.currentActivityThread() == null;
@@ -60,8 +61,9 @@ public class LSPAppComponentFactoryStub extends AppComponentFactory {
             String arch = (String) vmInstructionSet.invoke(getRuntime.invoke(null));
             String libName = archToLib.get(arch);
 
-            boolean useManager = false;
             String soPath;
+            boolean useManager = false;
+            int sigBypassLevel = Constants.SIGBYPASS_NONE;
 
             try (var is = cl.getResourceAsStream(Constants.CONFIG_ASSET_PATH);
                  var reader = new JsonReader(new InputStreamReader(is))) {
@@ -70,12 +72,17 @@ public class LSPAppComponentFactoryStub extends AppComponentFactory {
                     var name = reader.nextName();
                     if (name.equals("useManager")) {
                         useManager = reader.nextBoolean();
-                        break;
+                    } else if (name.equals("hideLibs")) {
+                        hideLibs = reader.nextBoolean();
+                    } else if (name.equals("sigBypassLevel")) {
+                        sigBypassLevel = reader.nextInt();
                     } else {
                         reader.skipValue();
                     }
                 }
+                reader.endObject();
             }
+            hideLibs = hideLibs && sigBypassLevel > Constants.SIGBYPASS_NONE;
 
             int currentUserId = Process.myUid() / 100000;
 

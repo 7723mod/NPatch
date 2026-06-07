@@ -53,6 +53,13 @@ namespace lspd {
     using StatxFn = int(*)(int, const char*, int, unsigned int, struct statx*);
     using CloseFn = int(*)(int);
     using FopenFn = FILE*(*)(const char*, const char*);
+    using ReadFn = ssize_t(*)(int, void*, size_t);
+    using Pread64Fn = ssize_t(*)(int, void*, size_t, off64_t);
+    using LseekFn = off_t(*)(int, off_t, int);
+    using FstatFn = int(*)(int, struct stat*);
+    using Fstat64Fn = int(*)(int, struct stat64*);
+    using MmapFn = void*(*)(void*, size_t, int, int, int, off_t);
+    using DlIteratePhdrFn = int(*)(int (*)(struct dl_phdr_info*, size_t, void*), void*);
 
     static std::string targetApkPath;
     static std::string redirectApkPath;
@@ -74,6 +81,13 @@ namespace lspd {
     static void *statx_target = nullptr;
     static void *close_target = nullptr;
     static void *fopen_target = nullptr;
+    static void *read_target = nullptr;
+    static void *pread64_target = nullptr;
+    static void *lseek_target = nullptr;
+    static void *fstat_target = nullptr;
+    static void *fstat64_target = nullptr;
+    static void *mmap_target = nullptr;
+    static void *dl_iterate_phdr_target = nullptr;
     static OpenAtFn openat_backup = nullptr;
     static OpenAtFn openat64_backup = nullptr;
     static OpenFn open_backup = nullptr;
@@ -91,6 +105,13 @@ namespace lspd {
     static StatxFn statx_backup = nullptr;
     static CloseFn close_backup = nullptr;
     static FopenFn fopen_backup = nullptr;
+    static ReadFn read_backup = nullptr;
+    static Pread64Fn pread64_backup = nullptr;
+    static LseekFn lseek_backup = nullptr;
+    static FstatFn fstat_backup = nullptr;
+    static Fstat64Fn fstat64_backup = nullptr;
+    static MmapFn mmap_backup = nullptr;
+    static DlIteratePhdrFn dl_iterate_phdr_backup = nullptr;
     static bool openat_hook_installed = false;
     static bool openat64_hook_installed = false;
     static bool open_hook_installed = false;
@@ -108,17 +129,32 @@ namespace lspd {
     static bool statx_hook_installed = false;
     static bool close_hook_installed = false;
     static bool fopen_hook_installed = false;
+    static bool read_hook_installed = false;
+    static bool pread64_hook_installed = false;
+    static bool lseek_hook_installed = false;
+    static bool fstat_hook_installed = false;
+    static bool fstat64_hook_installed = false;
+    static bool mmap_hook_installed = false;
+    static bool dl_iterate_phdr_hook_installed = false;
     static bool minimal_file_hook_mode = false;
     static bool g_lib_hide_enabled = false;
     static std::mutex g_path_mutex;
+    static std::mutex g_fd_mutex;
     static thread_local bool g_openat_reentry = false;
     static thread_local bool g_fopen_reentry = false;
     static thread_local std::string g_redirect_buffer;
-    static bool g_redirected_fds[4096] = {false};
+    static constexpr int kTrackedFdLimit = 4096;
+    static constexpr int kFdVisibleNone = -2;
+    static constexpr int kFdVisibleApk = -1;
+    static bool g_redirected_fds[kTrackedFdLimit] = {false};
+    static int g_shadow_fds[kTrackedFdLimit] = {0};
+    static int g_fd_visible_sources[kTrackedFdLimit] = {0};
+    static bool g_fd_tables_initialized = false;
 
     struct LibSnapshot {
         const char* soname;
         char path[PATH_MAX];
+        char visible_path[PATH_MAX];
         int fd = -1;
     };
 
@@ -133,12 +169,12 @@ namespace lspd {
     };
 
     static LibSnapshot g_lib_snapshots[] = {
-            {"libart.so", ""},
-            {"libbinder.so", ""},
-            {"libselinux.so", ""},
-            {"libnpatch.so", ""},
-            {"libandroid_runtime.so", ""},
-            {"libc.so", ""},
+            {"libart.so", "", ""},
+            {"libbinder.so", "", ""},
+            {"libselinux.so", "", ""},
+            {"libnpatch.so", "", ""},
+            {"libandroid_runtime.so", "", ""},
+            {"libc.so", "", ""},
     };
 
     static const char* const kSensitiveWords[] = {
@@ -146,6 +182,7 @@ namespace lspd {
             "rwxp",
             "zygisk",
             "lsposed",
+            "lspd",
             "edxposed",
             "xposed",
             "riru",
@@ -320,18 +357,41 @@ namespace lspd {
 
     static bool fd_is_redirected(int fd) {
         return fd >= 0
-               && fd < static_cast<int>(sizeof(g_redirected_fds) / sizeof(g_redirected_fds[0]))
+               && fd < kTrackedFdLimit
                && g_redirected_fds[fd];
+    }
+
+    static void ensure_fd_tables_locked() {
+        if (g_fd_tables_initialized) {
+            return;
+        }
+        for (int& shadow_fd : g_shadow_fds) {
+            shadow_fd = -1;
+        }
+        for (int& visible_source : g_fd_visible_sources) {
+            visible_source = kFdVisibleNone;
+        }
+        g_fd_tables_initialized = true;
+    }
+
+    static int find_lib_snapshot_index_by_fd(int fd) {
+        if (fd < 0) {
+            return -1;
+        }
+        for (size_t i = 0; i < sizeof(g_lib_snapshots) / sizeof(g_lib_snapshots[0]); ++i) {
+            if (g_lib_snapshots[i].fd == fd) {
+                return static_cast<int>(i);
+            }
+        }
+        return -1;
     }
 
     static bool fd_is_lib_snapshot(int fd) {
         if (fd < 0) {
             return false;
         }
-        for (auto& snapshot : g_lib_snapshots) {
-            if (snapshot.fd == fd) {
-                return true;
-            }
+        if (find_lib_snapshot_index_by_fd(fd) >= 0) {
+            return true;
         }
         return false;
     }
@@ -342,9 +402,81 @@ namespace lspd {
                : "/apex/com.android.runtime/lib/bionic/libc.so";
     }
 
-    static void mark_redirected_fd(int fd, bool redirected) {
-        if (fd >= 0 && fd < static_cast<int>(sizeof(g_redirected_fds) / sizeof(g_redirected_fds[0]))) {
-            g_redirected_fds[fd] = redirected;
+    static int dup_shadow_fd_locked(const char* path, int flags) {
+        if (path == nullptr || (flags & O_ACCMODE) != O_RDONLY) {
+            return -1;
+        }
+        const int shadow_flags = (flags & O_CLOEXEC) | O_RDONLY;
+        return static_cast<int>(syscall(__NR_openat, AT_FDCWD, path, shadow_flags));
+    }
+
+    static int find_lib_snapshot_index_by_visible_path(const char* pathname) {
+        if (pathname == nullptr || !g_lib_hide_enabled) {
+            return -1;
+        }
+        for (size_t i = 0; i < sizeof(g_lib_snapshots) / sizeof(g_lib_snapshots[0]); ++i) {
+            const auto& snapshot = g_lib_snapshots[i];
+            if (snapshot.path[0] == '\0' || snapshot.visible_path[0] == '\0') {
+                continue;
+            }
+            if (strcmp(pathname, snapshot.visible_path) == 0) {
+                return static_cast<int>(i);
+            }
+        }
+        return -1;
+    }
+
+    static int resolve_visible_source_for_fd(const char* original_path, const char* redirected_path) {
+        if (original_path == nullptr || redirected_path == nullptr) {
+            return kFdVisibleNone;
+        }
+        if (original_path == redirected_path || strcmp(original_path, redirected_path) == 0) {
+            return kFdVisibleNone;
+        }
+        int snapshot_index = find_lib_snapshot_index_by_visible_path(original_path);
+        return snapshot_index >= 0 ? snapshot_index : kFdVisibleApk;
+    }
+
+    static void mark_redirected_fd(int fd,
+                                   bool redirected,
+                                   const char* redirected_path = nullptr,
+                                   int flags = O_RDONLY,
+                                   int visible_source = kFdVisibleApk) {
+        if (fd < 0 || fd >= kTrackedFdLimit) {
+            return;
+        }
+        std::scoped_lock lock(g_fd_mutex);
+        ensure_fd_tables_locked();
+        if (g_shadow_fds[fd] >= 0) {
+            syscall(__NR_close, g_shadow_fds[fd]);
+            g_shadow_fds[fd] = -1;
+        }
+        g_redirected_fds[fd] = redirected;
+        g_fd_visible_sources[fd] = redirected ? visible_source : kFdVisibleNone;
+        if (redirected) {
+            g_shadow_fds[fd] = dup_shadow_fd_locked(redirected_path, flags);
+        }
+    }
+
+    static int get_shadow_fd(int fd) {
+        if (fd < 0 || fd >= kTrackedFdLimit) {
+            return -1;
+        }
+        std::scoped_lock lock(g_fd_mutex);
+        ensure_fd_tables_locked();
+        return g_redirected_fds[fd] ? g_shadow_fds[fd] : -1;
+    }
+
+    static void unmark_redirected_fd(int fd) {
+        if (fd >= 0 && fd < kTrackedFdLimit) {
+            std::scoped_lock lock(g_fd_mutex);
+            ensure_fd_tables_locked();
+            if (g_shadow_fds[fd] >= 0) {
+                syscall(__NR_close, g_shadow_fds[fd]);
+                g_shadow_fds[fd] = -1;
+            }
+            g_redirected_fds[fd] = false;
+            g_fd_visible_sources[fd] = kFdVisibleNone;
         }
     }
 
@@ -356,7 +488,21 @@ namespace lspd {
         if (!parse_proc_fd_path(pathname, &fd) || !fd_is_redirected(fd)) {
             return false;
         }
-        std::scoped_lock lock(g_path_mutex);
+        std::scoped_lock fd_lock(g_fd_mutex);
+        ensure_fd_tables_locked();
+        int visible_source = g_fd_visible_sources[fd];
+        if (visible_source >= 0) {
+            const auto& snapshot = g_lib_snapshots[visible_source];
+            if (snapshot.visible_path[0] == '\0') {
+                return false;
+            }
+            *out = snapshot.visible_path;
+            return true;
+        }
+        if (visible_source != kFdVisibleApk) {
+            return false;
+        }
+        std::scoped_lock path_lock(g_path_mutex);
         if (targetApkPath.empty()) {
             return false;
         }
@@ -369,10 +515,17 @@ namespace lspd {
             return false;
         }
         int fd = -1;
-        if (!parse_proc_fd_path(pathname, &fd) || !fd_is_lib_snapshot(fd)) {
+        if (!parse_proc_fd_path(pathname, &fd)) {
             return false;
         }
-        *out = neutral_runtime_lib_path();
+        int snapshot_index = find_lib_snapshot_index_by_fd(fd);
+        if (snapshot_index < 0) {
+            return false;
+        }
+        const auto& snapshot = g_lib_snapshots[snapshot_index];
+        *out = snapshot.visible_path[0] != '\0'
+               ? snapshot.visible_path
+               : neutral_runtime_lib_path();
         return true;
     }
 
@@ -395,8 +548,20 @@ namespace lspd {
             }
         }
 
+        if (prefer_visible && try_get_lib_snapshot_visible_path(pathname, storage)) {
+            return storage->c_str();
+        }
+
         if (prefer_visible && try_get_proc_fd_visible_path(pathname, storage)) {
             return storage->c_str();
+        }
+
+        if (!prefer_visible) {
+            int snapshot_index = find_lib_snapshot_index_by_visible_path(pathname);
+            if (snapshot_index >= 0) {
+                *storage = g_lib_snapshots[snapshot_index].path;
+                return storage->c_str();
+            }
         }
 
         return pathname;
@@ -463,11 +628,24 @@ namespace lspd {
         }
         std::string visible_path;
         {
-            std::scoped_lock lock(g_path_mutex);
-            if (targetApkPath.empty()) {
+            std::scoped_lock fd_lock(g_fd_mutex);
+            ensure_fd_tables_locked();
+            int visible_source = g_fd_visible_sources[fd];
+            if (visible_source >= 0) {
+                const auto& snapshot = g_lib_snapshots[visible_source];
+                if (snapshot.visible_path[0] == '\0') {
+                    return content;
+                }
+                visible_path = snapshot.visible_path;
+            } else if (visible_source == kFdVisibleApk) {
+                std::scoped_lock path_lock(g_path_mutex);
+                if (targetApkPath.empty()) {
+                    return content;
+                }
+                visible_path = targetApkPath;
+            } else {
                 return content;
             }
-            visible_path = targetApkPath;
         }
 
         struct statx visible_stx = {};
@@ -831,6 +1009,7 @@ namespace lspd {
         for (auto& snapshot : g_lib_snapshots) {
             if (snapshot.soname == soname) {
                 snapshot.fd = snapshot_fd;
+                copy_path(snapshot.visible_path, source_path);
                 break;
             }
         }
@@ -842,6 +1021,26 @@ namespace lspd {
             if (snapshot.path[0] == '\0') {
                 create_lib_snapshot_from_maps(snapshot.soname, snapshot.path);
             }
+        }
+    }
+
+    void PrepareLibHideSnapshots() {
+        g_lib_hide_enabled = true;
+        ensure_lib_snapshots();
+    }
+
+    void RefreshLibHideSnapshots() {
+        if (!g_lib_hide_enabled) {
+            return;
+        }
+        for (auto& snapshot : g_lib_snapshots) {
+            if (snapshot.fd >= 0) {
+                syscall(__NR_close, snapshot.fd);
+                snapshot.fd = -1;
+            }
+            snapshot.path[0] = '\0';
+            snapshot.visible_path[0] = '\0';
+            create_lib_snapshot_from_maps(snapshot.soname, snapshot.path);
         }
     }
 
@@ -888,7 +1087,7 @@ namespace lspd {
     }
 
     static bool should_redirect_apk_contents(const void* caller_pc) {
-        return !minimal_file_hook_mode && !is_npatch_module_native_caller(caller_pc);
+        return !is_npatch_module_native_caller(caller_pc);
     }
 
     static int open_sanitized_proc_file(const char* pathname, const void* caller_pc) {
@@ -916,7 +1115,7 @@ namespace lspd {
             return -1;
         }
         if (is_mem_path(pathname)) {
-            return create_memfd_from_string("npatch_mem_view", "");
+            return -1;
         }
         int fdinfo_fd = -1;
         if (parse_proc_fdinfo_path(pathname, &fdinfo_fd) && fd_is_redirected(fdinfo_fd)) {
@@ -955,16 +1154,23 @@ namespace lspd {
             return nullptr;
         }
 
-        std::scoped_lock lock(g_path_mutex);
-        // 只有命中補丁 APK 時才導向原包，避免一般檔案 IO 也被帶進去簽流程。
-        if (targetApkPath.empty() || redirectApkPath.empty()) {
-            return pathname;
+        {
+            std::scoped_lock lock(g_path_mutex);
+            // Only redirect the patched APK itself back to the original flow.
+            if (!targetApkPath.empty()
+                && !redirectApkPath.empty()
+                && strcmp(pathname, targetApkPath.c_str()) == 0) {
+                g_redirect_buffer = redirectApkPath;
+                return g_redirect_buffer.c_str();
+            }
         }
-        if (strcmp(pathname, targetApkPath.c_str()) != 0) {
-            return pathname;
+
+        int snapshot_index = find_lib_snapshot_index_by_visible_path(pathname);
+        if (snapshot_index >= 0) {
+            g_redirect_buffer = g_lib_snapshots[snapshot_index].path;
+            return g_redirect_buffer.c_str();
         }
-        g_redirect_buffer = redirectApkPath;
-        return g_redirect_buffer.c_str();
+        return pathname;
     }
 
     static int call_openat(OpenAtFn backup,
@@ -997,7 +1203,6 @@ namespace lspd {
         if (!g_openat_reentry) {
             // 某些 ROM 可能讓底層再次回到 openat，這裡先擋遞迴重入。
             g_openat_reentry = true;
-            g_openat_reentry = true;
             if (is_read_only_open(flags)) {
                 int sanitized_fd = open_sanitized_proc_file(pathname, caller_pc);
                 if (sanitized_fd >= 0) {
@@ -1017,7 +1222,11 @@ namespace lspd {
         }
         int result = call_openat(backup, dirfd, redirected_path, flags, mode, has_mode);
         if (result >= 0 && redirected_path != nullptr && pathname != nullptr) {
-            mark_redirected_fd(result, redirected_path != pathname);
+            mark_redirected_fd(result,
+                               redirected_path != pathname,
+                               redirected_path,
+                               flags,
+                               resolve_visible_source_for_fd(pathname, redirected_path));
         }
         return result;
     }
@@ -1069,7 +1278,11 @@ namespace lspd {
 
         int result = call_open(backup, redirected_path, flags, mode, has_mode);
         if (result >= 0 && redirected_path != nullptr && pathname != nullptr) {
-            mark_redirected_fd(result, redirected_path != pathname);
+            mark_redirected_fd(result,
+                               redirected_path != pathname,
+                               redirected_path,
+                               flags,
+                               resolve_visible_source_for_fd(pathname, redirected_path));
         }
         return result;
     }
@@ -1166,7 +1379,11 @@ namespace lspd {
         }
         int result = __open_2_backup(redirected_path, flags);
         if (result >= 0 && redirected_path != nullptr && pathname != nullptr) {
-            mark_redirected_fd(result, redirected_path != pathname);
+            mark_redirected_fd(result,
+                               redirected_path != pathname,
+                               redirected_path,
+                               flags,
+                               resolve_visible_source_for_fd(pathname, redirected_path));
         }
         return result;
     }
@@ -1401,12 +1618,119 @@ namespace lspd {
         return rc;
     }
 
+    static ssize_t hooked_read(int fd, void* buf, size_t count) {
+        if (read_backup == nullptr) {
+            errno = ENOSYS;
+            return -1;
+        }
+        int shadow_fd = get_shadow_fd(fd);
+        if (shadow_fd >= 0) {
+            return static_cast<ssize_t>(syscall(__NR_read, shadow_fd, buf, count));
+        }
+        return read_backup(fd, buf, count);
+    }
+
+    static ssize_t hooked_pread64(int fd, void* buf, size_t count, off64_t offset) {
+        if (pread64_backup == nullptr) {
+            errno = ENOSYS;
+            return -1;
+        }
+        int shadow_fd = get_shadow_fd(fd);
+        if (shadow_fd >= 0) {
+            return static_cast<ssize_t>(syscall(__NR_pread64, shadow_fd, buf, count, offset));
+        }
+        return pread64_backup(fd, buf, count, offset);
+    }
+
+    static off_t hooked_lseek(int fd, off_t offset, int whence) {
+        if (lseek_backup == nullptr) {
+            errno = ENOSYS;
+            return -1;
+        }
+        int shadow_fd = get_shadow_fd(fd);
+        if (shadow_fd >= 0) {
+            return static_cast<off_t>(syscall(__NR_lseek, shadow_fd, offset, whence));
+        }
+        return lseek_backup(fd, offset, whence);
+    }
+
+    static int hooked_fstat(int fd, struct stat* st) {
+        if (fstat_backup == nullptr) {
+            errno = ENOSYS;
+            return -1;
+        }
+        int shadow_fd = get_shadow_fd(fd);
+        if (shadow_fd >= 0) {
+            return fstat_backup(shadow_fd, st);
+        }
+        return fstat_backup(fd, st);
+    }
+
+    static int hooked_fstat64(int fd, struct stat64* st) {
+        if (fstat64_backup == nullptr) {
+            errno = ENOSYS;
+            return -1;
+        }
+        int shadow_fd = get_shadow_fd(fd);
+        if (shadow_fd >= 0) {
+            return fstat64_backup(shadow_fd, st);
+        }
+        return fstat64_backup(fd, st);
+    }
+
+    static void* hooked_mmap(void* addr, size_t length, int prot, int flags, int fd, off_t offset) {
+        if (mmap_backup == nullptr) {
+            errno = ENOSYS;
+            return MAP_FAILED;
+        }
+        int shadow_fd = get_shadow_fd(fd);
+        if (shadow_fd >= 0) {
+            return mmap_backup(addr, length, prot, flags, shadow_fd, offset);
+        }
+        return mmap_backup(addr, length, prot, flags, fd, offset);
+    }
+
+    struct DlIteratePhdrCallbackContext {
+        int (*callback)(struct dl_phdr_info*, size_t, void*) = nullptr;
+        void* data = nullptr;
+    };
+
+    static int sanitized_dl_iterate_phdr_callback(struct dl_phdr_info* info,
+                                                  size_t size,
+                                                  void* data) {
+        auto* context = static_cast<DlIteratePhdrCallbackContext*>(data);
+        if (context == nullptr || context->callback == nullptr) {
+            return 0;
+        }
+        if (g_lib_hide_enabled && info != nullptr && contains_sensitive_word(info->dlpi_name)) {
+            return 0;
+        }
+        return context->callback(info, size, context->data);
+    }
+
+    static int hooked_dl_iterate_phdr(int (*callback)(struct dl_phdr_info*, size_t, void*),
+                                      void* data) {
+        if (dl_iterate_phdr_backup == nullptr) {
+            errno = ENOSYS;
+            return 0;
+        }
+        if (!g_lib_hide_enabled || callback == nullptr) {
+            return dl_iterate_phdr_backup(callback, data);
+        }
+
+        DlIteratePhdrCallbackContext context = {
+                .callback = callback,
+                .data = data,
+        };
+        return dl_iterate_phdr_backup(sanitized_dl_iterate_phdr_callback, &context);
+    }
+
     static int hooked_close(int fd) {
         if (close_backup == nullptr) {
             errno = ENOSYS;
             return -1;
         }
-        mark_redirected_fd(fd, false);
+        unmark_redirected_fd(fd);
         return close_backup(fd);
     }
 
@@ -1601,6 +1925,13 @@ namespace lspd {
         bool statx_ok = true;
         bool close_ok = true;
         bool fopen_ok = true;
+        bool read_ok = true;
+        bool pread64_ok = true;
+        bool lseek_ok = true;
+        bool fstat_ok = true;
+        bool fstat64_ok = true;
+        bool mmap_ok = true;
+        bool dl_iterate_phdr_ok = true;
         if (!minimal_file_hook_mode) {
             open_ok = install_open_hook("open", hooked_open,
                                         &open_target, &open_backup,
@@ -1634,6 +1965,28 @@ namespace lspd {
             close_ok = install_plain_hook("close", reinterpret_cast<void*>(hooked_close),
                                           &close_target, &close_backup, &close_hook_installed);
             fopen_ok = install_fopen_hook();
+            read_ok = install_plain_hook("read", reinterpret_cast<void*>(hooked_read),
+                                         &read_target, &read_backup, &read_hook_installed);
+            pread64_ok = install_plain_hook("pread64", reinterpret_cast<void*>(hooked_pread64),
+                                            &pread64_target, &pread64_backup, &pread64_hook_installed);
+            lseek_ok = install_plain_hook("lseek", reinterpret_cast<void*>(hooked_lseek),
+                                          &lseek_target, &lseek_backup, &lseek_hook_installed);
+            fstat_ok = install_plain_hook("fstat", reinterpret_cast<void*>(hooked_fstat),
+                                          &fstat_target, &fstat_backup, &fstat_hook_installed);
+            void* fstat64_symbol = dlsym(RTLD_DEFAULT, "fstat64");
+            if (fstat64_symbol != nullptr && fstat64_symbol != fstat_target) {
+                fstat64_ok = install_plain_hook("fstat64", reinterpret_cast<void*>(hooked_fstat64),
+                                                &fstat64_target, &fstat64_backup, &fstat64_hook_installed);
+            }
+            mmap_ok = install_plain_hook("mmap", reinterpret_cast<void*>(hooked_mmap),
+                                         &mmap_target, &mmap_backup, &mmap_hook_installed);
+            if (g_lib_hide_enabled) {
+                dl_iterate_phdr_ok = install_plain_hook("dl_iterate_phdr",
+                                                        reinterpret_cast<void*>(hooked_dl_iterate_phdr),
+                                                        &dl_iterate_phdr_target,
+                                                        &dl_iterate_phdr_backup,
+                                                        &dl_iterate_phdr_hook_installed);
+            }
         } else {
             // Keep 360-like protectors on the old openat-only APK redirect path,
             // but still provide a narrow maps view for fd/inode consistency checks.
@@ -1648,12 +2001,31 @@ namespace lspd {
             }
             open2_ok = install_open2_hook();
             fopen_ok = install_fopen_hook();
+            close_ok = install_plain_hook("close", reinterpret_cast<void*>(hooked_close),
+                                          &close_target, &close_backup, &close_hook_installed);
+            read_ok = install_plain_hook("read", reinterpret_cast<void*>(hooked_read),
+                                         &read_target, &read_backup, &read_hook_installed);
+            lseek_ok = install_plain_hook("lseek", reinterpret_cast<void*>(hooked_lseek),
+                                          &lseek_target, &lseek_backup, &lseek_hook_installed);
+            fstat_ok = install_plain_hook("fstat", reinterpret_cast<void*>(hooked_fstat),
+                                          &fstat_target, &fstat_backup, &fstat_hook_installed);
+            mmap_ok = install_plain_hook("mmap", reinterpret_cast<void*>(hooked_mmap),
+                                         &mmap_target, &mmap_backup, &mmap_hook_installed);
+            if (g_lib_hide_enabled) {
+                dl_iterate_phdr_ok = install_plain_hook("dl_iterate_phdr",
+                                                        reinterpret_cast<void*>(hooked_dl_iterate_phdr),
+                                                        &dl_iterate_phdr_target,
+                                                        &dl_iterate_phdr_backup,
+                                                        &dl_iterate_phdr_hook_installed);
+            }
         }
 
         if (!openat_ok && !openat64_ok && !open_ok && !open64_ok && !open2_ok
             && !access_ok && !readlink_ok && !readlinkat_ok && !realpath_ok
             && !stat_ok && !lstat_ok && !stat64_ok && !lstat64_ok
-            && !statfs_ok && !statx_ok && !close_ok && !fopen_ok) {
+            && !statfs_ok && !statx_ok && !close_ok && !fopen_ok
+            && !read_ok && !pread64_ok && !lseek_ok && !fstat_ok && !fstat64_ok
+            && !mmap_ok && !dl_iterate_phdr_ok) {
             LOGW("SigBypass: No native file hooks were installed.");
         }
     }

@@ -172,7 +172,8 @@ public class LSPApplication {
             if (systemContext == null) {
                 return fallbackLevel;
             }
-            var metaData = systemContext.getPackageManager()
+            var packageManager = (PackageManager) XposedHelpers.callMethod(systemContext, "getPackageManager");
+            var metaData = packageManager
                     .getApplicationInfo(appInfo.packageName, PackageManager.GET_META_DATA)
                     .metaData;
             String encoded = metaData == null ? null : metaData.getString("npatch");
@@ -283,6 +284,7 @@ public class LSPApplication {
         }
 
         registerModuleCallerPrefixes(service);
+        SigBypass.doSigBypass(context, config.lspConfig.sigBypassLevel, config.hideLibs);
         disableProfile(context);
         Startup.initXposed(false, ActivityThread.currentProcessName(), context.getApplicationInfo().dataDir, service);
         Startup.bootstrapXposed(false);
@@ -304,7 +306,6 @@ public class LSPApplication {
         }
 
         switchAllClassLoader();
-        SigBypass.doSigBypass(context, config.lspConfig.sigBypassLevel);
 
         if (config.useMicroG) {
             logInfo("Activating MicroG redirect via NPatch");

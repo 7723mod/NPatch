@@ -240,8 +240,7 @@ public class GmsRedirector {
                                 if (targetGms.equals(pi.packageName) && (((int) param.args[1]) & PackageManager.GET_SIGNATURES) != 0) {
                                     if (originalSignature != null && !originalSignature.isEmpty()) {
                                         try {
-                                            byte[] sigBytes = android.util.Base64.decode(originalSignature, android.util.Base64.DEFAULT);
-                                            pi.signatures = new Signature[]{new Signature(sigBytes)};
+                                            pi.signatures = new Signature[]{new Signature(originalSignature)};
                                         } catch (Throwable ignored) {}
                                     }
                                 }

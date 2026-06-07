@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <cerrno>
 #include <cstring>
+#include <dlfcn.h>
 #include <fcntl.h>
 #include <linux/audit.h>
 #include <limits.h>
@@ -34,11 +35,17 @@ namespace lspd {
     static bool g_redirected_fds[4096] = {false};
     static constexpr size_t kRedirectedFdCapacity =
             sizeof(g_redirected_fds) / sizeof(g_redirected_fds[0]);
+    using SigactionFn = int (*)(int, const struct sigaction*, struct sigaction*);
+    static void* g_sigaction_target = nullptr;
+    static SigactionFn g_sigaction_backup = nullptr;
+    static bool g_sigaction_hook_installed = false;
     static std::mutex g_path_mutex;
     static std::mutex g_sigsys_handler_mutex;
     static struct sigaction g_previous_sigsys_action = {};
     static bool g_has_previous_sigsys_action = false;
     static constexpr uint32_t kSyscallReplayToken = 0xABCDEF00u;
+
+    static void sigsys_handler(int signo, siginfo_t* info, void* context);
 
     static bool is_tracked_fd(int fd) {
         return fd >= 0 && fd < static_cast<int>(kRedirectedFdCapacity);
@@ -249,6 +256,60 @@ namespace lspd {
         raise(SIGSYS);
     }
 
+    static bool is_funpatch_sigsys_action(const struct sigaction* action) {
+        return action != nullptr
+               && (action->sa_flags & SA_SIGINFO) != 0
+               && action->sa_sigaction == sigsys_handler;
+    }
+
+    static void copy_default_sigsys_action(struct sigaction* action) {
+        memset(action, 0, sizeof(*action));
+        action->sa_handler = SIG_DFL;
+    }
+
+    static int hooked_sigaction(int signum, const struct sigaction* action, struct sigaction* old_action) {
+        if (signum != SIGSYS || !g_sigsys_handler_ready || is_funpatch_sigsys_action(action)) {
+            return g_sigaction_backup(signum, action, old_action);
+        }
+
+        std::scoped_lock lock(g_sigsys_handler_mutex);
+        if (old_action != nullptr) {
+            if (g_has_previous_sigsys_action) {
+                *old_action = g_previous_sigsys_action;
+            } else {
+                copy_default_sigsys_action(old_action);
+            }
+        }
+        if (action != nullptr) {
+            g_previous_sigsys_action = *action;
+            g_has_previous_sigsys_action = true;
+            LOGI("FunPatch: preserved SIGSYS handler guard");
+        }
+        return 0;
+    }
+
+    static void ensure_sigaction_guard() {
+        if (g_sigaction_hook_installed) {
+            return;
+        }
+
+        g_sigaction_target = dlsym(RTLD_DEFAULT, "sigaction");
+        if (g_sigaction_target == nullptr) {
+            LOGW("FunPatch: failed to find sigaction for SIGSYS guard");
+            return;
+        }
+
+        if (HookInline(g_sigaction_target,
+                       reinterpret_cast<void*>(hooked_sigaction),
+                       reinterpret_cast<void**>(&g_sigaction_backup)) != 0) {
+            LOGW("FunPatch: failed to hook sigaction for SIGSYS guard");
+            return;
+        }
+
+        g_sigaction_hook_installed = true;
+        LOGI("FunPatch: SIGSYS handler guard installed");
+    }
+
     static void sigsys_handler(int signo, siginfo_t* info, void* context) {
         const int saved_errno = errno;
         if (signo != SIGSYS || context == nullptr) {
@@ -329,6 +390,7 @@ namespace lspd {
 
         g_has_previous_sigsys_action = true;
         g_sigsys_handler_ready = true;
+        ensure_sigaction_guard();
         return true;
     }
 
@@ -395,7 +457,7 @@ namespace lspd {
             (void) pkg;
         }
 
-        LOGI("FunPatch: redirect target set: %s -> %s", g_target_path, g_redirect_path);
+        LOGI("FunPatch: redirect target set: {} -> {}", g_target_path, g_redirect_path);
 
         if (!ensure_sigsys_handler()) {
             return JNI_FALSE;

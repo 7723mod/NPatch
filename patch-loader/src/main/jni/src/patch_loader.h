@@ -49,5 +49,8 @@ namespace lspd {
         void LoadDex(JNIEnv* env, vector::native::Context::PreloadedDex&& dex) override;
 
         void SetupEntryClass(JNIEnv* env) override;
+
+    private:
+        bool hide_libs_ = false;
     };
 } // namespace lspd

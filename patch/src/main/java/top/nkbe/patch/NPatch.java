@@ -106,7 +106,7 @@ public class NPatch {
     @Parameter(names = {"--outputLog"}, description = "Output Log to Media")
     private boolean outputLog = true;
 
-    @Parameter(names = {"--hidelibs"}, description = "Hide ART and sensitive system libraries from the application")
+    @Parameter(names = {"--hidelibs"}, description = "Exempt basic environment checks by sanitizing ART and sensitive system library visibility")
     private boolean hideLibs = false;
 
     @Parameter(names = {"-k", "--keystore"}, arity = 4, description = "Set custom signature keystore. Followed by 4 arguments: keystore path, keystore password, keystore alias, keystore alias password")
@@ -333,7 +333,7 @@ public class NPatch {
 
             logger.i("Patching apk...");
             // modify manifest
-            final var config = new PatchConfig(useManager, debuggableFlag, overrideVersionCode, sigbypassLevel, originalSignature, appComponentFactory, isInjectProvider, outputLog, newPackage, useMicroG, hideLibs);
+            final var config = new PatchConfig(useManager, debuggableFlag, overrideVersionCode, sigbypassLevel, originalSignature, appComponentFactory, isInjectProvider, outputLog, newPackage, useMicroG, hideLibs && sigbypassLevel > Constants.SIGBYPASS_NONE);
             final var configBytes = new Gson().toJson(config).getBytes(StandardCharsets.UTF_8);
             final var metadata = Base64.getEncoder().encodeToString(configBytes);
             try (var is = new ByteArrayInputStream(modifyManifestFile(manifestEntry.open(), metadata, minSdkVersion, pair.packageName, newPackage, originalSignature))) {
@@ -573,12 +573,7 @@ public class NPatch {
         // 注入 MicroG 偽裝簽名與權限
         if (useMicroG && originalSignature != null && !originalSignature.isEmpty()) {
             try {
-                byte[] sigBytes = Base64.getDecoder().decode(originalSignature);
-                StringBuilder hex = new StringBuilder();
-                for (byte b : sigBytes) {
-                    hex.append(String.format("%02x", b));
-                }
-                addOrReplaceMetaData(property, "fake-signature", hex.toString());
+                addOrReplaceMetaData(property, "fake-signature", originalSignature);
                 property.addUsesPermission("android.permission.FAKE_PACKAGE_SIGNATURE");
                 logger.d("Added fake-signature metadata for MicroG compatibility");
             } catch (Exception e) {

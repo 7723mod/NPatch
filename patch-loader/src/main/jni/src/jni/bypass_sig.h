@@ -4,5 +4,7 @@
 namespace lspd {
 
     void RegisterBypass(JNIEnv* env);
+    void PrepareLibHideSnapshots();
+    void RefreshLibHideSnapshots();
 
 } // namespace lspd

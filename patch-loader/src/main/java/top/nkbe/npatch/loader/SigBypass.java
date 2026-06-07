@@ -46,7 +46,7 @@ public class SigBypass {
     private static final String TAG = "NPatch-SigBypass";
     private static final int CERT_INPUT_RAW_X509 = 0;
     private static final int CERT_INPUT_SHA256 = 1;
-    private static final Map<String, Signature> signatureCache = new ConcurrentHashMap<>();
+    private static final Map<String, Signature[]> signatureCache = new ConcurrentHashMap<>();
     private static final Set<String> moduleCallerPrefixes = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     private static String redirectApkPath;
@@ -89,7 +89,7 @@ public class SigBypass {
     public static void setOriginalSignature(String packageName, String signatureBase64) {
         if (packageName == null || signatureBase64 == null) return;
         try {
-            signatureCache.put(packageName, new Signature(signatureBase64));
+            signatureCache.put(packageName, new Signature[]{new Signature(signatureBase64)});
         } catch (Throwable e) {
             Log.w(TAG, "Failed to cache original signature for " + packageName, e);
         }
@@ -323,13 +323,13 @@ public class SigBypass {
         if (!hasSignature) return;
 
         String packageName = packageInfo.packageName;
-        Signature replacement = getOriginalSignature(context, packageName);
+        Signature[] replacements = getOriginalSignatures(context, packageName);
 
-        if (replacement == null) return;
+        if (replacements == null || replacements.length == 0) return;
 
         if (packageInfo.signatures != null && packageInfo.signatures.length > 0) {
             XLog.d(TAG, "Replace signature info for `" + packageName + "` (method 1)");
-            packageInfo.signatures[0] = replacement;
+            packageInfo.signatures = cloneSignatures(replacements);
         }
 
         SigningInfo signingInfo = packageInfo.signingInfo;
@@ -338,22 +338,22 @@ public class SigBypass {
             try {
                 Signature[] signaturesArray = (Signature[]) XposedHelpers.callMethod(signingInfo, "getApkContentsSigners");
                 if (signaturesArray != null && signaturesArray.length > 0) {
-                    signaturesArray[0] = replacement;
+                    replaceSignatureArray(signaturesArray, replacements);
                 }
                 Signature[] history = (Signature[]) XposedHelpers.callMethod(signingInfo, "getSigningCertificateHistory");
                 if (history != null && history.length > 0) {
-                    history[0] = replacement;
+                    replaceSignatureArray(history, replacements);
                 }
                 // Try to replace internal fields if methods don't work or for deeper coverage
                 Object mSigningDetails = XposedHelpers.getObjectField(signingInfo, "mSigningDetails");
                 if (mSigningDetails != null) {
                     Signature[] pastSignatures = (Signature[]) XposedHelpers.getObjectField(mSigningDetails, "pastSigningCertificates");
                     if (pastSignatures != null && pastSignatures.length > 0) {
-                        pastSignatures[0] = replacement;
+                        replaceSignatureArray(pastSignatures, replacements);
                     }
                     Signature[] currentSignatures = (Signature[]) XposedHelpers.getObjectField(mSigningDetails, "signatures");
                     if (currentSignatures != null && currentSignatures.length > 0) {
-                        currentSignatures[0] = replacement;
+                        replaceSignatureArray(currentSignatures, replacements);
                     }
                 }
             } catch (Throwable e) {
@@ -399,9 +399,9 @@ public class SigBypass {
         clearMapFieldQuietly(Parcel.class, "sPairedCreators");
     }
 
-    private static Signature getOriginalSignature(Context context, String packageName) {
+    private static Signature[] getOriginalSignatures(Context context, String packageName) {
         if (packageName == null) return null;
-        Signature cached = signatureCache.get(packageName);
+        Signature[] cached = signatureCache.get(packageName);
         if (cached != null) return cached;
 
         String replacementStr = null;
@@ -424,9 +424,9 @@ public class SigBypass {
 
         if (replacementStr != null) {
             try {
-                Signature sig = new Signature(replacementStr);
-                signatureCache.put(packageName, sig);
-                return sig;
+                Signature[] signatures = new Signature[]{new Signature(replacementStr)};
+                signatureCache.put(packageName, signatures);
+                return signatures;
             } catch (Throwable e) {
                 Log.w(TAG, "fail to construct original signature for " + packageName, e);
             }
@@ -434,16 +434,38 @@ public class SigBypass {
         return null;
     }
 
-    private static boolean matchesOriginalCertificate(Signature original, byte[] certificate, int type) {
-        if (original == null || certificate == null) return false;
+    private static Signature[] cloneSignatures(Signature[] signatures) {
+        if (signatures == null) return null;
+        Signature[] cloned = new Signature[signatures.length];
+        for (int i = 0; i < signatures.length; i++) {
+            cloned[i] = signatures[i] == null ? null : new Signature(signatures[i].toByteArray());
+        }
+        return cloned;
+    }
+
+    private static void replaceSignatureArray(Signature[] target, Signature[] replacements) {
+        if (target == null || replacements == null) return;
+        int count = Math.min(target.length, replacements.length);
+        for (int i = 0; i < count; i++) {
+            target[i] = replacements[i] == null ? null : new Signature(replacements[i].toByteArray());
+        }
+    }
+
+    private static boolean matchesOriginalCertificate(Signature[] originals, byte[] certificate, int type) {
+        if (originals == null || certificate == null) return false;
         try {
-            byte[] raw = original.toByteArray();
-            if (type == CERT_INPUT_RAW_X509) {
-                return MessageDigest.isEqual(raw, certificate);
-            }
-            if (type == CERT_INPUT_SHA256) {
-                byte[] digest = MessageDigest.getInstance("SHA-256").digest(raw);
-                return MessageDigest.isEqual(digest, certificate);
+            for (Signature original : originals) {
+                if (original == null) continue;
+                byte[] raw = original.toByteArray();
+                if (type == CERT_INPUT_RAW_X509 && MessageDigest.isEqual(raw, certificate)) {
+                    return true;
+                }
+                if (type == CERT_INPUT_SHA256) {
+                    byte[] digest = MessageDigest.getInstance("SHA-256").digest(raw);
+                    if (MessageDigest.isEqual(digest, certificate)) {
+                        return true;
+                    }
+                }
             }
         } catch (Throwable e) {
             Log.w(TAG, "fail to compare signature certificate", e);
@@ -543,6 +565,10 @@ public class SigBypass {
                 }
             };
             boolean hookedAny = false;
+            try {
+                XposedBridge.hookAllMethods(PackageManager.class, "getPackageInfo", hook);
+                hookedAny = true;
+            } catch (Throwable ignored) {}
             try {
                 Class<?> appPm = Class.forName("android.app.ApplicationPackageManager");
                 XposedBridge.hookAllMethods(appPm, "getPackageInfo", hook);
@@ -691,9 +717,9 @@ public class SigBypass {
                         packageName = context.getPackageName();
                     }
                     if (packageName == null) return;
-                    Signature original = getOriginalSignature(context, packageName);
-                    if (original == null) return;
-                    if (matchesOriginalCertificate(original, certificate, type)) {
+                    Signature[] originals = getOriginalSignatures(context, packageName);
+                    if (originals == null) return;
+                    if (matchesOriginalCertificate(originals, certificate, type)) {
                         param.setResult(true);
                     }
                 }
@@ -761,8 +787,7 @@ public class SigBypass {
                 }
                 if (!isPatchedApkPath) return;
 
-                CallerContext ctx = checkCallerContext();
-                if (ctx.isModule || !ctx.isSensitive) return;
+                if (isModuleCaller()) return;
 
                 if (arg0 instanceof String) {
                     param.args[0] = originalApkPath;
@@ -785,23 +810,12 @@ public class SigBypass {
         return sigBypassLevel;
     }
 
-    static void doSigBypass(Context context, int sigBypassLevel) throws IOException {
+    static void doSigBypass(Context context, int sigBypassLevel, boolean hideLibs) throws IOException {
         activeSigBypassLevel = Math.max(activeSigBypassLevel, sigBypassLevel);
         int hookLevel = effectiveHookLevel(sigBypassLevel);
         String currentApkPath = visibleApkPath != null ? visibleApkPath : context.getPackageResourcePath();
 
-        boolean hideLibs = false;
-        try {
-            var metaData = context.getPackageManager()
-                    .getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA)
-                    .metaData;
-            String encoded = metaData == null ? null : metaData.getString("npatch");
-            if (encoded != null) {
-                var json = new String(Base64.decode(encoded, Base64.DEFAULT), StandardCharsets.UTF_8);
-                var patchConfig = new JSONObject(json);
-                hideLibs = patchConfig.optBoolean("hideLibs", false);
-            }
-        } catch (Throwable ignored) {}
+        hideLibs = hideLibs && hookLevel >= Constants.SIGBYPASS_BASIC;
 
         if (hookLevel >= Constants.SIGBYPASS_BASIC && redirectApkPath == null) {
             redirectApkPath = extractOriginalApk(context);
@@ -850,7 +864,9 @@ public class SigBypass {
             hookGetPackageInfo(context);
         }
 
-        if (sigBypassLevel == Constants.SIGBYPASS_SECCOMP && redirectApkPath != null) {
+        boolean useSeccompRedirect = redirectApkPath != null
+                && sigBypassLevel == Constants.SIGBYPASS_SECCOMP;
+        if (useSeccompRedirect) {
             if (!isSeccompRuntimeSupported()) {
                 XLog.w(TAG, "Seccomp skipped on non-arm64 runtime ABI");
             } else if (FunPatch.enableSeccompV2Redirect(
