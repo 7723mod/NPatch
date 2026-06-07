@@ -1,4 +1,7 @@
 -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
+-obfuscationdictionary ../proguard/obfuscation-dictionary.txt
+-classobfuscationdictionary ../proguard/obfuscation-dictionary.txt
+-packageobfuscationdictionary ../proguard/obfuscation-dictionary.txt
 -allowaccessmodification
 -renamesourcefileattribute SourceFile
 
