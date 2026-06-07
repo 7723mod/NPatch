@@ -375,8 +375,8 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
                         color = colorScheme.onSurfaceVariantSummary,
                     )
 
-                    val author = module.collaborators?.firstOrNull()?.name
-                        ?: module.collaborators?.firstOrNull()?.login
+                    val author = module.collaborators.firstOrNull()?.name
+                        ?: module.collaborators.firstOrNull()?.login
                     if (author != null) {
                         Spacer(modifier = Modifier.width(2.dp))
                         Text(

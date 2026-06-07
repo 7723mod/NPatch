@@ -243,15 +243,15 @@ class RepoLoader private constructor() {
         if (isRepoLoaded) {
             val module = onlineModules[packageName]
             if (module != null) {
-                releases = module.releases ?: emptyList()
+                releases = module.releases
                 if (!module.releasesLoaded) {
-                    if (channel == channels[1] && !module.betaReleases.isNullOrEmpty()) {
-                        releases = module.betaReleases!!
+                    if (channel == channels[1] && module.betaReleases.isNotEmpty()) {
+                        releases = module.betaReleases
                     } else if (channel == channels[2]) {
-                        if (!module.snapshotReleases.isNullOrEmpty()) {
-                            releases = module.snapshotReleases!!
-                        } else if (!module.betaReleases.isNullOrEmpty()) {
-                            releases = module.betaReleases!!
+                        if (module.snapshotReleases.isNotEmpty()) {
+                            releases = module.snapshotReleases
+                        } else if (module.betaReleases.isNotEmpty()) {
+                            releases = module.betaReleases
                         }
                     }
                 }

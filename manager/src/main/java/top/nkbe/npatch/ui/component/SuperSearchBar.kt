@@ -65,11 +65,9 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.imeAction
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
@@ -396,11 +394,8 @@ fun SearchBar(
             .fillMaxWidth()
             .padding(horizontal = 12.dp)
             .padding(top = searchBarTopPadding, bottom = 6.dp)
-            .focusRequester(focusRequester)
-            .semantics {
-                imeAction = ImeAction.Search
-            },
-        onSearch = { it },
+            .focusRequester(focusRequester),
+        onSearch = { },
         expanded = searchStatus.shouldExpand(),
         onExpandedChange = {
             searchStatus.current = if (it) SearchStatus.Status.EXPANDED else SearchStatus.Status.COLLAPSED

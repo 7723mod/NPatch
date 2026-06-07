@@ -595,7 +595,7 @@ fun ReleaseCard(release: Release, context: Context) {
                 )
             }
 
-            val hasAssets = !release.releaseAssets.isNullOrEmpty()
+            val hasAssets = release.releaseAssets.isNotEmpty()
             val hasDescription = !release.descriptionHTML.isNullOrEmpty()
 
             if (hasAssets || hasDescription) {
@@ -618,9 +618,9 @@ fun ReleaseCard(release: Release, context: Context) {
                             color = colorScheme.outline.copy(alpha = 0.15f)
                         )
 
-                        release.releaseAssets?.forEachIndexed { index, asset ->
+                        release.releaseAssets.forEachIndexed { index, asset ->
                             val bottomPadding =
-                                if (index == release.releaseAssets!!.lastIndex) 16.dp else 8.dp
+                                if (index == release.releaseAssets.lastIndex) 16.dp else 8.dp
 
                             ReleaseAssetItem(
                                 asset = asset,
@@ -628,7 +628,7 @@ fun ReleaseCard(release: Release, context: Context) {
                                 context = context
                             )
 
-                            if (index != release.releaseAssets!!.lastIndex) {
+                            if (index != release.releaseAssets.lastIndex) {
                                 HorizontalDivider(
                                     modifier = Modifier.padding(
                                         start = 12.dp,
@@ -709,7 +709,7 @@ fun InfoTab(
         }
 
         val collaborators = module.collaborators
-        if (!collaborators.isNullOrEmpty()) {
+        if (collaborators.isNotEmpty()) {
             val shouldShowContributors = if (collaborators.size == 1) {
                 val singleName = collaborators[0].name ?: collaborators[0].login ?: ""
                 singleName != headerAuthorName

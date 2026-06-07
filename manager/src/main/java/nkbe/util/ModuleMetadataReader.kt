@@ -3,6 +3,7 @@ package nkbe.util
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
+import android.os.Bundle
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 import java.io.BufferedReader
@@ -107,28 +108,28 @@ object ModuleMetadataReader {
         val minApiVersion = readInt(
             modernProps,
             KEY_MIN_API_VERSION,
-            legacyMeta?.get(LEGACY_KEY_MIN_API_VERSION),
+            readLegacyInt(legacyMeta, LEGACY_KEY_MIN_API_VERSION),
             0,
         )
         val targetApiVersion = readInt(
             modernProps,
             KEY_TARGET_API_VERSION,
-            legacyMeta?.get(LEGACY_KEY_TARGET_API_VERSION),
+            readLegacyInt(legacyMeta, LEGACY_KEY_TARGET_API_VERSION),
             minApiVersion,
         )
         val staticScope = readBoolean(
             modernProps,
             KEY_STATIC_SCOPE,
-            legacyMeta?.get(LEGACY_KEY_STATIC_SCOPE),
+            readLegacyBoolean(legacyMeta, LEGACY_KEY_STATIC_SCOPE),
             false,
         )
         val author = firstNonEmpty(
             readString(modernProps, KEY_AUTHOR),
-            legacyMeta?.get(LEGACY_KEY_AUTHOR)?.toString(),
+            readLegacyString(legacyMeta, LEGACY_KEY_AUTHOR),
         )
         val version = firstNonEmpty(
             readString(modernProps, KEY_VERSION),
-            legacyMeta?.get(LEGACY_KEY_VERSION)?.toString(),
+            readLegacyString(legacyMeta, LEGACY_KEY_VERSION),
         )
 
         val hasModernEntrypoint = modernJavaInitList.isNotEmpty() || modernNativeInitList.isNotEmpty()
@@ -156,19 +157,19 @@ object ModuleMetadataReader {
         }
 
         if (pipeline != ModulePipeline.MODERN && scopes.isEmpty()) {
-            readLegacyScopeList(legacyMeta?.get(LEGACY_KEY_SCOPES), scopes)
+            readLegacyScopeList(readLegacyString(legacyMeta, LEGACY_KEY_SCOPES), scopes)
         }
 
         if (!hasModernMetadata && !hasLegacyEntrypoint && !hasLegacyMetadata) return null
 
         val displayName = firstNonEmpty(
             loadLabel(appInfo, packageManager),
-            legacyMeta?.get(LEGACY_KEY_NAME)?.toString(),
+            readLegacyString(legacyMeta, LEGACY_KEY_NAME),
             appInfo.packageName,
         )
         val description = firstNonEmpty(
             loadDescription(appInfo, packageManager),
-            legacyMeta?.get(LEGACY_KEY_DESCRIPTION)?.toString(),
+            readLegacyString(legacyMeta, LEGACY_KEY_DESCRIPTION),
         )
 
         return ModuleMetadataSnapshot(
@@ -220,8 +221,8 @@ object ModuleMetadataReader {
         }
     }
 
-    private fun readLegacyScopeList(rawValue: Any?, out: MutableList<String>) {
-        val value = rawValue?.toString()?.trim().orEmpty()
+    private fun readLegacyScopeList(rawValue: String?, out: MutableList<String>) {
+        val value = rawValue?.trim().orEmpty()
         if (value.isEmpty()) return
         val deduplicated = LinkedHashSet<String>()
         value.split(Regex("[\\s,;]+"))
@@ -233,7 +234,7 @@ object ModuleMetadataReader {
 
     private fun loadLabel(applicationInfo: ApplicationInfo?, packageManager: PackageManager): String? {
         if (applicationInfo == null) return null
-        return runCatching { applicationInfo.loadLabel(packageManager)?.toString()?.trim() }
+        return runCatching { applicationInfo.loadLabel(packageManager).toString().trim() }
             .getOrNull()
             ?.takeIf { it.isNotEmpty() }
     }
@@ -247,15 +248,30 @@ object ModuleMetadataReader {
 
     private fun readString(properties: Properties, key: String): String? = properties.getProperty(key)?.trim()?.takeIf { it.isNotEmpty() }
 
-    private fun readInt(properties: Properties, modernKey: String, legacyValue: Any?, defaultValue: Int): Int {
+    private fun readLegacyString(metaData: Bundle?, key: String): String? {
+        if (metaData == null || !metaData.containsKey(key)) return null
+        return metaData.getString(key)?.trim()?.takeIf { it.isNotEmpty() }
+    }
+
+    private fun readLegacyInt(metaData: Bundle?, key: String): Int? {
+        if (metaData == null || !metaData.containsKey(key)) return null
+        return metaData.getString(key)?.trim()?.toIntOrNull() ?: metaData.getInt(key)
+    }
+
+    private fun readLegacyBoolean(metaData: Bundle?, key: String): Boolean? {
+        if (metaData == null || !metaData.containsKey(key)) return null
+        return metaData.getString(key)?.trim()?.toBooleanStrictOrNull() ?: metaData.getBoolean(key)
+    }
+
+    private fun readInt(properties: Properties, modernKey: String, legacyValue: Int?, defaultValue: Int): Int {
         readString(properties, modernKey)?.toIntOrNull()?.let { return it }
-        legacyValue?.toString()?.trim()?.toIntOrNull()?.let { return it }
+        legacyValue?.let { return it }
         return defaultValue
     }
 
-    private fun readBoolean(properties: Properties, modernKey: String, legacyValue: Any?, defaultValue: Boolean): Boolean {
+    private fun readBoolean(properties: Properties, modernKey: String, legacyValue: Boolean?, defaultValue: Boolean): Boolean {
         readString(properties, modernKey)?.let { return it.toBoolean() }
-        legacyValue?.toString()?.trim()?.let { return it.toBoolean() }
+        legacyValue?.let { return it }
         return defaultValue
     }
 

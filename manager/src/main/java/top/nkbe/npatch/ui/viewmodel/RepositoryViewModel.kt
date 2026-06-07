@@ -80,7 +80,7 @@ class RepositoryViewModel : ViewModel(), RepoLoader.RepoListener {
         snapshotFlow { NeoPackageManager.appList }
     ) { modules, _, appList ->
         val scopedPackageNames = modules
-            .flatMap { it.scope ?: emptyList() }
+            .flatMap { it.scope }
             .toSet()
 
         appList
@@ -125,7 +125,7 @@ class RepositoryViewModel : ViewModel(), RepoLoader.RepoListener {
             state.modules
         } else {
             state.modules.filter { module ->
-                module.scope?.contains(state.scopeFilter) == true
+                module.scope.contains(state.scopeFilter)
             }
         }
 
@@ -133,7 +133,7 @@ class RepositoryViewModel : ViewModel(), RepoLoader.RepoListener {
             filteredByScope
         } else {
             filteredByScope.filter {
-                (it.scope?.any { scope -> scope.contains(state.query, ignoreCase = true) } == true) ||
+                it.scope.any { scope -> scope.contains(state.query, ignoreCase = true) } ||
                     (it.name?.contains(state.query, ignoreCase = true) == true) ||
                     (it.description?.contains(state.query, ignoreCase = true) == true) ||
                     (it.summary?.contains(state.query, ignoreCase = true) == true)
