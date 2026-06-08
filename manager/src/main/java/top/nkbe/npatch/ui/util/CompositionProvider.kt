@@ -26,8 +26,8 @@ val LocalFloatingGlassBottomBarBlur = compositionLocalOf { true }
 
 @Composable
 fun backgroundAwareCardColors(
-    color: Color = MiuixTheme.colorScheme.surface,
-    contentColor: Color = MiuixTheme.colorScheme.onSurface,
+    color: Color = MiuixTheme.colorScheme.surfaceContainer,
+    contentColor: Color = MiuixTheme.colorScheme.onSurfaceContainer,
     backgroundAlpha: Float = BG_SURFACE_ALPHA,
 ): CardColors {
     val adjusted = if (LocalBackgroundImagePath.current.isNotEmpty()) {

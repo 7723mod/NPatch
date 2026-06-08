@@ -5,9 +5,7 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInstaller
-import android.content.pm.PackageInstallerHidden.SessionParamsHidden
 import android.content.pm.PackageManager
-import android.content.pm.PackageManagerHidden
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Parcelable
@@ -19,7 +17,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
-import dev.rikka.tools.refine.Refine
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -29,6 +26,7 @@ import kotlinx.parcelize.Parcelize
 import me.zhanghai.android.appiconloader.AppIconLoader
 import top.nkbe.npatch.config.ConfigManager
 import top.nkbe.npatch.config.Configs
+import top.nkbe.npatch.ShizukuService
 import top.nkbe.npatch.lspApp
 import top.nkbe.npatch.share.Constants
 import java.io.File
@@ -37,14 +35,11 @@ import java.text.Collator
 import java.util.*
 import java.util.Collections
 import java.util.zip.ZipFile
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 object NeoPackageManager {
 
     private const val TAG = "NeoPackageManager"
     private const val SETTINGS_CATEGORY = "de.robv.android.xposed.category.MODULE_SETTINGS"
-    private const val COPY_BUFFER_SIZE = 4096 * 4096
 
     const val STATUS_USER_CANCELLED = -2
 
@@ -159,71 +154,9 @@ object NeoPackageManager {
         var message: String? = null
         withContext(Dispatchers.IO) {
             runCatching {
-                val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
-                var flags = Refine.unsafeCast<SessionParamsHidden>(params).installFlags
-                flags = flags or PackageManagerHidden.INSTALL_ALLOW_TEST or PackageManagerHidden.INSTALL_REPLACE_EXISTING
-                Refine.unsafeCast<SessionParamsHidden>(params).installFlags = flags
-                ShizukuApi.createPackageInstallerSession(params).use { session ->
-                    val localApkFiles = lspApp.targetApkFiles
-                        ?.filter { it.isFile && it.name.endsWith(Constants.PATCH_FILE_SUFFIX) }
-                        .orEmpty()
-                    if (localApkFiles.isNotEmpty()) {
-                        localApkFiles.forEach { file ->
-                            Log.d(TAG, "Add ${file.name}")
-                            file.inputStream().use { input ->
-                                session.openWrite(file.name, 0, file.length()).use { output ->
-                                    input.copyTo(output, COPY_BUFFER_SIZE)
-                                    session.fsync(output)
-                                }
-                            }
-                        }
-                    } else {
-                        val uri = Configs.storageDirectory?.toUri() ?: throw IOException("Uri is null")
-                        val root = DocumentFile.fromTreeUri(lspApp, uri) ?: throw IOException("DocumentFile is null")
-                        root.listFiles().forEach { file ->
-                            val fileName = file.name ?: return@forEach
-                            when {
-                                fileName.endsWith(Constants.PATCH_FILE_SUFFIX) -> {
-                                    Log.d(TAG, "Add $fileName")
-                                    val input = lspApp.contentResolver.openInputStream(file.uri)
-                                        ?: throw IOException("Cannot open input stream")
-                                    input.use {
-                                        session.openWrite(fileName, 0, file.length()).use { output ->
-                                            input.copyTo(output, COPY_BUFFER_SIZE)
-                                            session.fsync(output)
-                                        }
-                                    }
-                                }
-
-                                fileName.endsWith(Constants.PATCH_ARCHIVE_SUFFIX) -> {
-                                    Log.d(TAG, "Extract and add $fileName")
-                                    val copiedArchive = copyDocumentToTempFile(file.uri, sanitizeVisibleFileName(fileName))
-                                    extractApkArchive(copiedArchive, fileName).forEach { extractedFile ->
-                                        extractedFile.inputStream().use { input ->
-                                            session.openWrite(extractedFile.name, 0, extractedFile.length()).use { output ->
-                                                input.copyTo(output, COPY_BUFFER_SIZE)
-                                                session.fsync(output)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    var result: Intent? = null
-                    suspendCoroutine { cont ->
-                        val adapter = IntentSenderHelper.IIntentSenderAdaptor { intent ->
-                            result = intent
-                            cont.resume(Unit)
-                        }
-                        val intentSender = IntentSenderHelper.newIntentSender(adapter)
-                        session.commit(intentSender)
-                    }
-                    result?.let {
-                        status = it.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
-                        message = it.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
-                    } ?: throw IOException("Intent is null")
-                }
+                val result = ShizukuApi.installApks(collectInstallApkFiles())
+                status = result.getInt(ShizukuService.KEY_STATUS, PackageInstaller.STATUS_FAILURE)
+                message = result.getString(ShizukuService.KEY_MESSAGE)
             }.onFailure {
                 status = PackageInstaller.STATUS_FAILURE
                 message = it.message + "\n" + it.stackTraceToString()
@@ -237,25 +170,43 @@ object NeoPackageManager {
         var message: String? = null
         withContext(Dispatchers.IO) {
             runCatching {
-                var result: Intent? = null
-                suspendCoroutine { cont ->
-                    val adapter = IntentSenderHelper.IIntentSenderAdaptor { intent ->
-                        result = intent
-                        cont.resume(Unit)
-                    }
-                    val intentSender = IntentSenderHelper.newIntentSender(adapter)
-                    ShizukuApi.uninstallPackage(packageName, intentSender)
-                }
-                result?.let {
-                    status = it.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
-                    message = it.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
-                } ?: throw IOException("Intent is null")
+                val result = ShizukuApi.uninstallPackage(packageName)
+                status = result.getInt(ShizukuService.KEY_STATUS, PackageInstaller.STATUS_FAILURE)
+                message = result.getString(ShizukuService.KEY_MESSAGE)
             }.onFailure {
                 status = PackageInstaller.STATUS_FAILURE
                 message = "Exception happened\n$it"
             }
         }
         return Pair(status, message)
+    }
+
+    private fun collectInstallApkFiles(): List<File> {
+        val localApkFiles = lspApp.targetApkFiles
+            ?.filter { it.isFile && it.name.endsWith(Constants.PATCH_FILE_SUFFIX) }
+            .orEmpty()
+        if (localApkFiles.isNotEmpty()) {
+            return localApkFiles
+        }
+
+        val uri = Configs.storageDirectory?.toUri() ?: throw IOException("Uri is null")
+        val root = DocumentFile.fromTreeUri(lspApp, uri) ?: throw IOException("DocumentFile is null")
+        val apkFiles = mutableListOf<File>()
+        root.listFiles().forEach { file ->
+            val fileName = file.name ?: return@forEach
+            when {
+                fileName.endsWith(Constants.PATCH_FILE_SUFFIX) -> {
+                    apkFiles.add(copyDocumentToTempFile(file.uri, sanitizeVisibleFileName(fileName)))
+                }
+
+                fileName.endsWith(Constants.PATCH_ARCHIVE_SUFFIX) -> {
+                    val copiedArchive = copyDocumentToTempFile(file.uri, sanitizeVisibleFileName(fileName))
+                    apkFiles.addAll(extractApkArchive(copiedArchive, fileName))
+                }
+            }
+        }
+        if (apkFiles.isEmpty()) throw IOException("No target APK files found for installation")
+        return apkFiles
     }
 
     suspend fun forceStop(packageName: String): Boolean {

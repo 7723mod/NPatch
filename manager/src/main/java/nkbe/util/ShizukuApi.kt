@@ -2,26 +2,53 @@ package nkbe.util
 
 import android.app.IActivityManager
 import android.content.ComponentName
-import android.content.IntentSender
 import android.content.ServiceConnection
 import android.content.pm.*
 import android.os.Build
+import android.os.Bundle
 import android.os.IBinder
 import android.os.IInterface
+import android.os.ParcelFileDescriptor
 import android.os.Process
 import android.os.SystemProperties
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import dev.rikka.tools.refine.Refine
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.withTimeout
+import top.nkbe.npatch.INPatchShizukuService
+import top.nkbe.npatch.ShizukuService
+import top.nkbe.npatch.lspApp
 import rikka.shizuku.Shizuku
 import rikka.shizuku.ShizukuBinderWrapper
 import rikka.shizuku.ShizukuProvider
 import rikka.shizuku.SystemServiceHelper
+import java.io.File
 
 object ShizukuApi {
     private const val PERMISSION_REQUEST_CODE = 114514
+    private const val USER_SERVICE_TAG = "npatch"
+    private const val USER_SERVICE_VERSION = 1
+    private const val USER_SERVICE_TIMEOUT_MS = 5000L
     private var initialized = false
+
+    @Volatile
+    private var userService: INPatchShizukuService? = null
+    private var userServiceDeferred = CompletableDeferred<INPatchShizukuService>()
+
+    private val userServiceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName, service: IBinder) {
+            val binder = INPatchShizukuService.Stub.asInterface(service)
+            userService = binder
+            userServiceDeferred.complete(binder)
+        }
+
+        override fun onServiceDisconnected(name: ComponentName) {
+            userService = null
+            userServiceDeferred = CompletableDeferred()
+        }
+    }
 
     private fun IBinder.wrap() = ShizukuBinderWrapper(this)
     private fun IInterface.asShizukuBinder() = this.asBinder().wrap()
@@ -69,6 +96,8 @@ object ShizukuApi {
         Shizuku.addBinderDeadListener {
             isBinderAvailable = false
             isPermissionGranted = false
+            userService = null
+            userServiceDeferred = CompletableDeferred()
         }
     }
 
@@ -119,6 +148,29 @@ object ShizukuApi {
                 .version(version)
                 .daemon(daemon)
         Shizuku.bindUserService(args, connection)
+    }
+
+    private fun bindUserServiceIfNeeded() {
+        if (userService != null) return
+        val component = ComponentName(lspApp.packageName, ShizukuService::class.java.name)
+        val args =
+            Shizuku.UserServiceArgs(component)
+                .tag(USER_SERVICE_TAG)
+                .version(USER_SERVICE_VERSION)
+                .daemon(false)
+                .processNameSuffix("shizuku")
+                .debuggable(false)
+        Shizuku.bindUserService(args, userServiceConnection)
+    }
+
+    private suspend fun getUserService(): INPatchShizukuService {
+        ensureReady()
+        userService?.let { return it }
+        if (userServiceDeferred.isCompleted) {
+            userServiceDeferred = CompletableDeferred()
+        }
+        bindUserServiceIfNeeded()
+        return withTimeout(USER_SERVICE_TIMEOUT_MS) { userServiceDeferred.await() }
     }
 
     fun unbindUserService(
@@ -178,18 +230,56 @@ object ShizukuApi {
         return (app != null) && (app.metaData?.containsKey("npatch") != true)
     }
 
-    fun uninstallPackage(packageName: String, intentSender: IntentSender) {
-        ensureReady()
-        packageInstaller.uninstall(packageName, intentSender)
+    suspend fun installApks(apkFiles: List<File>): Bundle {
+        val descriptors = apkFiles.map {
+            ParcelFileDescriptor.open(it, ParcelFileDescriptor.MODE_READ_ONLY)
+        }
+        return try {
+            getUserService().installApks(
+                descriptors.toTypedArray(),
+                apkFiles.map { it.name }.toTypedArray(),
+                Process.myUserHandle().hashCode(),
+            )
+        } finally {
+            descriptors.forEach { runCatching { it.close() } }
+        }
+    }
+
+    suspend fun uninstallPackage(packageName: String): Bundle {
+        return getUserService().uninstallPackage(packageName, Process.myUserHandle().hashCode())
     }
 
     fun performDexOptMode(packageName: String): Boolean {
         ensureReady()
-        return iPackageManager.performDexOptMode(
-            packageName,
-            SystemProperties.getBoolean("dalvik.vm.usejitprofiles", false),
-            "verify", true, true, null
-        )
+        runCatching {
+            userService?.performDexOptMode(packageName, Process.myUserHandle().hashCode())
+        }.getOrNull()?.let { return it }
+        val checkProfiles = SystemProperties.getBoolean("dalvik.vm.usejitprofiles", false)
+        return runCatching {
+            val method = iPackageManager.javaClass.methods.firstOrNull {
+                it.name == "performDexOptMode" && it.parameterTypes.contentEquals(
+                    arrayOf(
+                        String::class.java,
+                        Boolean::class.javaPrimitiveType,
+                        String::class.java,
+                        Boolean::class.javaPrimitiveType,
+                    )
+                )
+            }
+            if (method != null) {
+                method.invoke(iPackageManager, packageName, checkProfiles, "verify", true) as Boolean
+            } else {
+                iPackageManager.javaClass.getMethod(
+                    "performDexOptMode",
+                    String::class.java,
+                    Boolean::class.javaPrimitiveType,
+                    String::class.java,
+                    Boolean::class.javaPrimitiveType,
+                    Boolean::class.javaPrimitiveType,
+                    String::class.java,
+                ).invoke(iPackageManager, packageName, checkProfiles, "verify", true, true, null) as Boolean
+            }
+        }.getOrDefault(false)
     }
 
     fun forceStopPackage(packageName: String) {
