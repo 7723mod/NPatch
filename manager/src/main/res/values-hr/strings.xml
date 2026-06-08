@@ -84,4 +84,6 @@
     <string name="settings_keystore_wrong_alias">Pogrešno pseudonim</string>
     <string name="settings_keystore_wrong_alias_password">Pogrešna lozinka za alias</string>
     <string name="settings_detail_patch_logs">Dnevnici zakrpa detalja</string>
+    <string name="settings_card_background_alpha">Neprozirnost pozadine kartica</string>
+    <string name="settings_card_background_alpha_summary">Primjenjuje se kada je omogućena prilagođena pozadinska slika</string>
 </resources>

@@ -84,4 +84,6 @@
     <string name="settings_keystore_wrong_alias">Nesprávny alias</string>
     <string name="settings_keystore_wrong_alias_password">Nesprávne heslo aliasu</string>
     <string name="settings_detail_patch_logs">Podrobné protokoly o opravách</string>
+    <string name="settings_card_background_alpha">Nepriehľadnosť pozadia kariet</string>
+    <string name="settings_card_background_alpha_summary">Platí, keď je zapnutý vlastný obrázok pozadia</string>
 </resources>

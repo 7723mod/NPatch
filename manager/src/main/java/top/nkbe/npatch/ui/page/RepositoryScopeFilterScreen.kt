@@ -54,7 +54,6 @@ import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private val RepoScopeHorizontalPadding = 12.dp
-private const val RepoScopeBackgroundAlpha = 0.82f
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -181,8 +180,7 @@ fun RepositoryScopeFilterScreen(
                                 }
                             },
                             cardColors = backgroundAwareCardColors(
-                                color = MiuixTheme.colorScheme.surfaceContainer,
-                                backgroundAlpha = RepoScopeBackgroundAlpha
+                                color = MiuixTheme.colorScheme.surfaceContainer
                             ),
                             onClick = { select(target.packageName) }
                         )
@@ -201,8 +199,7 @@ private fun ScopeFilterCard(content: @Composable ColumnScope.() -> Unit) {
             .padding(horizontal = RepoScopeHorizontalPadding)
             .padding(bottom = 8.dp),
         colors = backgroundAwareCardColors(
-            color = MiuixTheme.colorScheme.surfaceContainer,
-            backgroundAlpha = RepoScopeBackgroundAlpha
+            color = MiuixTheme.colorScheme.surfaceContainer
         ),
         insideMargin = PaddingValues(0.dp),
         showIndication = false,
@@ -223,8 +220,7 @@ private fun ScopeFilterSearchCard(
             .padding(horizontal = RepoScopeHorizontalPadding)
             .padding(bottom = 8.dp),
         colors = backgroundAwareCardColors(
-            color = MiuixTheme.colorScheme.surfaceContainer,
-            backgroundAlpha = RepoScopeBackgroundAlpha
+            color = MiuixTheme.colorScheme.surfaceContainer
         ),
         insideMargin = PaddingValues(0.dp),
         showIndication = false

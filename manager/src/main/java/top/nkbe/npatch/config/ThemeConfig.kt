@@ -27,9 +27,13 @@ data class ThemeSettings(
     val themeMode: ThemeMode,
     val useFloatingGlassBottomBar: Boolean,
     val useFloatingGlassBottomBarBlur: Boolean,
+    val cardBackgroundAlphaPercent: Int,
 )
 
 const val DEFAULT_CUSTOM_COLOR = 0xFFF27297.toInt()
+const val CARD_BACKGROUND_ALPHA_MIN = 10
+const val CARD_BACKGROUND_ALPHA_MAX = 91
+const val DEFAULT_CARD_BACKGROUND_ALPHA_PERCENT = 60
 
 object ThemeConfig {
     val BG_IMAGE_URI = stringPreferencesKey("bg_image_uri")
@@ -38,6 +42,7 @@ object ThemeConfig {
     val THEME_MODE = intPreferencesKey("theme_mode")
     val USE_FLOATING_GLASS_BOTTOM_BAR = booleanPreferencesKey("use_floating_glass_bottom_bar")
     val USE_FLOATING_GLASS_BOTTOM_BAR_BLUR = booleanPreferencesKey("use_floating_glass_bottom_bar_blur")
+    val CARD_BACKGROUND_ALPHA_PERCENT = intPreferencesKey("card_background_alpha_percent")
 
     fun isFloatingGlassBottomBarBlurSupported(): Boolean {
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
@@ -51,6 +56,8 @@ object ThemeConfig {
             themeMode = ThemeMode.fromValue(prefs[THEME_MODE] ?: ThemeMode.SYSTEM.value),
             useFloatingGlassBottomBar = prefs[USE_FLOATING_GLASS_BOTTOM_BAR] ?: false,
             useFloatingGlassBottomBarBlur = prefs[USE_FLOATING_GLASS_BOTTOM_BAR_BLUR] ?: isFloatingGlassBottomBarBlurSupported(),
+            cardBackgroundAlphaPercent = (prefs[CARD_BACKGROUND_ALPHA_PERCENT] ?: DEFAULT_CARD_BACKGROUND_ALPHA_PERCENT)
+                .coerceIn(CARD_BACKGROUND_ALPHA_MIN, CARD_BACKGROUND_ALPHA_MAX),
         )
     }
 }

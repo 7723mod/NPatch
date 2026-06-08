@@ -34,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -55,6 +56,8 @@ import kotlinx.coroutines.launch
 import top.nkbe.npatch.LSPApplication
 import top.nkbe.npatch.R
 import top.nkbe.npatch.config.Configs
+import top.nkbe.npatch.config.CARD_BACKGROUND_ALPHA_MAX
+import top.nkbe.npatch.config.CARD_BACKGROUND_ALPHA_MIN
 import top.nkbe.npatch.config.KeystorePreset
 import top.nkbe.npatch.config.MyKeyStore
 import top.nkbe.npatch.config.ThemeConfig
@@ -66,6 +69,7 @@ import top.nkbe.npatch.manager.ManagerLogger
 import top.nkbe.npatch.ui.activity.MainActivity
 import top.nkbe.npatch.ui.component.NPatchScaffold
 import top.nkbe.npatch.config.DEFAULT_CUSTOM_COLOR
+import top.nkbe.npatch.config.DEFAULT_CARD_BACKGROUND_ALPHA_PERCENT
 import top.nkbe.npatch.ui.util.BackgroundImageStorage
 import top.nkbe.npatch.ui.util.LocalFloatingGlassBottomBar
 import top.nkbe.npatch.ui.util.LocalSnackbarHost
@@ -75,6 +79,7 @@ import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.Slider
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
@@ -90,6 +95,7 @@ import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.security.KeyStore
+import kotlin.math.roundToInt
 
 private const val TAG = "SettingsScreen"
 
@@ -162,6 +168,7 @@ fun AppearanceSettings() {
             themeMode = ThemeMode.SYSTEM,
             useFloatingGlassBottomBar = false,
             useFloatingGlassBottomBarBlur = supportsFloatingGlassBottomBarBlur,
+            cardBackgroundAlphaPercent = DEFAULT_CARD_BACKGROUND_ALPHA_PERCENT,
         )
     )
     val bgImageUri = themeState.backgroundImageUri
@@ -169,6 +176,10 @@ fun AppearanceSettings() {
     val customColor = themeState.customColor
     val useFloatingGlassBottomBar = themeState.useFloatingGlassBottomBar
     val useFloatingGlassBottomBarBlur = themeState.useFloatingGlassBottomBarBlur
+    val cardBackgroundAlphaPercent = themeState.cardBackgroundAlphaPercent
+    var cardBackgroundAlphaSlider by remember(cardBackgroundAlphaPercent) {
+        mutableFloatStateOf(cardBackgroundAlphaPercent.toFloat())
+    }
     val scrollState = rememberScrollState()
     val snackbarHost = LocalSnackbarHost.current
     val unknownErrorText = stringResource(R.string.error_unknown)
@@ -284,6 +295,57 @@ fun AppearanceSettings() {
         },
         onClick = { imagePickerLauncher.launch(arrayOf("image/*")) }
     )
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 10.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            SettingsStartIcon(Icons.Outlined.Palette)
+            Spacer(Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.settings_card_background_alpha),
+                    style = MiuixTheme.textStyles.body1,
+                    color = MiuixTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = stringResource(R.string.settings_card_background_alpha_summary),
+                    style = MiuixTheme.textStyles.body2,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                )
+            }
+            Text(
+                text = "${cardBackgroundAlphaSlider.roundToInt()}%",
+                style = MiuixTheme.textStyles.body2,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+            )
+        }
+        Slider(
+            value = cardBackgroundAlphaSlider,
+            onValueChange = { value ->
+                cardBackgroundAlphaSlider = value.roundToInt()
+                    .coerceIn(CARD_BACKGROUND_ALPHA_MIN, CARD_BACKGROUND_ALPHA_MAX)
+                    .toFloat()
+            },
+            valueRange = CARD_BACKGROUND_ALPHA_MIN.toFloat()..CARD_BACKGROUND_ALPHA_MAX.toFloat(),
+            steps = CARD_BACKGROUND_ALPHA_MAX - CARD_BACKGROUND_ALPHA_MIN - 1,
+            onValueChangeFinished = {
+                val percent = cardBackgroundAlphaSlider.roundToInt()
+                    .coerceIn(CARD_BACKGROUND_ALPHA_MIN, CARD_BACKGROUND_ALPHA_MAX)
+                scope.launch {
+                    context.dataStore.edit { it[ThemeConfig.CARD_BACKGROUND_ALPHA_PERCENT] = percent }
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp)
+        )
+    }
 
     AnimatedVisibility(visible = !useMonet) {
         Column {

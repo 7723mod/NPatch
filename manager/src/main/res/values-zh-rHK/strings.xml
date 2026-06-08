@@ -99,4 +99,6 @@
     <string name="time_minutes_ago">%d分鐘前</string>
     <string name="time_hours_ago">%d小時前</string>
     <string name="time_days_ago">%d天前</string>
+    <string name="settings_card_background_alpha">卡片背景不透明度</string>
+    <string name="settings_card_background_alpha_summary">啟用自訂背景圖片時生效</string>
 </resources>

@@ -84,4 +84,6 @@
     <string name="settings_keystore_wrong_alias">Nama alias salah</string>
     <string name="settings_keystore_wrong_alias_password">Kata sandi alias salah</string>
     <string name="settings_detail_patch_logs">Detail log tambalan</string>
+    <string name="settings_card_background_alpha">Opasitas latar belakang kartu</string>
+    <string name="settings_card_background_alpha_summary">Berlaku saat gambar latar belakang khusus diaktifkan</string>
 </resources>

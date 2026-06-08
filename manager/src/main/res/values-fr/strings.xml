@@ -97,4 +97,6 @@
     <string name="time_minutes_ago">Il y a %d minutes</string>
     <string name="time_hours_ago">Il y a %d heures</string>
     <string name="time_days_ago">Il y a %d jours</string>
+    <string name="settings_card_background_alpha">Opacité du fond des cartes</string>
+    <string name="settings_card_background_alpha_summary">S\'applique lorsqu\'une image d\'arrière-plan personnalisée est activée</string>
 </resources>

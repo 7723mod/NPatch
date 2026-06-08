@@ -125,7 +125,6 @@ import top.nkbe.npatch.repo.Release
 import kotlin.math.min
 
 private val RepoDetailHorizontalPadding = 12.dp
-private const val RepoDetailBackgroundAlpha = 0.84f
 
 fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
@@ -295,8 +294,7 @@ fun RepositoryDetailScreen(
                         .padding(top = 8.dp)
                         .padding(bottom = 4.dp),
                     colors = backgroundAwareCardColors(
-                        color = colorScheme.surfaceContainer,
-                        backgroundAlpha = RepoDetailBackgroundAlpha
+                        color = colorScheme.surfaceContainer
                     )
                 ) {
                     Column(modifier = Modifier.padding(vertical = 12.dp, horizontal = 14.dp)) {
@@ -398,8 +396,7 @@ fun RepositoryDetailScreen(
                         .fillMaxWidth()
                         .padding(horizontal = RepoDetailHorizontalPadding),
                     colors = backgroundAwareCardColors(
-                        color = colorScheme.surfaceContainer,
-                        backgroundAlpha = RepoDetailBackgroundAlpha
+                        color = colorScheme.surfaceContainer
                     ),
                     insideMargin = PaddingValues(0.dp),
                     showIndication = false
@@ -449,8 +446,7 @@ fun ReadmeTab(
                         .fillMaxWidth()
                         .padding(horizontal = RepoDetailHorizontalPadding),
                     colors = backgroundAwareCardColors(
-                        color = colorScheme.surfaceContainer,
-                        backgroundAlpha = RepoDetailBackgroundAlpha
+                        color = colorScheme.surfaceContainer
                     ),
                 ) {
                     GithubMarkdown(content = content)
@@ -557,8 +553,7 @@ fun ReleaseCard(release: Release, context: Context) {
         modifier = Modifier
             .fillMaxWidth(),
         colors = backgroundAwareCardColors(
-            color = colorScheme.surfaceContainer,
-            backgroundAlpha = RepoDetailBackgroundAlpha
+            color = colorScheme.surfaceContainer
         ),
     ) {
         Column {
@@ -676,8 +671,7 @@ fun InfoTab(
                         .fillMaxWidth()
                         .padding(horizontal = RepoDetailHorizontalPadding),
                     colors = backgroundAwareCardColors(
-                        color = colorScheme.surfaceContainer,
-                        backgroundAlpha = RepoDetailBackgroundAlpha
+                        color = colorScheme.surfaceContainer
                     ),
                 ) {
                     if (!module.homepageUrl.isNullOrEmpty()) {
@@ -725,8 +719,7 @@ fun InfoTab(
                             .fillMaxWidth()
                             .padding(horizontal = RepoDetailHorizontalPadding),
                         colors = backgroundAwareCardColors(
-                            color = colorScheme.surfaceContainer,
-                            backgroundAlpha = RepoDetailBackgroundAlpha
+                            color = colorScheme.surfaceContainer
                         ),
                     ) {
                         Column {

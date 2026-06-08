@@ -22,4 +22,6 @@
     <string name="welcome_btn_return">Return</string>
     <string name="settings_view_welcome">View guide</string>
     <string name="settings_view_welcome_summary">Review the welcome and permission guide</string>
+    <string name="settings_card_background_alpha">Card background opacity</string>
+    <string name="settings_card_background_alpha_summary">Applies when a custom background image is enabled</string>
 </resources>

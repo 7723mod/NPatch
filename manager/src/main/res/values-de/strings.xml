@@ -88,4 +88,6 @@
     <string name="patch_inject_dex_desc">Für Anwendungen mit isolierten Diensten, wie die Render-Engines von Browsern, aktivieren Sie bitte diese Option, um sicherzustellen, dass sie ordnungsgemäß funktionieren.</string>
     <string name="patch_output_log_to_media">Protokoll in Media-Verzeichnis ausgeben</string>
     <string name="patch_output_log_to_media_desc">Gibt die Xposed-Protokolle und die Startprotokolle des Frameworks in das Media-Verzeichnis aus.</string>
+    <string name="settings_card_background_alpha">Deckkraft des Kartenhintergrunds</string>
+    <string name="settings_card_background_alpha_summary">Gilt, wenn ein benutzerdefiniertes Hintergrundbild aktiviert ist</string>
 </resources>

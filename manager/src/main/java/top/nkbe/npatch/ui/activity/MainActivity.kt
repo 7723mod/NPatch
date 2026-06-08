@@ -47,9 +47,11 @@ import top.nkbe.npatch.ui.page.RepositoryScopeFilterScreen
 import top.nkbe.npatch.ui.page.Route
 import top.nkbe.npatch.ui.page.SelectAppsScreen
 import top.nkbe.npatch.ui.page.WelcomeScreen
+import top.nkbe.npatch.config.DEFAULT_CARD_BACKGROUND_ALPHA_PERCENT
 import top.nkbe.npatch.config.DEFAULT_CUSTOM_COLOR
 import top.nkbe.npatch.ui.theme.LSPTheme
 import top.nkbe.npatch.ui.util.LocalBackgroundImagePath
+import top.nkbe.npatch.ui.util.LocalCardBackgroundAlpha
 import top.nkbe.npatch.ui.util.LocalFloatingGlassBottomBar
 import top.nkbe.npatch.ui.util.LocalFloatingGlassBottomBarBlur
 import top.nkbe.npatch.ui.util.LocalSnackbarHost
@@ -91,6 +93,7 @@ class MainActivity : ComponentActivity() {
                     themeMode = ThemeMode.SYSTEM,
                     useFloatingGlassBottomBar = false,
                     useFloatingGlassBottomBarBlur = supportsFloatingGlassBottomBarBlur,
+                    cardBackgroundAlphaPercent = DEFAULT_CARD_BACKGROUND_ALPHA_PERCENT,
                 )
             )
             val isDark = when (themeState.themeMode) {
@@ -123,6 +126,7 @@ class MainActivity : ComponentActivity() {
             ) {
                 CompositionLocalProvider(
                     LocalBackgroundImagePath provides themeState.backgroundImageUri,
+                    LocalCardBackgroundAlpha provides (themeState.cardBackgroundAlphaPercent / 100f),
                     LocalFloatingGlassBottomBar provides themeState.useFloatingGlassBottomBar,
                     LocalFloatingGlassBottomBarBlur provides (
                         themeState.useFloatingGlassBottomBarBlur && supportsFloatingGlassBottomBarBlur

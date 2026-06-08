@@ -89,4 +89,6 @@
     <string name="patch_inject_dex_desc">W przypadku aplikacji z odosobnionymi usługami, takimi jak renderowanie silników przeglądarek, włącz tę opcję, aby zapewnić ich prawidłowe działanie.</string>
     <string name="patch_output_log_to_media">Wyjście logu do katalogu Media</string>
     <string name="patch_output_log_to_media_desc">Wyjście logów Xposed i logów startu framework do katalogu Media.</string>
+    <string name="settings_card_background_alpha">Nieprzezroczystość tła kart</string>
+    <string name="settings_card_background_alpha_summary">Obowiązuje, gdy włączony jest niestandardowy obraz tła</string>
 </resources>

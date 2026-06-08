@@ -85,4 +85,6 @@
     <string name="settings_keystore_wrong_alias">ভুল উপনাম নাম</string>
     <string name="settings_keystore_wrong_alias_password">ভুল ওরফে পাসওয়ার্ড</string>
     <string name="settings_detail_patch_logs">বিস্তারিত প্যাচ লগ</string>
+    <string name="settings_card_background_alpha">কার্ডের পটভূমির অস্বচ্ছতা</string>
+    <string name="settings_card_background_alpha_summary">কাস্টম পটভূমি ছবি চালু থাকলে প্রযোজ্য</string>
 </resources>

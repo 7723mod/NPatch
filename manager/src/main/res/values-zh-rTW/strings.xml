@@ -194,6 +194,8 @@
     <string name="settings_floating_glass_bottom_bar_blur">液態玻璃底欄</string>
     <string name="settings_floating_glass_bottom_bar_blur_summary">為懸浮底欄啟用模糊、鮮明、透鏡與高光效果</string>
     <string name="settings_custom_background_image">自定義背景圖片</string>
+    <string name="settings_card_background_alpha">卡片背景不透明度</string>
+    <string name="settings_card_background_alpha_summary">啟用自訂背景圖片時生效</string>
     <string name="settings_clear">清除</string>
     <string name="accessibility_clear">清除</string>
     <string name="accessibility_sort">排序</string>

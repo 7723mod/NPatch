@@ -86,4 +86,6 @@
     <string name="settings_detail_patch_logs">Detaliile jurnalelor de patch-uri</string>
     <string name="patch_inject_dex">Injectare loader dex</string>
     <string name="patch_inject_dex_desc">Pentru aplicațiile cu servicii izolate, cum ar fi motoarele de randare a browserelor, vă rugăm să porniți această opțiune pentru a vă asigura că acestea funcționează corect.</string>
+    <string name="settings_card_background_alpha">Opacitatea fundalului cardurilor</string>
+    <string name="settings_card_background_alpha_summary">Se aplică atunci când este activată o imagine de fundal personalizată</string>
 </resources>

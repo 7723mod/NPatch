@@ -89,4 +89,6 @@
     <string name="patch_inject_dex_desc">ブラウザのレンダリングエンジンなど、分離されたサービスを持つアプリケーションの場合は、このオプションをオンにして正常に動作するようにしてください。</string>
     <string name="patch_output_log_to_media">Mediaディレクトリにログを出力</string>
     <string name="patch_output_log_to_media_desc">Xposedログとフレームワーク起動ログをMediaディレクトリに出力します。</string>
+    <string name="settings_card_background_alpha">カード背景の不透明度</string>
+    <string name="settings_card_background_alpha_summary">カスタム背景画像が有効な場合に適用されます</string>
 </resources>

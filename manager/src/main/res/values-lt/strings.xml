@@ -128,4 +128,6 @@
         <item quantity="other">%d download</item>
     </plurals>
     <string name="download_asset">Scarica</string>
+    <string name="settings_card_background_alpha">Kortelių fono nepermatomumas</string>
+    <string name="settings_card_background_alpha_summary">Taikoma, kai įjungtas pasirinktinis fono paveikslėlis</string>
 </resources>

@@ -87,4 +87,6 @@
     <string name="settings_detail_patch_logs">تفاصيل سجلات التعديل</string>
     <string name="patch_inject_dex">حقن ديكس</string>
     <string name="patch_inject_dex_desc">بالنسبة للتطبيقات ذات الخدمات المعزولة، مثل محركات عرض المتصفحات، يرجى تشغيل هذا الخيار للتأكد من أنها تعمل بشكل صحيح.</string>
+    <string name="settings_card_background_alpha">عتامة خلفية البطاقة</string>
+    <string name="settings_card_background_alpha_summary">ينطبق عند تفعيل صورة خلفية مخصصة</string>
 </resources>

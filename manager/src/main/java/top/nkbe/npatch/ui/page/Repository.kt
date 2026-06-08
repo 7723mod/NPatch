@@ -84,7 +84,6 @@ import java.util.Date
 import java.util.Locale
 
 private val RepoHorizontalPadding = 12.dp
-private const val RepoBackgroundAlpha = 0.82f
 
 @Composable
 fun RepositoryScreen(
@@ -105,6 +104,9 @@ fun RepositoryScreen(
     val scrollBehavior = MiuixScrollBehavior()
     val dynamicTopPadding by remember {
         derivedStateOf { 12.dp * (1f - scrollBehavior.state.collapsedFraction) }
+    }
+    val topBarBlurVisible by remember {
+        derivedStateOf { scrollBehavior.state.collapsedFraction > 0.01f }
     }
 
     val hazeState = rememberHazeState()
@@ -132,7 +134,11 @@ fun RepositoryScreen(
     NPatchScaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            searchStatus.TopAppBarAnim(hazeState = hazeState, hazeStyle = hazeStyle) {
+            searchStatus.TopAppBarAnim(
+                blurVisible = topBarBlurVisible,
+                hazeState = hazeState,
+                hazeStyle = hazeStyle
+            ) {
                 NPatchTopAppBar(
                     title = stringResource(R.string.module_repo),
                     scrollBehavior = scrollBehavior,
@@ -323,8 +329,7 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
                 .padding(horizontal = RepoHorizontalPadding)
                 .padding(bottom = 12.dp),
             colors = backgroundAwareCardColors(
-                color = colorScheme.surfaceContainer,
-                backgroundAlpha = RepoBackgroundAlpha
+                color = colorScheme.surfaceContainer
             ),
             insideMargin = PaddingValues(16.dp),
             showIndication = true,

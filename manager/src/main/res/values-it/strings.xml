@@ -88,4 +88,6 @@
     <string name="patch_inject_dex_desc">Per applicazioni con servizi isolati, come i motori di rendering dei browser, attiva questa opzione per assicurarti che funzionino correttamente.</string>
     <string name="patch_output_log_to_media">Output log nella directory Media</string>
     <string name="patch_output_log_to_media_desc">Output dei log Xposed e dei log di avvio del framework nella directory Media.</string>
+    <string name="settings_card_background_alpha">Opacità dello sfondo delle schede</string>
+    <string name="settings_card_background_alpha_summary">Si applica quando è abilitata un\'immagine di sfondo personalizzata</string>
 </resources>

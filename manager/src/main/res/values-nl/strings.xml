@@ -88,4 +88,6 @@
     <string name="patch_inject_dex_desc">Voor toepassingen met geïsoleerde diensten, zoals de render motoren van browsers, schakel deze optie in om ervoor te zorgen dat ze goed werken.</string>
     <string name="patch_output_log_to_media">Log uitvoer naar Media-map</string>
     <string name="patch_output_log_to_media_desc">Voer de Xposed-logboeken en framework-opstartlogboeken uit naar de Media-map.</string>
+    <string name="settings_card_background_alpha">Ondoorzichtigheid van kaartachtergrond</string>
+    <string name="settings_card_background_alpha_summary">Van toepassing wanneer een aangepaste achtergrondafbeelding is ingeschakeld</string>
 </resources>

@@ -88,4 +88,6 @@
     <string name="patch_inject_dex_desc">Para aplicaciones con servicios aislados, como los motores de renderizado de navegadores, por favor active esta opción para asegurarse de que funcionan correctamente.</string>
     <string name="patch_output_log_to_media">Salida de registro al directorio Media</string>
     <string name="patch_output_log_to_media_desc">Salida de los registros Xposed y los registros de inicio del framework al directorio Media.</string>
+    <string name="settings_card_background_alpha">Opacidad del fondo de las tarjetas</string>
+    <string name="settings_card_background_alpha_summary">Se aplica cuando hay una imagen de fondo personalizada activada</string>
 </resources>

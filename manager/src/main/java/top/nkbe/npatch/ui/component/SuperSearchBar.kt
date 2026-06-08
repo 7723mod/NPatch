@@ -122,6 +122,7 @@ class SearchStatus(val label: String) {
     fun TopAppBarAnim(
         modifier: Modifier = Modifier,
         visible: Boolean = shouldCollapsed(),
+        blurVisible: Boolean = false,
         hazeState: HazeState? = null,
         hazeStyle: HazeBlurStyle? = null,
         content: @Composable () -> Unit
@@ -130,10 +131,24 @@ class SearchStatus(val label: String) {
             if (visible) 1f else 0f,
             animationSpec = tween(if (visible) 550 else 0, easing = FastOutSlowInEasing),
         )
-        Box(modifier = modifier) {
+        val hazeModifier = if (blurVisible && hazeState != null && hazeStyle != null) {
+            Modifier.hazeEffect(hazeState) {
+                blurEffect {
+                    style = hazeStyle
+                    blurRadius = 30.dp
+                    noiseFactor = 0f
+                }
+            }
+        } else {
+            Modifier
+        }
+        Box(
+            modifier = modifier
+                .alpha(topAppBarAlpha.value)
+                .then(hazeModifier)
+        ) {
             Box(
                 modifier = Modifier
-                    .alpha(topAppBarAlpha.value)
             ) { content() }
         }
     }

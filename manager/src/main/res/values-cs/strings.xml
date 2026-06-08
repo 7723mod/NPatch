@@ -86,4 +86,6 @@
     <string name="settings_detail_patch_logs">Podrobné protokoly oprav</string>
     <string name="patch_inject_dex">Injektovat dex zavaděče</string>
     <string name="patch_inject_dex_desc">Pro aplikace s izolovanými službami, jako jsou vykreslování prohlížečů, zapněte tuto možnost, abyste zajistili, že fungují správně.</string>
+    <string name="settings_card_background_alpha">Krytí pozadí karet</string>
+    <string name="settings_card_background_alpha_summary">Platí při zapnutém vlastním obrázku na pozadí</string>
 </resources>

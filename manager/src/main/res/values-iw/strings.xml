@@ -85,4 +85,6 @@
     <string name="settings_keystore_wrong_alias">שם כינוי שגוי</string>
     <string name="settings_keystore_wrong_alias_password">סיסמת כינוי שגויה</string>
     <string name="settings_detail_patch_logs">פירוט יומני תיקון</string>
+    <string name="settings_card_background_alpha">אטימות רקע הכרטיסים</string>
+    <string name="settings_card_background_alpha_summary">חל כאשר מופעלת תמונת רקע מותאמת אישית</string>
 </resources>

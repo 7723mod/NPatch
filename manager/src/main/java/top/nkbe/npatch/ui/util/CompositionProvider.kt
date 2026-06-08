@@ -20,6 +20,8 @@ val LocalSnackbarHost = compositionLocalOf<SnackbarHostState> {
 
 val LocalBackgroundImagePath = compositionLocalOf { "" }
 
+val LocalCardBackgroundAlpha = compositionLocalOf { BG_SURFACE_ALPHA }
+
 val LocalFloatingGlassBottomBar = compositionLocalOf { false }
 
 val LocalFloatingGlassBottomBarBlur = compositionLocalOf { true }
@@ -28,7 +30,7 @@ val LocalFloatingGlassBottomBarBlur = compositionLocalOf { true }
 fun backgroundAwareCardColors(
     color: Color = MiuixTheme.colorScheme.surfaceContainer,
     contentColor: Color = MiuixTheme.colorScheme.onSurfaceContainer,
-    backgroundAlpha: Float = BG_SURFACE_ALPHA,
+    backgroundAlpha: Float = LocalCardBackgroundAlpha.current,
 ): CardColors {
     val adjusted = if (LocalBackgroundImagePath.current.isNotEmpty()) {
         color.copy(alpha = backgroundAlpha)

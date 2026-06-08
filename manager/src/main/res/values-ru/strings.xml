@@ -89,4 +89,6 @@
     <string name="patch_inject_dex_desc">Для приложений с изолированными сервисами, такими как рендеринг браузеров, пожалуйста, включите эту опцию, чтобы убедиться, что они работают должным образом.</string>
     <string name="patch_output_log_to_media">Вывод журнала в каталог Media</string>
     <string name="patch_output_log_to_media_desc">Вывод журналов Xposed и журналов запуска фреймворка в каталог Media.</string>
+    <string name="settings_card_background_alpha">Непрозрачность фона карточек</string>
+    <string name="settings_card_background_alpha_summary">Применяется, когда включено пользовательское фоновое изображение</string>
 </resources>

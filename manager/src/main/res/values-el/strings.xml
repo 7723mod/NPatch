@@ -86,4 +86,6 @@
     <string name="settings_detail_patch_logs">Λεπτομερή αρχεία καταγραφής επιδιορθώσεων</string>
     <string name="patch_inject_dex">Έγχυση dex φορτωτή</string>
     <string name="patch_inject_dex_desc">Για εφαρμογές με απομονωμένες υπηρεσίες, όπως οι μηχανές αναπαραγωγής των προγραμμάτων περιήγησης, παρακαλούμε ενεργοποιήστε αυτήν την επιλογή για να βεβαιωθείτε ότι λειτουργούν σωστά.</string>
+    <string name="settings_card_background_alpha">Αδιαφάνεια φόντου καρτών</string>
+    <string name="settings_card_background_alpha_summary">Ισχύει όταν είναι ενεργή μια προσαρμοσμένη εικόνα φόντου</string>
 </resources>

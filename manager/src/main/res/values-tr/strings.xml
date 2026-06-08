@@ -88,4 +88,6 @@
     <string name="patch_inject_dex_desc">Tarayıcıların render motorları gibi izole hizmetlere sahip uygulamalar için, düzgün çalıştıklarından emin olmak amacıyla lütfen bu seçeneği açın.</string>
     <string name="patch_output_log_to_media">Media dizinine günlük çıktısı</string>
     <string name="patch_output_log_to_media_desc">Xposed günlüklerini ve framework başlangıç günlüklerini Media dizinine çıkarın.</string>
+    <string name="settings_card_background_alpha">Kart arka plan opaklığı</string>
+    <string name="settings_card_background_alpha_summary">Özel arka plan resmi etkinleştirildiğinde uygulanır</string>
 </resources>

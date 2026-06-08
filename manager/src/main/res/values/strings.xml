@@ -197,6 +197,8 @@
     <string name="settings_floating_glass_bottom_bar_blur">Liquid glass bottom bar</string>
     <string name="settings_floating_glass_bottom_bar_blur_summary">Enable blur, vibrancy, lens and highlight effects for the floating bottom bar</string>
     <string name="settings_custom_background_image">Custom Background Image</string>
+    <string name="settings_card_background_alpha">Card background opacity</string>
+    <string name="settings_card_background_alpha_summary">Applies when a custom background image is enabled</string>
     <string name="settings_clear">Clear</string>
     <string name="accessibility_clear">Clear</string>
     <string name="accessibility_sort">Sort</string>
