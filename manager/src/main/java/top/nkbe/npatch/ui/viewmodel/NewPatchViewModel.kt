@@ -46,6 +46,7 @@ class NewPatchViewModel : ViewModel() {
     var newPackageName by mutableStateOf("")
     var debuggable by mutableStateOf(false)
     var overrideVersionCode by mutableStateOf(false)
+    var overrideVersionCodeValue by mutableStateOf("1")
     var sigBypassLevel by mutableStateOf(2)
     var injectDex by mutableStateOf(false)
     var injectProvider by mutableStateOf(false)
@@ -97,6 +98,7 @@ class NewPatchViewModel : ViewModel() {
         newPackageName = ""
         debuggable = false
         overrideVersionCode = false
+        overrideVersionCodeValue = "1"
         sigBypassLevel = 2
         injectDex = false
         injectProvider = false
@@ -131,9 +133,11 @@ class NewPatchViewModel : ViewModel() {
         if (useManager) embeddedModules = emptyList()
         val patchSigBypassLevel = if (useManager) sigBypassLevel else sigBypassLevel.coerceAtMost(Constants.SIGBYPASS_HIGH)
         val patchHideLibs = hideLibs && patchSigBypassLevel > Constants.SIGBYPASS_NONE
+        val patchVersionCode = overrideVersionCodeValue.toIntOrNull()?.takeIf { it > 0 } ?: 1
         sigBypassLevel = patchSigBypassLevel
         hideLibs = patchHideLibs
-        val config = PatchConfig(useManager, debuggable, overrideVersionCode, patchSigBypassLevel, null, null, injectProvider, outputLog, newPackageName, useMicroG, patchHideLibs)
+        overrideVersionCodeValue = patchVersionCode.toString()
+        val config = PatchConfig(useManager, debuggable, overrideVersionCode, patchVersionCode, patchSigBypassLevel, null, null, injectProvider, outputLog, newPackageName, useMicroG, patchHideLibs)
         patchOptions = Patcher.Options(
             newPackageName = newPackageName,
             injectDex = injectDex,

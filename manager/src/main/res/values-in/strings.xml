@@ -60,7 +60,8 @@
     <string name="patch_sigbypasslv1">lv1: Bypass PM</string>
     <string name="patch_sigbypasslv2">lv2: Bypass PM + openat (libc)</string>
     <string name="patch_override_version_code">Ganti kode versi</string>
-    <string name="patch_override_version_code_desc">Ganti kode versi aplikasi yang ditambal ke 1\nIni memungkinkan penginstalan downgrade di masa mendatang, dan umumnya ini tidak akan memengaruhi kode versi yang sebenarnya dirasakan oleh aplikasi</string>
+    <string name="patch_override_version_code_desc">Ganti kode versi aplikasi yang ditambal dengan nilai kustom, default 1\nIni memungkinkan penginstalan downgrade dalam lebih banyak kasus, dan umumnya ini tidak akan memengaruhi kode versi yang sebenarnya dirasakan oleh aplikasi</string>
+    <string name="patch_custom_version_code">Kode versi kustom</string>
     <string name="patch_start">Mulai Patch</string>
     <string name="patch_return">Kembali</string>
     <string name="patch_uninstall_text">Dikarenakan adanya perbedaan tanda tangan, Anda perlu menghapus aplikasi asli sebelum menginstal aplikasi yang telah di-patch.\nPastikan Anda telah mencadangkan data personal.</string>

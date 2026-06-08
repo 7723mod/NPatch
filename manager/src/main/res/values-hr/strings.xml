@@ -60,7 +60,8 @@
     <string name="patch_sigbypasslv1">lv1: Zaobići PM</string>
     <string name="patch_sigbypasslv2">lv2: Zaobići PM + openat (libc)</string>
     <string name="patch_override_version_code">Nadjačaj kod verzije</string>
-    <string name="patch_override_version_code_desc">Nadjačajte kod verzije zakrpane aplikacije na 1\nTo omogućuje instalaciju na stariju verziju u budućnosti i općenito to neće utjecati na kod verzije koji aplikacija stvarno percipira</string>
+    <string name="patch_override_version_code_desc">Nadjačajte kod verzije zakrpane aplikacije prilagođenom vrijednošću, zadano 1\nTo omogućuje instalaciju na stariju verziju u više slučajeva i općenito to neće utjecati na kod verzije koji aplikacija stvarno percipira</string>
+    <string name="patch_custom_version_code">Prilagođeni kod verzije</string>
     <string name="patch_start">Pokreni zakrpu</string>
     <string name="patch_return">Povratak</string>
     <string name="patch_uninstall_text">Zbog različitih potpisa morate deinstalirati izvornu aplikaciju prije instaliranja zakrpane.\nProvjerite jeste li sigurnosno kopirali osobne podatke.</string>

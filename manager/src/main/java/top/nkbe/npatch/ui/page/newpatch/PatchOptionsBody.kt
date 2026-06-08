@@ -12,6 +12,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -197,6 +199,17 @@ fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
                     checked = viewModel.overrideVersionCode,
                     onCheckedChange = { viewModel.overrideVersionCode = it }
                 )
+                if (viewModel.overrideVersionCode) {
+                    SettingsEditor(
+                        Modifier.padding(horizontal = 12.dp),
+                        stringResource(R.string.patch_custom_version_code),
+                        viewModel.overrideVersionCodeValue,
+                        onValueChange = { value ->
+                            viewModel.overrideVersionCodeValue = value.filter { it in '0'..'9' }
+                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                }
                 SwitchPreference(
                     title = stringResource(R.string.patch_inject_dex),
                     summary = stringResource(R.string.patch_inject_dex_desc),

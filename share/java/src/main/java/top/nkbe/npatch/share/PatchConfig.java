@@ -7,6 +7,7 @@ public class PatchConfig {
     public final boolean overrideVersionCode;
     public final boolean injectProvider;
     public final boolean outputLog;
+    public final int overrideVersionCodeValue;
     public final int sigBypassLevel;
     public final String originalSignature;
     public final String appComponentFactory;
@@ -20,6 +21,7 @@ public class PatchConfig {
             boolean useManager,
             boolean debuggable,
             boolean overrideVersionCode,
+            int overrideVersionCodeValue,
             int sigBypassLevel,
             String originalSignature,
             String appComponentFactory,
@@ -32,6 +34,7 @@ public class PatchConfig {
         this.useManager = useManager;
         this.debuggable = debuggable;
         this.overrideVersionCode = overrideVersionCode;
+        this.overrideVersionCodeValue = overrideVersionCodeValue;
         this.sigBypassLevel = sigBypassLevel;
         this.originalSignature = originalSignature;
         this.appComponentFactory = appComponentFactory;

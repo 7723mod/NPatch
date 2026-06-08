@@ -60,7 +60,8 @@
     <string name="patch_sigbypasslv1">lv1: Pasar PM</string>
     <string name="patch_sigbypasslv2">lv2: Omitir PM + abrir en (libc)</string>
     <string name="patch_override_version_code">Anular código de versión</string>
-    <string name="patch_override_version_code_desc">Anular el código de versión de la app parcheada a 1\nEsto permite la instalación de downgrade en el futuro, y generalmente esto no afectará al código de versión realmente percibido por la aplicación</string>
+    <string name="patch_override_version_code_desc">Anular el código de versión de la app parcheada con un valor personalizado, predeterminado 1\nEsto permite la instalación de downgrade en más casos, y generalmente esto no afectará al código de versión realmente percibido por la aplicación</string>
+    <string name="patch_custom_version_code">Código de versión personalizado</string>
     <string name="patch_start">Parche de inicio</string>
     <string name="patch_return">Regreso</string>
     <string name="patch_uninstall_text">Debido a las diferentes firmas, debe desinstalar la aplicación original antes de instalar la parcheada.\nAsegúrese de haber realizado una copia de seguridad de los datos personales.</string>

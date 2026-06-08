@@ -60,7 +60,8 @@
     <string name="patch_sigbypasslv1">lv1: Παράκαμψη PM</string>
     <string name="patch_sigbypasslv2">lv2: Παράκαμψη PM + openat (libc)</string>
     <string name="patch_override_version_code">Παράκαμψη κωδικού έκδοσης</string>
-    <string name="patch_override_version_code_desc">Αντικαταστήστε τον κωδικό έκδοσης της επιδιορθωμένης εφαρμογής σε 1\nΑυτό επιτρέπει την εγκατάσταση υποβάθμισης στο μέλλον και γενικά αυτό δεν θα επηρεάσει τον κωδικό έκδοσης που αντιλαμβάνεται πραγματικά η εφαρμογή.</string>
+    <string name="patch_override_version_code_desc">Αντικαταστήστε τον κωδικό έκδοσης της επιδιορθωμένης εφαρμογής με προσαρμοσμένη τιμή, προεπιλογή 1\nΑυτό επιτρέπει την εγκατάσταση υποβάθμισης σε περισσότερες περιπτώσεις και γενικά δεν θα επηρεάσει τον κωδικό έκδοσης που αντιλαμβάνεται πραγματικά η εφαρμογή.</string>
+    <string name="patch_custom_version_code">Προσαρμοσμένος κωδικός έκδοσης</string>
     <string name="patch_start">Ξεκινήστε το Patch</string>
     <string name="patch_return">ΕΠΙΣΤΡΟΦΗ</string>
     <string name="patch_uninstall_text">Λόγω διαφορετικών υπογραφών, πρέπει να απεγκαταστήσετε την αρχική εφαρμογή πριν εγκαταστήσετε την επιδιορθωμένη.\nΒεβαιωθείτε ότι έχετε δημιουργήσει αντίγραφα ασφαλείας προσωπικών δεδομένων.</string>

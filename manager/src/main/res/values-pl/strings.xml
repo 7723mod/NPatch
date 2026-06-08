@@ -61,7 +61,8 @@
     <string name="patch_sigbypasslv1">lv1: Pomiń PM</string>
     <string name="patch_sigbypasslv2">lv2: Pomiń PM + openat (libc)</string>
     <string name="patch_override_version_code">Zastąp kod wersji</string>
-    <string name="patch_override_version_code_desc">Zastąp kod wersji załatanej aplikacji na 1\nUmożliwi to instalację w przyszłości, a generalnie nie będzie miało wpływu na kod wersji faktycznie odbierany przez aplikację</string>
+    <string name="patch_override_version_code_desc">Zastąp kod wersji załatanej aplikacji niestandardową wartością, domyślnie 1\nUmożliwi to instalację starszej wersji w większej liczbie przypadków, a generalnie nie będzie miało wpływu na kod wersji faktycznie odbierany przez aplikację</string>
+    <string name="patch_custom_version_code">Niestandardowy kod wersji</string>
     <string name="patch_start">Rozpocznij łatkę</string>
     <string name="patch_return">Powrót</string>
     <string name="patch_uninstall_text">Ze względu na różne sygnatury musisz odinstalować oryginalną aplikację przed zainstalowaniem poprawionej.\nUpewnij się, że wykonałeś kopię zapasową danych osobowych.</string>

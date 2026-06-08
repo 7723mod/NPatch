@@ -61,7 +61,8 @@
     <string name="patch_sigbypasslv1">lv1: PMをバイパス</string>
     <string name="patch_sigbypasslv2">lv2: PMをバイパス + openat (libc)</string>
     <string name="patch_override_version_code">バージョンコードを上書き</string>
-    <string name="patch_override_version_code_desc">パッチを適用するアプリのバージョンコードを1に上書きします。\nこれを行う事で将来的にダウングレードのインストールが可能になります。アプリが通常時に認識するバージョンコードには影響は与えません。</string>
+    <string name="patch_override_version_code_desc">パッチを適用するアプリのバージョンコードをカスタム値に上書きします。既定値は1です。\nこれにより、より多くの場合でダウングレードインストールが可能になります。アプリが通常時に認識するバージョンコードには影響は与えません。</string>
+    <string name="patch_custom_version_code">カスタムバージョンコード</string>
     <string name="patch_start">パッチを開始</string>
     <string name="patch_return">戻る</string>
     <string name="patch_uninstall_text">署名が異なるため、パッチを適用したアプリをインストールする前に、元のアプリをアンインストールする必要があります。\nデータは必要に応じてバックアップしてください。</string>

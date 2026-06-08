@@ -61,7 +61,8 @@
     <string name="patch_sigbypasslv1">lv1: Обійти PM</string>
     <string name="patch_sigbypasslv2">lv2: обійти PM + openat (libc)</string>
     <string name="patch_override_version_code">Замінити код версії</string>
-    <string name="patch_override_version_code_desc">Замінити код версії виправленого додатка на 1\nЦе дозволить встановити попередню версію в майбутньому, і, як правило, це не вплине на код версії, який фактично сприймається програмою</string>
+    <string name="patch_override_version_code_desc">Замінити код версії виправленого додатка власним значенням, за замовчуванням 1\nЦе дозволить встановити попередню версію в більшій кількості випадків і, як правило, не вплине на код версії, який фактично сприймається програмою</string>
+    <string name="patch_custom_version_code">Власний код версії</string>
     <string name="patch_start">Запустити патч</string>
     <string name="patch_return">Повернення</string>
     <string name="patch_uninstall_text">Через різні сигнатури вам потрібно видалити оригінальну програму, перш ніж встановлювати виправлену.\nПереконайтеся, що ви створили резервну копію особистих даних.</string>

@@ -61,7 +61,8 @@
     <string name="patch_sigbypasslv1">سطح ۱ : دور زدن PM</string>
     <string name="patch_sigbypasslv2">سطح ۲ : دور زدن PM + openat (libc)</string>
     <string name="patch_override_version_code">لغو کد نسخه</string>
-    <string name="patch_override_version_code_desc">کد نسخه برنامه پچ شده را به ۱ تغییر می دهد این کار امکان بازگردانی نسخه قبلی را فراهم می کند به طور کلی این کار روی کد نسخه ای که توسط برنامه درک می شود تاثیر نمی گذارد</string>
+    <string name="patch_override_version_code_desc">کد نسخه برنامه پچ شده را با یک مقدار سفارشی تغییر می‌دهد، مقدار پیش‌فرض ۱ است\nاین کار امکان بازگردانی نسخه قبلی را در موارد بیشتری فراهم می‌کند و به طور کلی روی کد نسخه‌ای که توسط برنامه درک می‌شود تاثیر نمی‌گذارد</string>
+    <string name="patch_custom_version_code">کد نسخه سفارشی</string>
     <string name="patch_start">شروع پچ</string>
     <string name="patch_return">بازیابی</string>
     <string name="patch_uninstall_text">به دلیل انجام امضاهای مختلف باید قبل از نصب برنامه پچ شده برنامه اصلی را حذف نصب کنید لطفا قبل از انجام این کار از اطلاعات خود پشتیبان گیری کنید</string>

@@ -60,7 +60,8 @@
     <string name="patch_sigbypasslv1">lv1: Ohita PM</string>
     <string name="patch_sigbypasslv2">lv2: Ohita PM + openat (libc)</string>
     <string name="patch_override_version_code">Ohita versiokoodi</string>
-    <string name="patch_override_version_code_desc">Korjatun sovelluksen versiokoodi korvataan arvolla 1\nTämä mahdollistaa downgrade-asennuksen tulevaisuudessa, eikä tämä yleensä vaikuta sovelluksen havaitsemaan versiokoodiin.</string>
+    <string name="patch_override_version_code_desc">Korjatun sovelluksen versiokoodi korvataan mukautetulla arvolla, oletus 1\nTämä mahdollistaa downgrade-asennuksen useammissa tapauksissa, eikä tämä yleensä vaikuta sovelluksen havaitsemaan versiokoodiin.</string>
+    <string name="patch_custom_version_code">Mukautettu versiokoodi</string>
     <string name="patch_start">Aloita korjaustiedosto</string>
     <string name="patch_return">Palata</string>
     <string name="patch_uninstall_text">Erilaisten allekirjoitusten vuoksi sinun on poistettava alkuperäinen sovellus ennen korjatun sovelluksen asentamista.\nVarmista, että olet varmuuskopioinut henkilökohtaiset tiedot.</string>

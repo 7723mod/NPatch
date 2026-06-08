@@ -60,7 +60,8 @@
     <string name="patch_sigbypasslv1">lv1: Obejít PM</string>
     <string name="patch_sigbypasslv2">lv2: Bypass PM + openat (libc)</string>
     <string name="patch_override_version_code">Přepsat kód verze</string>
-    <string name="patch_override_version_code_desc">Přepsat kód verze opravené aplikace na 1\nTo umožní v budoucnu downgradovat (snížit verzi) a obecně to neovlivní kód verze, který aplikace skutečně vnímá</string>
+    <string name="patch_override_version_code_desc">Přepsat kód verze opravené aplikace vlastní hodnotou, výchozí je 1\nTo umožní downgradovat (snížit verzi) ve více případech a obecně to neovlivní kód verze, který aplikace skutečně vnímá</string>
+    <string name="patch_custom_version_code">Vlastní kód verze</string>
     <string name="patch_start">Spusťte opravu</string>
     <string name="patch_return">Vrátit se</string>
     <string name="patch_uninstall_text">Kvůli různým podpisům musíte před instalací opravené odinstalovat původní aplikaci.\nUjistěte se, že máte zálohovaná osobní data.</string>

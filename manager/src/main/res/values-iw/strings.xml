@@ -61,7 +61,8 @@
     <string name="patch_sigbypasslv1">lv1: עוקף את PM</string>
     <string name="patch_sigbypasslv2">lv2: עוקף PM + openat (libc)</string>
     <string name="patch_override_version_code">עוקף את קוד הגרסה</string>
-    <string name="patch_override_version_code_desc">עוקף את קוד הגרסה של האפליקציה המתוקנת ל-1\nזה מאפשר שדרוג לאחור של התקנה בעתיד, ובדרך כלל זה לא ישפיע על קוד הגרסה הנתפס בפועל על ידי האפליקציה</string>
+    <string name="patch_override_version_code_desc">עוקף את קוד הגרסה של האפליקציה המתוקנת בערך מותאם אישית, ברירת המחדל היא 1\nזה מאפשר שדרוג לאחור של התקנה ביותר מקרים, ובדרך כלל זה לא ישפיע על קוד הגרסה הנתפס בפועל על ידי האפליקציה</string>
+    <string name="patch_custom_version_code">קוד גרסה מותאם אישית</string>
     <string name="patch_start">התחל תיקון</string>
     <string name="patch_return">לַחֲזוֹר</string>
     <string name="patch_uninstall_text">עקב חתימות שונות, עליך להסיר את ההתקנה של האפליקציה המקורית לפני התקנת האפליקציה המתוקנת.\nודא שגיבית את הנתונים האישיים.</string>

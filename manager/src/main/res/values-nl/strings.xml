@@ -60,7 +60,8 @@
     <string name="patch_sigbypasslv1">lv1: PM overslaan</string>
     <string name="patch_sigbypasslv2">lv2: Bypass PM + openat (libc)</string>
     <string name="patch_override_version_code">Versiecode overschrijven</string>
-    <string name="patch_override_version_code_desc">Overschrijf de versiecode van de gepatchte app naar 1\nDit maakt downgrade installatie in de toekomst mogelijk, en over het algemeen zal dit geen invloed hebben op de versiecode die daadwerkelijk wordt waargenomen door de applicatie</string>
+    <string name="patch_override_version_code_desc">Overschrijf de versiecode van de gepatchte app met een aangepaste waarde, standaard 1\nDit maakt downgrade installatie in meer gevallen mogelijk, en over het algemeen zal dit geen invloed hebben op de versiecode die daadwerkelijk wordt waargenomen door de applicatie</string>
+    <string name="patch_custom_version_code">Aangepaste versiecode</string>
     <string name="patch_start">Patch starten</string>
     <string name="patch_return">Opbrengst</string>
     <string name="patch_uninstall_text">Vanwege verschillende handtekeningen moet u de originele app verwijderen voordat u de gepatchte app installeert.\nZorg ervoor dat u een back-up hebt gemaakt van persoonlijke gegevens.</string>

@@ -60,7 +60,8 @@
     <string name="patch_sigbypasslv1">lv1: บายพาส PM</string>
     <string name="patch_sigbypasslv2">lv2: บายพาส PM + openat (libc)</string>
     <string name="patch_override_version_code">แทนที่รหัสเวอร์ชัน</string>
-    <string name="patch_override_version_code_desc">แทนที่รหัสเวอร์ชันของแอปที่แพตช์เป็น\nซึ่งช่วยให้สามารถติดตั้งดาวน์เกรดได้ในอนาคต และโดยทั่วไปแล้วสิ่งนี้จะไม่ส่งผลต่อโค้ดเวอร์ชันที่แอปพลิเคชันรับรู้จริงๆ</string>
+    <string name="patch_override_version_code_desc">แทนที่รหัสเวอร์ชันของแอปที่แพตช์ด้วยค่าที่กำหนดเอง ค่าเริ่มต้นคือ 1\nซึ่งช่วยให้สามารถติดตั้งดาวน์เกรดได้ในกรณีมากขึ้น และโดยทั่วไปแล้วสิ่งนี้จะไม่ส่งผลต่อโค้ดเวอร์ชันที่แอปพลิเคชันรับรู้จริงๆ</string>
+    <string name="patch_custom_version_code">รหัสเวอร์ชันกำหนดเอง</string>
     <string name="patch_start">เริ่มโปรแกรมแก้ไข</string>
     <string name="patch_return">กลับ</string>
     <string name="patch_uninstall_text">เนื่องจากลายเซ็นต่างกัน คุณต้องถอนการติดตั้งแอปเดิมก่อนที่จะติดตั้งแอปที่แพตช์\nตรวจสอบให้แน่ใจว่าคุณได้สำรองข้อมูลส่วนบุคคลแล้ว</string>

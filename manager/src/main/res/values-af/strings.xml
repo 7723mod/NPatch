@@ -60,7 +60,8 @@
     <string name="patch_sigbypasslv1">lv1: Omseil PM</string>
     <string name="patch_sigbypasslv2">lv2: Omseil PM + openat (libc)</string>
     <string name="patch_override_version_code">Ignoreer weergawekode</string>
-    <string name="patch_override_version_code_desc">Ignoreer die gelapte toepassing se weergawekode na 1\nDit laat afgradering installasie in die toekoms toe, en oor die algemeen sal dit nie die weergawekode beïnvloed wat werklik deur die toepassing waargeneem word nie</string>
+    <string name="patch_override_version_code_desc">Ignoreer die gelapte toepassing se weergawekode met \'n pasgemaakte waarde, verstek 1\nDit laat afgradering installasie in meer gevalle toe, en oor die algemeen sal dit nie die weergawekode beïnvloed wat werklik deur die toepassing waargeneem word nie</string>
+    <string name="patch_custom_version_code">Pasgemaakte weergawekode</string>
     <string name="patch_start">Begin Patch</string>
     <string name="patch_return">Keer terug</string>
     <string name="patch_uninstall_text">As gevolg van verskillende handtekeninge, moet u die oorspronklike toepassing deïnstalleer voordat u die gelapte een installeer.\nMaak seker dat jy persoonlike data gerugsteun het.</string>

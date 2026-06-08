@@ -60,7 +60,8 @@
     <string name="patch_sigbypasslv1">lv1: apeiti PM</string>
     <string name="patch_sigbypasslv2">lv2: apeiti PM + openat (libc)</string>
     <string name="patch_override_version_code">Nepaisyti versijos kodo</string>
-    <string name="patch_override_version_code_desc">Pakeiskite pataisytos programos versijos kodą į 1\nTai leidžia ateityje sumažinti įdiegimo lygį, ir paprastai tai neturės įtakos programos faktiškai suvokiamam versijos kodui.</string>
+    <string name="patch_override_version_code_desc">Pakeiskite pataisytos programos versijos kodą pasirinktine reikšme, numatytoji 1\nTai leidžia sumažinti įdiegimo lygį daugiau atvejų, ir paprastai tai neturės įtakos programos faktiškai suvokiamam versijos kodui.</string>
+    <string name="patch_custom_version_code">Pasirinktinis versijos kodas</string>
     <string name="patch_start">Pradėti pataisą</string>
     <string name="patch_return">Grįžti</string>
     <string name="patch_uninstall_text">Dėl skirtingų parašų prieš įdiegdami pataisytą programą turite pašalinti originalią programą.\nĮsitikinkite, kad turite atsargines asmens duomenų kopijas.</string>

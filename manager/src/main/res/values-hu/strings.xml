@@ -60,7 +60,8 @@
     <string name="patch_sigbypasslv1">lv1: Bypass PM</string>
     <string name="patch_sigbypasslv2">lv2: PM megkerülése + openat (libc)</string>
     <string name="patch_override_version_code">Verziókód felülírása</string>
-    <string name="patch_override_version_code_desc">A javított alkalmazás verziószámának felülírása 1-re\nEz lehetővé teszi a jövőbeni downgrade telepítést, és általában ez nem befolyásolja az alkalmazás által ténylegesen érzékelt verziószámot.</string>
+    <string name="patch_override_version_code_desc">A javított alkalmazás verziószámának felülírása egyéni értékkel, alapértelmezés szerint 1\nEz több esetben lehetővé teszi a downgrade telepítést, és általában nem befolyásolja az alkalmazás által ténylegesen érzékelt verziószámot.</string>
+    <string name="patch_custom_version_code">Egyéni verziókód</string>
     <string name="patch_start">Indítsa el a Patch-et</string>
     <string name="patch_return">Visszatérés</string>
     <string name="patch_uninstall_text">Az eltérő aláírások miatt a javított alkalmazás telepítése előtt el kell távolítania az eredeti alkalmazást.\nGyőződjön meg arról, hogy biztonsági másolatot készített a személyes adatokról.</string>

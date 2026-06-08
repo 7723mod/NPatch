@@ -61,7 +61,8 @@
     <string name="patch_sigbypasslv1">مستوى 1: تجاوز PM</string>
     <string name="patch_sigbypasslv2">مستوى 2: تجاوز PM + openat (libc)</string>
     <string name="patch_override_version_code">تجاوز رمز الإصدار</string>
-    <string name="patch_override_version_code_desc">تجاوز رمز إصدار التطبيق المعدل إلى 1\nوهذا يسمح بالرجوع إلى إصدار أقدم في المستقبل، وعمومًا لن يؤثر هذا على رمز الإصدار الذي يتصوره التطبيق بالفعل</string>
+    <string name="patch_override_version_code_desc">تجاوز رمز إصدار التطبيق المعدل بقيمة مخصصة، الافتراضي 1\nيسمح ذلك بالرجوع إلى إصدار أقدم في حالات أكثر، وعمومًا لن يؤثر هذا على رمز الإصدار الذي يتصوره التطبيق بالفعل</string>
+    <string name="patch_custom_version_code">رمز إصدار مخصص</string>
     <string name="patch_start">بدء التعديل</string>
     <string name="patch_return">رجوع</string>
     <string name="patch_uninstall_text">نظرًا لاختلاف التوقيعات، يلزمك إلغاء تثبيت التطبيق الأصلي قبل تثبيت التطبيق المعدل.\nتأكد من عمل نسخة احتياطية من البيانات الشخصية.</string>

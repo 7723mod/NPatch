@@ -60,7 +60,8 @@
     <string name="patch_sigbypasslv1">lv1: Ignorar PM</string>
     <string name="patch_sigbypasslv2">lv2: Ignorar PM + openat (libc)</string>
     <string name="patch_override_version_code">Substituir o código da versão</string>
-    <string name="patch_override_version_code_desc">Substitua o código de versão do aplicativo corrigido para 1\nIsso permite a instalação de downgrade no futuro, e geralmente isso não afetará o código de versão realmente percebido pela aplicação</string>
+    <string name="patch_override_version_code_desc">Substitua o código de versão do aplicativo corrigido por um valor personalizado, padrão 1\nIsso permite a instalação de downgrade em mais casos, e geralmente isso não afetará o código de versão realmente percebido pela aplicação</string>
+    <string name="patch_custom_version_code">Código de versão personalizado</string>
     <string name="patch_start">Iniciar patch</string>
     <string name="patch_return">Retornar</string>
     <string name="patch_uninstall_text">Devido a assinaturas diferentes, você precisa desinstalar o aplicativo original antes de instalar o corrigido.\nCertifique-se de ter feito backup dos dados pessoais.</string>

@@ -60,7 +60,8 @@
     <string name="patch_sigbypasslv1">lv1: PM\'yi atla</string>
     <string name="patch_sigbypasslv2">lv2: PM + openat\'ı atla (libc)</string>
     <string name="patch_override_version_code">Sürüm kodunu geçersiz kıl</string>
-    <string name="patch_override_version_code_desc">Yama uygulanmış uygulamanın sürüm kodunu 1\nolarak geçersiz kıl Bu, gelecekte sürüm düşürme kurulumuna izin verir ve genellikle bu, uygulama tarafından gerçekte algılanan sürüm kodunu etkilemez</string>
+    <string name="patch_override_version_code_desc">Yama uygulanmış uygulamanın sürüm kodunu özel bir değerle geçersiz kıl, varsayılan 1\nBu, daha fazla durumda sürüm düşürme kurulumuna izin verir ve genellikle uygulama tarafından gerçekte algılanan sürüm kodunu etkilemez</string>
+    <string name="patch_custom_version_code">Özel sürüm kodu</string>
     <string name="patch_start">Yama Başlat</string>
     <string name="patch_return">Dönüş</string>
     <string name="patch_uninstall_text">Farklı imzalar nedeniyle, yamalı uygulamayı yüklemeden önce orijinal uygulamayı kaldırmanız gerekir.\nKişisel verilerinizi yedeklediğinizden emin olun.</string>

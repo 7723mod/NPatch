@@ -60,7 +60,8 @@
     <string name="patch_sigbypasslv1">lv1: Bypass PM</string>
     <string name="patch_sigbypasslv2">lv2: Bypass PM + openat (libc)</string>
     <string name="patch_override_version_code">Sostituisci il codice versione</string>
-    <string name="patch_override_version_code_desc">Sostituisci il codice versione dell\'applicazione patchata con 1\nQuesto permette il downgrade dell\'installazione in futuro, e generalmente questo non influenzerà il codice versione effettivamente percepito dall\'applicazione</string>
+    <string name="patch_override_version_code_desc">Sostituisci il codice versione dell\'applicazione patchata con un valore personalizzato, predefinito 1\nQuesto permette il downgrade dell\'installazione in più casi, e generalmente questo non influenzerà il codice versione effettivamente percepito dall\'applicazione</string>
+    <string name="patch_custom_version_code">Codice versione personalizzato</string>
     <string name="patch_start">Avvia Patch</string>
     <string name="patch_return">Ritorna</string>
     <string name="patch_uninstall_text">A causa delle diverse firme, è necessario disinstallare l\'app originale prima di installare quella patchata.\nAssicurati di aver eseguito il backup dei dati personali.</string>

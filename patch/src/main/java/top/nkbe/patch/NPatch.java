@@ -124,6 +124,9 @@ public class NPatch {
     @Parameter(names = {"-r", "--allowdown"}, description = "Allow downgrade installation by overriding versionCode to 1 (In most cases, the app can still get the correct versionCode)")
     private boolean overrideVersionCode = false;
 
+    @Parameter(names = {"--versioncode"}, description = "Custom versionCode used when --allowdown is enabled. default 1")
+    private int overrideVersionCodeValue = 1;
+
     @Parameter(names = {"-v", "--verbose"}, description = "Verbose output")
     private boolean verbose = false;
 
@@ -333,7 +336,7 @@ public class NPatch {
             }
 
             // modify manifest
-            final var config = new PatchConfig(useManager, debuggableFlag, overrideVersionCode, sigbypassLevel, originalSignature, appComponentFactory, isInjectProvider, outputLog, newPackage, useMicroG, hideLibs && sigbypassLevel > Constants.SIGBYPASS_NONE);
+            final var config = new PatchConfig(useManager, debuggableFlag, overrideVersionCode, overrideVersionCodeValue, sigbypassLevel, originalSignature, appComponentFactory, isInjectProvider, outputLog, newPackage, useMicroG, hideLibs && sigbypassLevel > Constants.SIGBYPASS_NONE);
             final var configBytes = new Gson().toJson(config).getBytes(StandardCharsets.UTF_8);
             final var metadata = Base64.getEncoder().encodeToString(configBytes);
             try (var is = new ByteArrayInputStream(modifyManifestFile(manifestEntry.open(), metadata, minSdkVersion, pair.packageName, newPackage, originalSignature))) {
@@ -546,7 +549,7 @@ public class NPatch {
         String targetPackage = (newPackage != null && !newPackage.isEmpty()) ? newPackage : originPackage;
 
         if (overrideVersionCode) {
-            property.addManifestAttribute(new AttributeItem(NodeValue.Manifest.VERSION_CODE, 1));
+            property.addManifestAttribute(new AttributeItem(NodeValue.Manifest.VERSION_CODE, overrideVersionCodeValue));
         }
 
         if (minSdkVersion > 0)

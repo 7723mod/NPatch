@@ -104,7 +104,8 @@
     <string name="patch_sigbypasslv4">瞬移猫步 (Seccomp)</string>
     <string name="patch_sigbypasslv4_desc">限 ARM64 爬架！布下 seccomp 魔法阵并召唤神秘信任猫丝线。偷偷抄了隔壁 FunPatchApp 家的独门捕鼠绝技喵</string>
     <string name="patch_override_version_code">改写喵龄</string>
-    <string name="patch_override_version_code_desc">把喵龄改成 1。这样就算它“老了”也能强行塞回去，App通常察觉不到喵。</string>
+    <string name="patch_override_version_code_desc">把喵龄改成自定义值，默认 1。这样更多时候都能强行塞回去，App通常察觉不到喵。</string>
+    <string name="patch_custom_version_code">自定义喵龄</string>
     <string name="patch_new_package">改名卡喵</string>
     <string name="hint_patch_new_package">请输入这只猫的新包名喵</string>
     <string name="patch_inject_mt_provider">注入猫洞（MT Provider）</string>

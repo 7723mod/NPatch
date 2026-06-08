@@ -60,7 +60,8 @@
     <string name="patch_sigbypasslv1">lv1: PM umgehen</string>
     <string name="patch_sigbypasslv2">lv2: PM umgehen + openat (libc)</string>
     <string name="patch_override_version_code">Versionscode überschreiben</string>
-    <string name="patch_override_version_code_desc">Überschreiben Sie den Versionscode der gepatchten Anwendung auf 1\nDies ermöglicht eine Downgrade-Installation in der Zukunft und hat im Allgemeinen keinen Einfluss auf den Versionscode, der von der Anwendung tatsächlich wahrgenommen wird</string>
+    <string name="patch_override_version_code_desc">Überschreiben Sie den Versionscode der gepatchten Anwendung mit einem benutzerdefinierten Wert, standardmäßig 1\nDies ermöglicht eine Downgrade-Installation in mehr Fällen und hat im Allgemeinen keinen Einfluss auf den Versionscode, der von der Anwendung tatsächlich wahrgenommen wird</string>
+    <string name="patch_custom_version_code">Benutzerdefinierter Versionscode</string>
     <string name="patch_start">Patch starten</string>
     <string name="patch_return">Zurückkehren</string>
     <string name="patch_uninstall_text">Aufgrund unterschiedlicher Signaturen müssen Sie die Original-App deinstallieren, bevor Sie die gepatchte App installieren.\nStellen Sie sicher, dass Sie Ihre persönlichen Daten gesichert haben.</string>

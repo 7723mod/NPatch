@@ -60,7 +60,8 @@
     <string name="patch_sigbypasslv1">lv1: PM ümbersõit</string>
     <string name="patch_sigbypasslv2">lv2: PM + openat (libc) ümbersõit</string>
     <string name="patch_override_version_code">Alista versioonikood</string>
-    <string name="patch_override_version_code_desc">Paigutatud rakenduse versioonikoodi alistamine väärtusele 1\nSee võimaldab edaspidi installida madalamale versioonile ja üldiselt ei mõjuta see rakenduse poolt tegelikult tajutavat versioonikoodi</string>
+    <string name="patch_override_version_code_desc">Paigutatud rakenduse versioonikoodi alistamine kohandatud väärtusega, vaikimisi 1\nSee võimaldab madalamale versioonile installimist rohkematel juhtudel ja üldiselt ei mõjuta see rakenduse poolt tegelikult tajutavat versioonikoodi</string>
+    <string name="patch_custom_version_code">Kohandatud versioonikood</string>
     <string name="patch_start">Käivitage patch</string>
     <string name="patch_return">Tagasi</string>
     <string name="patch_uninstall_text">Erinevate allkirjade tõttu peate enne paigatud rakenduse installimist algse rakenduse desinstallima.\nVeenduge, et olete isikuandmed varundanud.</string>

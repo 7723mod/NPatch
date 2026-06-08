@@ -61,7 +61,8 @@
     <string name="patch_sigbypasslv1">lv1: PM বাইপাস করুন</string>
     <string name="patch_sigbypasslv2">lv2: বাইপাস PM + openat (libc)</string>
     <string name="patch_override_version_code">সংস্করণ কোড ওভাররাইড করুন</string>
-    <string name="patch_override_version_code_desc">প্যাচ করা অ্যাপের সংস্করণ কোডটিকে 1\nএ ওভাররাইড করুন এটি ভবিষ্যতে ইনস্টলেশন ডাউনগ্রেড করার অনুমতি দেয় এবং সাধারণত এটি অ্যাপ্লিকেশন দ্বারা অনুভূত সংস্করণ কোডকে প্রভাবিত করবে না</string>
+    <string name="patch_override_version_code_desc">প্যাচ করা অ্যাপের সংস্করণ কোডটিকে একটি কাস্টম মান দিয়ে ওভাররাইড করুন, ডিফল্ট 1\nএটি আরও ক্ষেত্রে ডাউনগ্রেড ইনস্টলেশনের অনুমতি দেয় এবং সাধারণত অ্যাপ্লিকেশন দ্বারা অনুভূত সংস্করণ কোডকে প্রভাবিত করবে না</string>
+    <string name="patch_custom_version_code">কাস্টম সংস্করণ কোড</string>
     <string name="patch_start">প্যাচ শুরু করুন</string>
     <string name="patch_return">প্রত্যাবর্তন</string>
     <string name="patch_uninstall_text">বিভিন্ন স্বাক্ষরের কারণে, প্যাচ করা একটি ইনস্টল করার আগে আপনাকে আসল অ্যাপটি আনইনস্টল করতে হবে।\nআপনি ব্যক্তিগত ডেটা ব্যাক আপ করেছেন তা নিশ্চিত করুন৷</string>

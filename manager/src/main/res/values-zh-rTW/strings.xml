@@ -104,7 +104,8 @@
     <string name="patch_sigbypasslv4">Seccomp</string>
     <string name="patch_sigbypasslv4_desc">在 ARM64 上啟用 seccomp v2 過濾與 trusted thread 檔案重定向，參考了 FunPatchApp 的實作方案</string>
     <string name="patch_override_version_code">覆蓋版本編號</string>
-    <string name="patch_override_version_code_desc">將打包應用程式的版本編號改成 1\n允許以後降級安裝，一般來說，這不會影響應用程式實際感知的版本編號。</string>
+    <string name="patch_override_version_code_desc">將打包應用程式的版本編號改成自訂值，預設為 1\n允許更多情境下的降級安裝，一般來說，這不會影響應用程式實際感知的版本編號。</string>
+    <string name="patch_custom_version_code">自訂版本編號</string>
     <string name="patch_new_package">修補新套件名</string>
     <string name="hint_patch_new_package">請輸入新的套件名</string>
     <string name="patch_inject_mt_provider">注入檔案选取器</string>

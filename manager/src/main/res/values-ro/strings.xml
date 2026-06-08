@@ -60,7 +60,8 @@
     <string name="patch_sigbypasslv1">lv1: Ocoli PM</string>
     <string name="patch_sigbypasslv2">lv2: Bypass PM + openat (libc)</string>
     <string name="patch_override_version_code">Ignorați codul versiunii</string>
-    <string name="patch_override_version_code_desc">Suprascrieți codul de versiune al aplicației corectate la 1\nAcest lucru permite o instalare retrogradată în viitor și, în general, acest lucru nu va afecta codul de versiune perceput efectiv de aplicație.</string>
+    <string name="patch_override_version_code_desc">Suprascrieți codul de versiune al aplicației corectate cu o valoare personalizată, implicit 1\nAcest lucru permite o instalare retrogradată în mai multe cazuri și, în general, acest lucru nu va afecta codul de versiune perceput efectiv de aplicație.</string>
+    <string name="patch_custom_version_code">Cod de versiune personalizat</string>
     <string name="patch_start">Începeți Patch-ul</string>
     <string name="patch_return">Întoarcere</string>
     <string name="patch_uninstall_text">Din cauza semnăturilor diferite, trebuie să dezinstalați aplicația originală înainte de a o instala pe cea corectată.\nAsigurați-vă că ați făcut o copie de rezervă a datelor personale.</string>

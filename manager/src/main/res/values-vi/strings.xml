@@ -60,7 +60,8 @@
     <string name="patch_sigbypasslv1">lv1: Bỏ qua PM</string>
     <string name="patch_sigbypasslv2">lv2: Bỏ qua PM + openat (libc)</string>
     <string name="patch_override_version_code">Ghi đè mã phiên bản</string>
-    <string name="patch_override_version_code_desc">Ghi đè mã phiên bản của ứng dụng đã vá thành 1\nĐiều này cho phép hạ cấp cài đặt trong tương lai và nói chung điều này sẽ không ảnh hưởng đến mã phiên bản mà ứng dụng thực sự nhận thấy</string>
+    <string name="patch_override_version_code_desc">Ghi đè mã phiên bản của ứng dụng đã vá bằng một giá trị tùy chỉnh, mặc định là 1\nĐiều này cho phép hạ cấp cài đặt trong nhiều trường hợp hơn và nói chung điều này sẽ không ảnh hưởng đến mã phiên bản mà ứng dụng thực sự nhận thấy</string>
+    <string name="patch_custom_version_code">Mã phiên bản tùy chỉnh</string>
     <string name="patch_start">Bắt đầu bản vá</string>
     <string name="patch_return">Trở về</string>
     <string name="patch_uninstall_text">Do các chữ ký khác nhau, bạn cần gỡ cài đặt ứng dụng gốc trước khi cài đặt bản vá.\nĐảm bảo rằng bạn đã sao lưu dữ liệu cá nhân.</string>

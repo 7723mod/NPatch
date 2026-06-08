@@ -65,7 +65,8 @@
     <string name="patch_sigbypasslv1">lv1: 绕过 PM</string>
     <string name="patch_sigbypasslv2">lv2: 绕过 PM + openat (libc)</string>
     <string name="patch_override_version_code">覆写版本号</string>
-    <string name="patch_override_version_code_desc">将修补的 App 版本号重写为 1\n这将允许后续降级安裝，并且通常来说这不会影响應用程式实际感知到的版本号</string>
+    <string name="patch_override_version_code_desc">將修補的 App 版本號重寫為自訂值，預設為 1\n這將允許更多場景下的降級安裝，並且通常來說這不會影響應用程式實際感知到的版本號</string>
+    <string name="patch_custom_version_code">自訂版本號</string>
     <string name="patch_start">开始修补</string>
     <string name="patch_return">返回</string>
     <string name="patch_uninstall_text">由于簽名不同，安裝修补的應用程式前需要先解除安裝原應用程式。\n确保您已备份好个人数据。</string>

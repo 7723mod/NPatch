@@ -61,7 +61,8 @@
     <string name="patch_sigbypasslv1">lv1: PM බයිපාස් කරන්න</string>
     <string name="patch_sigbypasslv2">lv2: බයිපාස් PM + openat (libc)</string>
     <string name="patch_override_version_code">අනුවාද කේතය අභිබවා යන්න</string>
-    <string name="patch_override_version_code_desc">පැච් කරන ලද යෙදුමේ අනුවාද කේතය 1\nවෙත ප්‍රතික්‍ෂේප කරන්න මෙය අනාගතයේදී ස්ථාපනය පහත හෙලීමට ඉඩ සලසයි, සාමාන්‍යයෙන් මෙය යෙදුමට සත්‍ය වශයෙන්ම පෙනෙන අනුවාද කේතයට බලපාන්නේ නැත.</string>
+    <string name="patch_override_version_code_desc">පැච් කරන ලද යෙදුමේ අනුවාද කේතය අභිරුචි අගයකින් ප්‍රතික්‍ෂේප කරන්න, පෙරනිමිය 1\nමෙය තවත් අවස්ථාවලදී පහළ අනුවාද ස්ථාපනයට ඉඩ සලසයි, සාමාන්‍යයෙන් මෙය යෙදුමට සත්‍ය වශයෙන්ම පෙනෙන අනුවාද කේතයට බලපාන්නේ නැත.</string>
+    <string name="patch_custom_version_code">අභිරුචි අනුවාද කේතය</string>
     <string name="patch_start">පැච් ආරම්භ කරන්න</string>
     <string name="patch_return">ආපසු</string>
     <string name="patch_uninstall_text">විවිධ අත්සන් හේතුවෙන්, පැච් කළ එක ස්ථාපනය කිරීමට පෙර ඔබට මුල් යෙදුම අස්ථාපනය කිරීමට අවශ්‍ය වේ.\nඔබ පුද්ගලික දත්ත උපස්ථ කර ඇති බවට වග බලා ගන්න.</string>

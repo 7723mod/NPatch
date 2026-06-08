@@ -61,7 +61,8 @@
     <string name="patch_sigbypasslv1">ур. 1: Обход PM</string>
     <string name="patch_sigbypasslv2">ур. 2: Обход PM + openat (libc)</string>
     <string name="patch_override_version_code">Переопределение кода версии</string>
-    <string name="patch_override_version_code_desc">Переопределить код версии пропатченного приложения на 1.\nЭто позволит понижать версию установки и совершенно не повлияет на код версии, фактически воспринимаемый приложением.</string>
+    <string name="patch_override_version_code_desc">Переопределить код версии пропатченного приложения пользовательским значением, по умолчанию 1.\nЭто позволит понижать версию установки в большем числе случаев и обычно не повлияет на код версии, фактически воспринимаемый приложением.</string>
+    <string name="patch_custom_version_code">Пользовательский код версии</string>
     <string name="patch_start">Запустить патч</string>
     <string name="patch_return">Вернуться</string>
     <string name="patch_uninstall_text">Ввиду разницы в подписях вам необходимо удалить оригинальное приложение перед установкой пропатченного.\nУбедитесь, что у вас есть резервная копия личных данных.</string>

@@ -60,7 +60,8 @@
     <string name="patch_sigbypasslv1">lv1: Åtsidosätt pakethanteraren</string>
     <string name="patch_sigbypasslv2">lv2: Åtsidosätt pakethanteraren + openat (libc)</string>
     <string name="patch_override_version_code">Åsidosätt versionskoden</string>
-    <string name="patch_override_version_code_desc">Åsidosätt den patchade appens versionskod till 1.\nDetta tillåter nedgraderad installation i framtiden och generellt påverkar detta inte den versionskod som faktiskt uppfattas av applikationen</string>
+    <string name="patch_override_version_code_desc">Åsidosätt den patchade appens versionskod med ett anpassat värde, standard 1.\nDetta tillåter nedgraderad installation i fler fall och generellt påverkar detta inte den versionskod som faktiskt uppfattas av applikationen</string>
+    <string name="patch_custom_version_code">Anpassad versionskod</string>
     <string name="patch_start">Påbörja patchning</string>
     <string name="patch_return">Återgå</string>
     <string name="patch_uninstall_text">På grund av olika signaturer måste du avinstallera den ursprungliga appen innan du installerar den korrigerade.\nSe till att du har säkerhetskopierat personlig data.</string>

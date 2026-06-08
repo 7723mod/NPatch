@@ -60,7 +60,8 @@
     <string name="patch_sigbypasslv1">lv1: Omgå PM</string>
     <string name="patch_sigbypasslv2">lv2: Bypass PM + openat (libc)</string>
     <string name="patch_override_version_code">Overstyr versjonskoden</string>
-    <string name="patch_override_version_code_desc">Overstyr den lappede appens versjonskode til 1\nDette tillater nedgraderingsinstallasjon i fremtiden, og generelt vil dette ikke påvirke versjonskoden som faktisk oppfattes av applikasjonen</string>
+    <string name="patch_override_version_code_desc">Overstyr den lappede appens versjonskode med en egendefinert verdi, standard 1\nDette tillater nedgraderingsinstallasjon i flere tilfeller, og generelt vil dette ikke påvirke versjonskoden som faktisk oppfattes av applikasjonen</string>
+    <string name="patch_custom_version_code">Egendefinert versjonskode</string>
     <string name="patch_start">Start patch</string>
     <string name="patch_return">Komme tilbake</string>
     <string name="patch_uninstall_text">På grunn av forskjellige signaturer, må du avinstallere den originale appen før du installerer den lappede.\nSørg for at du har sikkerhetskopiert personlige data.</string>

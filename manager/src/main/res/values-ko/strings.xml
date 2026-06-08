@@ -61,7 +61,8 @@
     <string name="patch_sigbypasslv1">lv1: PM 우회</string>
     <string name="patch_sigbypasslv2">lv2: PM + openat(libc) 우회</string>
     <string name="patch_override_version_code">버전 코드 덮어씌우기</string>
-    <string name="patch_override_version_code_desc">패치된 앱의 버전 코드를 1\n으로 덮어씌웁니다. 이렇게 하면 향후 다운그레이드 설치를 할 수 있으며 일반적으로 애플리케이션에서 실제로 인식하는 버전 코드에는 영향을 미치지 않습니다.</string>
+    <string name="patch_override_version_code_desc">패치된 앱의 버전 코드를 사용자 지정 값으로 덮어씁니다. 기본값은 1입니다\n이렇게 하면 더 많은 경우에 다운그레이드 설치를 할 수 있으며 일반적으로 애플리케이션에서 실제로 인식하는 버전 코드에는 영향을 미치지 않습니다.</string>
+    <string name="patch_custom_version_code">사용자 지정 버전 코드</string>
     <string name="patch_start">패치 시작</string>
     <string name="patch_return">되돌리기</string>
     <string name="patch_uninstall_text">서명이 다르기 때문에 패치된 앱을 설치하기 전에 기존 앱을 제거해야 합니다.\n개인 데이터를 백업했는지 확인하십시오.</string>

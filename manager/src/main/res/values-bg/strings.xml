@@ -61,7 +61,8 @@
     <string name="patch_sigbypasslv1">1 лев: Заобикаляне на PM</string>
     <string name="patch_sigbypasslv2">2 лв: Заобикаляне на PM openat (libc)</string>
     <string name="patch_override_version_code">Код на версията за пренастройване</string>
-    <string name="patch_override_version_code_desc">Презаписване на кода на версията на коригираното приложение на 1\nТова позволява понижаване на инсталацията в бъдеще и като цяло няма да се отрази на кода на версията, възприеман от приложението.</string>
+    <string name="patch_override_version_code_desc">Презаписване на кода на версията на коригираното приложение с персонализирана стойност, по подразбиране 1\nТова позволява понижаване на инсталацията в повече случаи и като цяло няма да се отрази на кода на версията, възприеман от приложението.</string>
+    <string name="patch_custom_version_code">Персонализиран код на версията</string>
     <string name="patch_start">Начална кръпка</string>
     <string name="patch_return">Връщане на</string>
     <string name="patch_uninstall_text">Поради различните сигнатури е необходимо да деинсталирате оригиналното приложение, преди да инсталирате коригираното.\nУверете се, че сте направили резервно копие на личните си данни.</string>

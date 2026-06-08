@@ -60,7 +60,8 @@
     <string name="patch_sigbypasslv1">lv1: anul·lar PM</string>
     <string name="patch_sigbypasslv2">lv2: ometre PM + openat (libc)</string>
     <string name="patch_override_version_code">Anul·la el codi de versió</string>
-    <string name="patch_override_version_code_desc">Substituïu el codi de versió de l\'aplicació aplicada a 1\nAixò permetrà la instal·lació de baixada en el futur i, en general, això no afectarà el codi de versió realment percebut per l\'aplicació.</string>
+    <string name="patch_override_version_code_desc">Substituïu el codi de versió de l\'aplicació aplicada per un valor personalitzat, per defecte 1\nAixò permetrà la instal·lació de baixada en més casos i, en general, això no afectarà el codi de versió realment percebut per l\'aplicació.</string>
+    <string name="patch_custom_version_code">Codi de versió personalitzat</string>
     <string name="patch_start">Inicia el pegat</string>
     <string name="patch_return">Tornar</string>
     <string name="patch_uninstall_text">A causa de les diferents signatures, heu de desinstal·lar l\'aplicació original abans d\'instal·lar la pegada.\nAssegureu-vos que heu fet una còpia de seguretat de les dades personals.</string>

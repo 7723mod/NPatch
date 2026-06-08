@@ -61,7 +61,8 @@
     <string name="patch_sigbypasslv1">lv1: बाईपास पीएम</string>
     <string name="patch_sigbypasslv2">lv2: बाईपास PM + openat (libc)</string>
     <string name="patch_override_version_code">संस्करण कोड ओवरराइड करें</string>
-    <string name="patch_override_version_code_desc">पैच किए गए ऐप के संस्करण कोड को 1\nपर ओवरराइड करें यह भविष्य में डाउनग्रेड इंस्टॉलेशन की अनुमति देता है, और आम तौर पर यह एप्लिकेशन द्वारा वास्तव में देखे जाने वाले संस्करण कोड को प्रभावित नहीं करेगा।</string>
+    <string name="patch_override_version_code_desc">पैच किए गए ऐप के संस्करण कोड को कस्टम मान से ओवरराइड करें, डिफ़ॉल्ट 1\nयह अधिक मामलों में डाउनग्रेड इंस्टॉलेशन की अनुमति देता है, और आम तौर पर यह एप्लिकेशन द्वारा वास्तव में देखे जाने वाले संस्करण कोड को प्रभावित नहीं करेगा।</string>
+    <string name="patch_custom_version_code">कस्टम संस्करण कोड</string>
     <string name="patch_start">पैच शुरू करें</string>
     <string name="patch_return">वापस करना</string>
     <string name="patch_uninstall_text">अलग-अलग हस्ताक्षरों के कारण, आपको पैच किए गए ऐप को इंस्टॉल करने से पहले मूल ऐप को अनइंस्टॉल करना होगा।\nसुनिश्चित करें कि आपने व्यक्तिगत डेटा का बैकअप लिया है।</string>
