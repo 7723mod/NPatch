@@ -47,7 +47,7 @@ import top.nkbe.npatch.BuildConfig
 import top.nkbe.npatch.config.ConfigManager
 import top.nkbe.npatch.config.Configs
 import top.nkbe.npatch.database.entity.Module
-import top.nkbe.npatch.manager.ModuleActivationController
+import top.nkbe.npatch.manager.ModuleScopeSyncStore
 import top.nkbe.npatch.share.Constants
 import top.nkbe.npatch.share.LSPConfig
 
@@ -352,9 +352,7 @@ fun AppManageBody(
                                                 if (ShizukuApi.isReady) {
                                                     // Notify both removed and newly added modules so they do not
                                                     // keep stale scope state after a scope edit.
-                                                    affectedPackages.forEach { modulePackageName ->
-                                                        ModuleActivationController.activate(modulePackageName)
-                                                    }
+                                                    ModuleScopeSyncStore.syncModuleScopes(affectedPackages)
                                                 }
                                             }
                                             moduleManageViewModel.refreshScopedActivationState()

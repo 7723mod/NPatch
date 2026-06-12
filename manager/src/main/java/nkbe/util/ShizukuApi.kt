@@ -15,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import dev.rikka.tools.refine.Refine
+import java.util.LinkedHashSet
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeout
 import top.nkbe.npatch.INPatchShizukuService
@@ -32,6 +33,7 @@ object ShizukuApi {
     private const val USER_SERVICE_VERSION = 1
     private const val USER_SERVICE_TIMEOUT_MS = 5000L
     private var initialized = false
+    private val onReadyListeners = LinkedHashSet<() -> Unit>()
 
     @Volatile
     private var userService: INPatchShizukuService? = null
@@ -102,6 +104,7 @@ object ShizukuApi {
     }
 
     fun refreshState() {
+        val wasReady = isReady
         isBinderAvailable = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
         isPermissionGranted =
             isBinderAvailable &&
@@ -109,6 +112,22 @@ object ShizukuApi {
                         Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
                     }
                     .getOrDefault(false)
+        if (!wasReady && isReady) {
+            onReadyListeners.toList().forEach { listener ->
+                runCatching { listener() }
+            }
+        }
+    }
+
+    fun addOnReadyListener(listener: () -> Unit) {
+        onReadyListeners += listener
+        if (isReady) {
+            runCatching { listener() }
+        }
+    }
+
+    fun removeOnReadyListener(listener: () -> Unit) {
+        onReadyListeners -= listener
     }
 
     fun requestPermission(requestCode: Int = PERMISSION_REQUEST_CODE) {

@@ -14,6 +14,7 @@ import org.lsposed.hiddenapibypass.HiddenApiBypass
 import top.nkbe.npatch.manager.AppBroadcastReceiver
 import top.nkbe.npatch.manager.ManagerLogger
 import top.nkbe.npatch.manager.ManagerIntegrity
+import top.nkbe.npatch.manager.ModuleScopeSyncStore
 import nkbe.util.NeoPackageManager
 import nkbe.util.ShizukuApi
 import top.nkbe.npatch.util.SB
@@ -61,6 +62,11 @@ class LSPApplication : Application() {
         prefs = lspApp.getSharedPreferences("settings", Context.MODE_PRIVATE)
         ManagerLogger.init()
         ShizukuApi.init()
+        ShizukuApi.addOnReadyListener {
+            globalScope.launch {
+                ModuleScopeSyncStore.syncTrackedModuleScopes()
+            }
+        }
         AppBroadcastReceiver.register(this)
         globalScope.launch { 
             NeoPackageManager.fetchAppList() 

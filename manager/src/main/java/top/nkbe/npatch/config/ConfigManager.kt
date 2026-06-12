@@ -10,6 +10,7 @@ import top.nkbe.npatch.database.LSPDatabase
 import top.nkbe.npatch.database.entity.Module
 import top.nkbe.npatch.database.entity.Scope
 import top.nkbe.npatch.lspApp
+import top.nkbe.npatch.manager.ModuleScopeSyncStore
 import top.nkbe.npatch.util.LocalInjectedModuleService
 import top.nkbe.npatch.util.ModuleLoader
 import java.io.File
@@ -40,6 +41,7 @@ object ConfigManager {
                 if (apkPath == null) {
                     moduleDao.delete(module)
                     loadedModules.remove(module.pkgName)
+                    ModuleScopeSyncStore.deleteSnapshot(module.pkgName)
                 } else if (module.apkPath != apkPath) {
                     module.apkPath = apkPath
                     moduleDao.update(module)
@@ -55,11 +57,13 @@ object ConfigManager {
         withContext(dispatcher) {
             moduleDao.insert(module)
             scopeDao.insert(Scope(appPkgName = pkgName, modulePkgName = module.pkgName))
+            ModuleScopeSyncStore.saveSnapshot(module.pkgName, scopeDao.getAppsForModule(module.pkgName))
         }
 
     suspend fun deactivateModule(pkgName: String, module: Module) =
         withContext(dispatcher) {
             scopeDao.delete(Scope(appPkgName = pkgName, modulePkgName = module.pkgName))
+            ModuleScopeSyncStore.saveSnapshot(module.pkgName, scopeDao.getAppsForModule(module.pkgName))
         }
 
     suspend fun getModulesForApp(pkgName: String): List<Module> =
