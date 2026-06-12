@@ -250,17 +250,34 @@ object ModuleMetadataReader {
 
     private fun readLegacyString(metaData: Bundle?, key: String): String? {
         if (metaData == null || !metaData.containsKey(key)) return null
-        return metaData.getString(key)?.trim()?.takeIf { it.isNotEmpty() }
+        val rawValue = metaData.get(key) ?: return null
+        return when (rawValue) {
+            is String -> rawValue.trim().takeIf { it.isNotEmpty() }
+            is CharSequence -> rawValue.toString().trim().takeIf { it.isNotEmpty() }
+            else -> null
+        }
     }
 
     private fun readLegacyInt(metaData: Bundle?, key: String): Int? {
         if (metaData == null || !metaData.containsKey(key)) return null
-        return metaData.getString(key)?.trim()?.toIntOrNull() ?: metaData.getInt(key)
+        val rawValue = metaData.get(key) ?: return null
+        return when (rawValue) {
+            is Number -> rawValue.toInt()
+            is String -> rawValue.trim().toIntOrNull()
+            is CharSequence -> rawValue.toString().trim().toIntOrNull()
+            else -> null
+        }
     }
 
     private fun readLegacyBoolean(metaData: Bundle?, key: String): Boolean? {
         if (metaData == null || !metaData.containsKey(key)) return null
-        return metaData.getString(key)?.trim()?.toBooleanStrictOrNull() ?: metaData.getBoolean(key)
+        val rawValue = metaData.get(key) ?: return null
+        return when (rawValue) {
+            is Boolean -> rawValue
+            is String -> rawValue.trim().toBooleanStrictOrNull()
+            is CharSequence -> rawValue.toString().trim().toBooleanStrictOrNull()
+            else -> null
+        }
     }
 
     private fun readInt(properties: Properties, modernKey: String, legacyValue: Int?, defaultValue: Int): Int {
