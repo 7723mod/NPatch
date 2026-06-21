@@ -67,6 +67,9 @@
     <string name="manage_force_stop">強制停止</string>
     <string name="manage_force_stop_successfully">強制停止成功</string>
     <string name="manage_force_stop_failed">強制停止失敗</string>
+    <string name="manage_force_restart">強制重啟</string>
+    <string name="manage_force_restart_successfully">強制重啟成功</string>
+    <string name="manage_force_restart_failed">強制重啟失敗</string>
     <string name="manage_uninstall_successfully">解除安裝成功</string>
     <string name="manage_no_modules">還沒有模組</string>
     <string name="manage_module_settings">模組設定</string>

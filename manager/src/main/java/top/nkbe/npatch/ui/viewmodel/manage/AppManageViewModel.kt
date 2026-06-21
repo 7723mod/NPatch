@@ -44,6 +44,8 @@ class AppManageViewModel : ViewModel() {
         object ClearOptimizeResult : ViewAction()
         data class PerformForceStop(val appInfo: AppInfo) : ViewAction()
         object ClearForceStopResult : ViewAction()
+        data class PerformForceRestart(val appInfo: AppInfo) : ViewAction()
+        object ClearForceRestartResult : ViewAction()
         object Refresh : ViewAction()
     }
 
@@ -61,6 +63,9 @@ class AppManageViewModel : ViewModel() {
         private set
 
     var forceStopState: ProcessingState<Boolean> by mutableStateOf(ProcessingState.Idle)
+        private set
+
+    var forceRestartState: ProcessingState<Boolean> by mutableStateOf(ProcessingState.Idle)
         private set
 
     private val logger = object : Logger() {
@@ -105,6 +110,8 @@ class AppManageViewModel : ViewModel() {
                 is ViewAction.ClearOptimizeResult -> optimizeState = ProcessingState.Idle
                 is ViewAction.PerformForceStop -> performForceStop(action.appInfo)
                 is ViewAction.ClearForceStopResult -> forceStopState = ProcessingState.Idle
+                is ViewAction.PerformForceRestart -> performForceRestart(action.appInfo)
+                is ViewAction.ClearForceRestartResult -> forceRestartState = ProcessingState.Idle
                 is ViewAction.Refresh -> {
                     if (!isRefreshing) {
                         isRefreshing = true
@@ -214,5 +221,26 @@ class AppManageViewModel : ViewModel() {
             NeoPackageManager.forceStop(appInfo.app.packageName)
         }
         forceStopState = ProcessingState.Done(result)
+    }
+
+    private suspend fun performForceRestart(appInfo: AppInfo) {
+        Log.i(TAG, "Perform force restart for ${appInfo.app.packageName}")
+        forceRestartState = ProcessingState.Processing
+        val launchIntent = NeoPackageManager.getLaunchIntentForPackage(appInfo.app.packageName)
+        val result = if (launchIntent == null) {
+            false
+        } else {
+            val stopped = NeoPackageManager.forceStop(appInfo.app.packageName)
+            if (!stopped) {
+                false
+            } else {
+                delay(500)
+                withContext(Dispatchers.Main) {
+                    lspApp.startActivity(launchIntent)
+                }
+                true
+            }
+        }
+        forceRestartState = ProcessingState.Done(result)
     }
 }

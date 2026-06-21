@@ -119,6 +119,7 @@ fun AppManageBody(
     val isProcessing = viewModel.updateLoaderState is ProcessingState.Processing 
             || viewModel.optimizeState is ProcessingState.Processing
             || viewModel.forceStopState is ProcessingState.Processing
+            || viewModel.forceRestartState is ProcessingState.Processing
     if (isProcessing) {
         val showLoading = remember { mutableStateOf(true) }
         OverlayDialog(
@@ -177,6 +178,20 @@ fun AppManageBody(
             LaunchedEffect(Unit) {
                 Toast.makeText(context, if (it.result) forceStopSucceed else forceStopFailed, Toast.LENGTH_SHORT).show()
                 viewModel.dispatch(AppManageViewModel.ViewAction.ClearForceStopResult)
+            }
+        }
+    }
+
+    when (viewModel.forceRestartState) {
+        is ProcessingState.Idle -> Unit
+        is ProcessingState.Processing -> Unit
+        is ProcessingState.Done -> {
+            val it = viewModel.forceRestartState as ProcessingState.Done
+            val forceRestartSucceed = stringResource(R.string.manage_force_restart_successfully)
+            val forceRestartFailed = stringResource(R.string.manage_force_restart_failed)
+            LaunchedEffect(Unit) {
+                Toast.makeText(context, if (it.result) forceRestartSucceed else forceRestartFailed, Toast.LENGTH_SHORT).show()
+                viewModel.dispatch(AppManageViewModel.ViewAction.ClearForceRestartResult)
             }
         }
     }
@@ -374,6 +389,18 @@ fun AppManageBody(
                             actions.add(stringResource(R.string.manage_force_stop) to {
                                 if (ShizukuApi.isReady) {
                                     scope.launch { viewModel.dispatch(AppManageViewModel.ViewAction.PerformForceStop(appInfo)) }
+                                } else {
+                                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = "package:${appInfo.app.packageName}".toUri()
+                                    }
+                                    context.startActivity(intent)
+                                }
+                            })
+                            actions.add(stringResource(R.string.manage_force_restart) to {
+                                if (ShizukuApi.isReady) {
+                                    scope.launch {
+                                        viewModel.dispatch(AppManageViewModel.ViewAction.PerformForceRestart(appInfo))
+                                    }
                                 } else {
                                     val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                                         data = "package:${appInfo.app.packageName}".toUri()

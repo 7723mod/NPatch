@@ -67,6 +67,9 @@
     <string name="manage_force_stop">Force stop</string>
     <string name="manage_force_stop_successfully">Force stop successfully</string>
     <string name="manage_force_stop_failed">Force stop failed</string>
+    <string name="manage_force_restart">Force restart</string>
+    <string name="manage_force_restart_successfully">Force restart successfully</string>
+    <string name="manage_force_restart_failed">Force restart failed</string>
     <string name="manage_uninstall_successfully">Uninstall successfully</string>
     <string name="manage_no_modules">No modules yet</string>
     <string name="manage_module_settings">Module settings</string>
