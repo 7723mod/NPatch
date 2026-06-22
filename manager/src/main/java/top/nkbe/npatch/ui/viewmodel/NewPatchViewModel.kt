@@ -48,7 +48,6 @@ class NewPatchViewModel : ViewModel() {
     var overrideVersionCode by mutableStateOf(false)
     var overrideVersionCodeValue by mutableStateOf("1")
     var sigBypassLevel by mutableStateOf(2)
-    var injectDex by mutableStateOf(false)
     var injectProvider by mutableStateOf(false)
     var useMicroG by mutableStateOf(false)
     var outputLog by mutableStateOf(true)
@@ -100,7 +99,6 @@ class NewPatchViewModel : ViewModel() {
         overrideVersionCode = false
         overrideVersionCodeValue = "1"
         sigBypassLevel = 2
-        injectDex = false
         injectProvider = false
         useMicroG = false
         outputLog = true
@@ -140,7 +138,6 @@ class NewPatchViewModel : ViewModel() {
         val config = PatchConfig(useManager, debuggable, overrideVersionCode, patchVersionCode, patchSigBypassLevel, null, null, injectProvider, outputLog, newPackageName, useMicroG, patchHideLibs)
         patchOptions = Patcher.Options(
             newPackageName = newPackageName,
-            injectDex = injectDex,
             config = config,
             apkPaths = listOf(patchApp.app.sourceDir) + (patchApp.app.splitSourceDirs ?: emptyArray()),
             embeddedModules = embeddedModules.flatMap { listOf(it.app.sourceDir) + (it.app.splitSourceDirs ?: emptyArray()) }

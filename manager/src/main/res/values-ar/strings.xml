@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="add">إضافة</string>
     <string name="install">تثبيت</string>
@@ -86,8 +86,6 @@
     <string name="settings_keystore_wrong_alias">اسم مستعار خاطئ</string>
     <string name="settings_keystore_wrong_alias_password">كلمة مرور الاسم المستعار خاطئة</string>
     <string name="settings_detail_patch_logs">تفاصيل سجلات التعديل</string>
-    <string name="patch_inject_dex">حقن ديكس</string>
-    <string name="patch_inject_dex_desc">بالنسبة للتطبيقات ذات الخدمات المعزولة، مثل محركات عرض المتصفحات، يرجى تشغيل هذا الخيار للتأكد من أنها تعمل بشكل صحيح.</string>
     <string name="settings_card_background_alpha">عتامة خلفية البطاقة</string>
     <string name="settings_card_background_alpha_summary">ينطبق عند تفعيل صورة خلفية مخصصة</string>
 </resources>

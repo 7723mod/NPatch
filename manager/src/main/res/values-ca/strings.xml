@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="add">Afegeix</string>
     <string name="install">Instal·lar</string>
@@ -85,8 +85,6 @@
     <string name="settings_keystore_wrong_alias">Nom d\'àlies incorrecte</string>
     <string name="settings_keystore_wrong_alias_password">Contrasenya d\'àlies incorrecta</string>
     <string name="settings_detail_patch_logs">Registres de pedaços detallats</string>
-    <string name="patch_inject_dex">Injectar carregador dex</string>
-    <string name="patch_inject_dex_desc">Per a aplicacions amb serveis aïllats, com ara els motors de renderització dels navegadors, activeu aquesta opció per assegurar-vos que funcionin correctament.</string>
     <string name="settings_card_background_alpha">Opacitat del fons de les targetes</string>
     <string name="settings_card_background_alpha_summary">S\'aplica quan hi ha una imatge de fons personalitzada activada</string>
 </resources>

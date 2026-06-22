@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="welcome_version">Version %1$s</string>
     <string name="welcome_intro_content">A modernised rootless Xposed framework manager and APK patching utility.</string>

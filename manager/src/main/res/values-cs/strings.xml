@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="add">Přidat</string>
     <string name="install">Instalace</string>
@@ -85,8 +85,6 @@
     <string name="settings_keystore_wrong_alias">Špatný název aliasu</string>
     <string name="settings_keystore_wrong_alias_password">Špatné heslo aliasu</string>
     <string name="settings_detail_patch_logs">Podrobné protokoly oprav</string>
-    <string name="patch_inject_dex">Injektovat dex zavaděče</string>
-    <string name="patch_inject_dex_desc">Pro aplikace s izolovanými službami, jako jsou vykreslování prohlížečů, zapněte tuto možnost, abyste zajistili, že fungují správně.</string>
     <string name="settings_card_background_alpha">Krytí pozadí karet</string>
     <string name="settings_card_background_alpha_summary">Platí při zapnutém vlastním obrázku na pozadí</string>
 </resources>

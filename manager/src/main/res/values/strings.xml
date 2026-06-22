@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="add">Add</string>
     <string name="install">Install</string>
@@ -116,8 +116,6 @@
     <string name="patch_custom_version_code">Custom version code</string>
     <string name="patch_inject_mt_provider">Inject Files Provider</string>
     <string name="patch_inject_mt_provider_desc">Inject file providers to manage files in the data directory without root privileges (From MT Manager)</string>
-    <string name="patch_inject_dex">Inject loader dex</string>
-    <string name="patch_inject_dex_desc">For applications with isolated services, such as the render engines of browsers, please turn on this option to ensure that they work properly.</string>
     <string name="patch_use_microg">Force enable MicroG support</string>
     <string name="patch_use_microg_desc">Redirect GMS requests to the community version of MicroG (such as ReVanced GmsCore). Applicable to Google apps like YouTube, requires manually installing the corresponding MicroG service.</string>
     <string name="patch_output_log_to_media">Output Log to Media Directory</string>

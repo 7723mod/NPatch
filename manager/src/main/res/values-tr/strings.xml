@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="add">Ekle</string>
     <string name="install">Düzenlemek</string>
@@ -85,8 +85,6 @@
     <string name="settings_keystore_wrong_alias">Yanlış takma ad</string>
     <string name="settings_keystore_wrong_alias_password">Yanlış takma ad şifresi</string>
     <string name="settings_detail_patch_logs">Ayrıntılı yama günlükleri</string>
-    <string name="patch_inject_dex">Enjeksiyon yükleyici dex</string>
-    <string name="patch_inject_dex_desc">Tarayıcıların render motorları gibi izole hizmetlere sahip uygulamalar için, düzgün çalıştıklarından emin olmak amacıyla lütfen bu seçeneği açın.</string>
     <string name="patch_output_log_to_media">Media dizinine günlük çıktısı</string>
     <string name="patch_output_log_to_media_desc">Xposed günlüklerini ve framework başlangıç günlüklerini Media dizinine çıkarın.</string>
     <string name="settings_card_background_alpha">Kart arka plan opaklığı</string>

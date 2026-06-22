@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="add">Tilføje</string>
     <string name="install">Installer</string>
@@ -85,8 +85,6 @@
     <string name="settings_keystore_wrong_alias">Forkert aliasnavn</string>
     <string name="settings_keystore_wrong_alias_password">Forkert adgangskode til alias</string>
     <string name="settings_detail_patch_logs">Detaljerede patch-logfiler</string>
-    <string name="patch_inject_dex">Injicer loader dex</string>
-    <string name="patch_inject_dex_desc">For applikationer med isolerede tjenester, såsom render motorer af browsere, skal du aktivere denne mulighed for at sikre, at de fungerer korrekt.</string>
     <string name="settings_card_background_alpha">Kortbaggrundens opacitet</string>
     <string name="settings_card_background_alpha_summary">Gælder når et brugerdefineret baggrundsbillede er aktiveret</string>
 </resources>

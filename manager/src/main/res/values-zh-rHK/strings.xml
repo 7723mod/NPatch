@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='UTF-8'?>
+﻿<?xml version='1.0' encoding='UTF-8'?>
 <resources>
     <string name="add">添加</string>
     <string name="install">安裝</string>
@@ -92,8 +92,6 @@
     <string name="settings_detail_patch_logs">详细修补日誌</string>
     <string name="settings_storage_directory">变更儲存目錄</string>
     <string name="enable_install_activity_title">启用 install activity</string>
-    <string name="patch_inject_dex">注入載入器 Dex</string>
-    <string name="patch_inject_dex_desc">对那些需要孤立服务进程的應用程式程序，譬如说浏览器的渲染引擎，请勾选此选项以确保他们正常运行</string>
     <string name="package_name">包名</string>
     <string name="author">作者</string>
     <string name="time_just_now">剛剛</string>

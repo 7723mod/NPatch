@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="add">Lägg till</string>
     <string name="install">Installera</string>
@@ -85,8 +85,6 @@
     <string name="settings_keystore_wrong_alias">Fel aliasnamn</string>
     <string name="settings_keystore_wrong_alias_password">Fel lösenord för alias</string>
     <string name="settings_detail_patch_logs">Detaljerade patchloggar</string>
-    <string name="patch_inject_dex">Inject loader dex</string>
-    <string name="patch_inject_dex_desc">För applikationer med isolerade tjänster, såsom render motorer av webbläsare, aktivera detta alternativ för att se till att de fungerar korrekt.</string>
     <string name="settings_card_background_alpha">Opacitet för kortbakgrund</string>
     <string name="settings_card_background_alpha_summary">Gäller när en anpassad bakgrundsbild är aktiverad</string>
 </resources>

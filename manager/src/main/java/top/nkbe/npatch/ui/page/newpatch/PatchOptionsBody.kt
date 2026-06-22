@@ -211,13 +211,6 @@ fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
                     )
                 }
                 SwitchPreference(
-                    title = stringResource(R.string.patch_inject_dex),
-                    summary = stringResource(R.string.patch_inject_dex_desc),
-                    startAction = { Icon(Icons.Outlined.Code, null) },
-                    checked = viewModel.injectDex,
-                    onCheckedChange = { viewModel.injectDex = it }
-                )
-                SwitchPreference(
                     title = stringResource(R.string.patch_inject_mt_provider),
                     summary = stringResource(R.string.patch_inject_mt_provider_desc),
                     startAction = { Icon(Icons.Outlined.AddCard, null) },

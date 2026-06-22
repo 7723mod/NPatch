@@ -22,7 +22,6 @@ object Patcher {
 
     class Options(
         val newPackageName: String,
-        private val injectDex: Boolean,
         private val config: PatchConfig,
         private val apkPaths: List<String>,
         private val embeddedModules: List<String>?
@@ -43,7 +42,6 @@ object Patcher {
                     add("-m"); add(it)
                 }
                 if (config.injectProvider) add("--provider")
-                if(injectDex) add("--injectdex")
                 if (config.useMicroG) add("--useMicroG")
                 if (config.hideLibs) add("--hidelibs")
                 when (Configs.keyStorePreset) {

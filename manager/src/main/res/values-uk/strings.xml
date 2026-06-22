@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="add">Додати</string>
     <string name="install">Встановити</string>
@@ -86,8 +86,6 @@
     <string name="settings_keystore_wrong_alias">Неправильний псевдонім</string>
     <string name="settings_keystore_wrong_alias_password">Неправильний пароль псевдоніма</string>
     <string name="settings_detail_patch_logs">Детальні журнали патчів</string>
-    <string name="patch_inject_dex">Ввести dex завантажувач</string>
-    <string name="patch_inject_dex_desc">Для додатків з ізольованими послугами, такими як системи візуалізації, увімкніть цю опцію, щоб вони працювали належним чином.</string>
     <string name="settings_card_background_alpha">Непрозорість фону карток</string>
     <string name="settings_card_background_alpha_summary">Застосовується, коли ввімкнено власне фонове зображення</string>
 </resources>

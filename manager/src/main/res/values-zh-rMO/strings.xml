@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="add">收入爪下</string>
     <string name="install">塞进窝里</string>
@@ -110,8 +110,6 @@
     <string name="hint_patch_new_package">请输入这只猫的新包名喵</string>
     <string name="patch_inject_mt_provider">注入猫洞（MT Provider）</string>
     <string name="patch_inject_mt_provider_desc">挖个暗道，不用超级权限也能翻动 data 目录里的东西喵。</string>
-    <string name="patch_inject_dex">注入 Dex 强心针</string>
-    <string name="patch_inject_dex_desc">对那些脾气古怪的浏览器引擎，打一针确保它们不会在独立进程里哈气喵。</string>
     <string name="patch_use_microg">强喂 MicroG 小药水</string>
     <string name="patch_use_microg_desc">把GMS异化为MicroG喵。YT 等猫咪专用，记得自己先备好药喵。</string>
     <string name="patch_output_log_to_media">把小秘密丢进 Media 目录</string>

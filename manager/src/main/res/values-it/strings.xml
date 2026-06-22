@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="add">Aggiungi</string>
     <string name="install">Installa</string>
@@ -85,8 +85,6 @@
     <string name="settings_keystore_wrong_alias">Nome alias errato</string>
     <string name="settings_keystore_wrong_alias_password">Password alias errata</string>
     <string name="settings_detail_patch_logs">Registri dettagliati delle patch</string>
-    <string name="patch_inject_dex">Inject loader dex</string>
-    <string name="patch_inject_dex_desc">Per applicazioni con servizi isolati, come i motori di rendering dei browser, attiva questa opzione per assicurarti che funzionino correttamente.</string>
     <string name="patch_output_log_to_media">Output log nella directory Media</string>
     <string name="patch_output_log_to_media_desc">Output dei log Xposed e dei log di avvio del framework nella directory Media.</string>
     <string name="settings_card_background_alpha">Opacità dello sfondo delle schede</string>

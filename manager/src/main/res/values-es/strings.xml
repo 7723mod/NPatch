@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="add">Agregar</string>
     <string name="install">Instalar</string>
@@ -85,8 +85,6 @@
     <string name="settings_keystore_wrong_alias">Nombre de alias incorrecto</string>
     <string name="settings_keystore_wrong_alias_password">Contraseña de alias incorrecta</string>
     <string name="settings_detail_patch_logs">Registros de parches detallados</string>
-    <string name="patch_inject_dex">Inyectar dex del cargador</string>
-    <string name="patch_inject_dex_desc">Para aplicaciones con servicios aislados, como los motores de renderizado de navegadores, por favor active esta opción para asegurarse de que funcionan correctamente.</string>
     <string name="patch_output_log_to_media">Salida de registro al directorio Media</string>
     <string name="patch_output_log_to_media_desc">Salida de los registros Xposed y los registros de inicio del framework al directorio Media.</string>
     <string name="settings_card_background_alpha">Opacidad del fondo de las tarjetas</string>

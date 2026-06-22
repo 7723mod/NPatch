@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="add">新增</string>
     <string name="install">安裝</string>
@@ -113,8 +113,6 @@
     <string name="hint_patch_new_package">請輸入新的套件名</string>
     <string name="patch_inject_mt_provider">注入檔案选取器</string>
     <string name="patch_inject_mt_provider_desc">注入檔案选取器以在沒有 Root 權限的情況下管理 data 目錄的檔案(來自 MT 管理器)</string>
-    <string name="patch_inject_dex">注入載入器 Dex</string>
-    <string name="patch_inject_dex_desc">對那些需要孤立服務程序的應用程式，譬如說瀏覽器的渲染引擎，請勾選此選項以確保他們正常執行</string>
     <string name="patch_use_microg">強制啟用 MicroG 支援</string>
     <string name="patch_use_microg_desc">重新導向 GMS 請求至社群版 MicroG。適用於 YouTube 等 Google 應用程式，需自行安裝對應的 MicroG 服務。</string>
     <string name="patch_output_log_to_media">日誌輸出到 Media 目錄</string>

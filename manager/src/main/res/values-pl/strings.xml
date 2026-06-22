@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="add">Dodaj</string>
     <string name="install">Zainstaluj</string>
@@ -86,8 +86,6 @@
     <string name="settings_keystore_wrong_alias">Nieprawidłowa nazwa aliasu</string>
     <string name="settings_keystore_wrong_alias_password">Nieprawidłowe hasło aliasu</string>
     <string name="settings_detail_patch_logs">Szczegóły logów poprawek</string>
-    <string name="patch_inject_dex">Wstrzyknięcie ładowarki dex</string>
-    <string name="patch_inject_dex_desc">W przypadku aplikacji z odosobnionymi usługami, takimi jak renderowanie silników przeglądarek, włącz tę opcję, aby zapewnić ich prawidłowe działanie.</string>
     <string name="patch_output_log_to_media">Wyjście logu do katalogu Media</string>
     <string name="patch_output_log_to_media_desc">Wyjście logów Xposed i logów startu framework do katalogu Media.</string>
     <string name="settings_card_background_alpha">Nieprzezroczystość tła kart</string>

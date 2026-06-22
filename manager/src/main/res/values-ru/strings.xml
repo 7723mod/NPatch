@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="add">Добавить</string>
     <string name="install">Установить</string>
@@ -86,8 +86,6 @@
     <string name="settings_keystore_wrong_alias">Неправильное имя alias</string>
     <string name="settings_keystore_wrong_alias_password">Неправильный alias-пароль</string>
     <string name="settings_detail_patch_logs">Подробности журнала патча</string>
-    <string name="patch_inject_dex">Inject loader dex</string>
-    <string name="patch_inject_dex_desc">Для приложений с изолированными сервисами, такими как рендеринг браузеров, пожалуйста, включите эту опцию, чтобы убедиться, что они работают должным образом.</string>
     <string name="patch_output_log_to_media">Вывод журнала в каталог Media</string>
     <string name="patch_output_log_to_media_desc">Вывод журналов Xposed и журналов запуска фреймворка в каталог Media.</string>
     <string name="settings_card_background_alpha">Непрозрачность фона карточек</string>

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="add">Hozzáadás</string>
     <string name="install">Telepítés</string>
@@ -85,8 +85,6 @@
     <string name="settings_keystore_wrong_alias">Rossz alias név</string>
     <string name="settings_keystore_wrong_alias_password">Rossz alias jelszó</string>
     <string name="settings_detail_patch_logs">Részletes patch naplók</string>
-    <string name="patch_inject_dex">Inject loader dex</string>
-    <string name="patch_inject_dex_desc">Az elszigetelt szolgáltatásokat nyújtó alkalmazásoknál, például a böngészők renderelő motorjainál, kapcsolja be ezt a lehetőséget, hogy biztosítsa a megfelelő működésüket.</string>
     <string name="settings_card_background_alpha">Kártyaháttér átlátszatlansága</string>
     <string name="settings_card_background_alpha_summary">Egyéni háttérkép engedélyezésekor érvényes</string>
 </resources>

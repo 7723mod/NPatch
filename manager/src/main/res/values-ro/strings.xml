@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="add">Adăuga</string>
     <string name="install">Instalați</string>
@@ -85,8 +85,6 @@
     <string name="settings_keystore_wrong_alias">Nume alias greșit</string>
     <string name="settings_keystore_wrong_alias_password">Parolă alias greșită</string>
     <string name="settings_detail_patch_logs">Detaliile jurnalelor de patch-uri</string>
-    <string name="patch_inject_dex">Injectare loader dex</string>
-    <string name="patch_inject_dex_desc">Pentru aplicațiile cu servicii izolate, cum ar fi motoarele de randare a browserelor, vă rugăm să porniți această opțiune pentru a vă asigura că acestea funcționează corect.</string>
     <string name="settings_card_background_alpha">Opacitatea fundalului cardurilor</string>
     <string name="settings_card_background_alpha_summary">Se aplică atunci când este activată o imagine de fundal personalizată</string>
 </resources>

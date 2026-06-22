@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="add">Voeg by</string>
     <string name="install">Installeer</string>
@@ -85,8 +85,6 @@
     <string name="settings_keystore_wrong_alias">Verkeerde alias naam</string>
     <string name="settings_keystore_wrong_alias_password">Verkeerde alias wagwoord</string>
     <string name="settings_detail_patch_logs">Detail pleister logs</string>
-    <string name="patch_inject_dex">Spuit loader dex</string>
-    <string name="patch_inject_dex_desc">Vir toepassings met geïsoleerde dienste, soos die weergawe-enjins van blaaiers, skakel asseblief hierdie opsie aan om te verseker dat hulle behoorlik werk.</string>
     <string name="settings_card_background_alpha">Kaartagtergronddeursigtigheid</string>
     <string name="settings_card_background_alpha_summary">Van toepassing wanneer n pasgemaakte agtergrondprent geaktiveer is</string>
 </resources>

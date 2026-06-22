@@ -91,9 +91,6 @@ public class NPatch {
     @Parameter(names = {"-l", "--sigbypasslv"}, description = "Signature bypass mode. 0: None, 1: Basic, 2: High, 3: Extreme, 4: Seccomp. Extreme and Seccomp require --manager. default 1")
     private int sigbypassLevel = 1;
 
-    @Parameter(names = {"--injectdex"}, description = "Inject directly the loader dex file into the original application package")
-    private boolean injectDex = false;
-
     @Parameter(names = {"--provider"}, description = "Inject Provider to manager data files")
     private boolean isInjectProvider = false;
 
@@ -189,7 +186,6 @@ public class NPatch {
             logger.e("Extreme and Seccomp signature bypass modes cannot be used in integrated mode\n");
             help = true;
         }
-
         this.logger = logger;
         logger.verbose = verbose;
     }
@@ -373,19 +369,16 @@ public class NPatch {
                 }
 
                 logger.i("Adding native lib...");
-                // copy so and dex files into the unzipped apk
-                // do not put libnpatch.so into apk!lib because x86 native bridge causes crash
                 for (String arch : ARCHES) {
                     String entryName = "assets/npatch/so/" + arch + "/libnpatch.so";
                     try (var is = getClass().getClassLoader().getResourceAsStream(entryName)) {
                         if (is != null) {
-                            dstZFile.add(entryName, is, false); // no compress for so
+                            dstZFile.add(entryName, is, false);
                             logger.d("added " + entryName);
                         } else {
                             logger.e("Native lib not found: " + entryName);
                         }
                     } catch (Throwable e) {
-                        // More exception info
                         throw new PatchError("Error when adding native lib", e);
                     }
                 }
@@ -431,10 +424,11 @@ public class NPatch {
 
             logger.i("Adding metaloader dex...");
             try (var is = getClass().getClassLoader().getResourceAsStream(Constants.META_LOADER_DEX_ASSET_PATH)) {
-                if (is == null) throw new PatchError("Meta loader dex not found");
-                String metaloaderDexName = maxDexIndex <= 0 ? "classes.dex" : "classes" + (maxDexIndex + 1) + ".dex";
-                logger.d("Appending metaloader dex as " + metaloaderDexName);
-                dstZFile.add(metaloaderDexName, is, false);
+                var dexCount = srcZFile.entries().stream().filter(entry -> {
+                    var name = entry.getCentralDirectoryHeader().getName();
+                    return name.startsWith("classes") && name.endsWith(".dex");
+                }).collect(Collectors.toList()).size() + 1;
+                dstZFile.add("classes" + dexCount + ".dex", is);
             } catch (Throwable e) {
                 throw new PatchError("Error when adding dex", e);
             }
