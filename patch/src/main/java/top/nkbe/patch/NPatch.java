@@ -50,7 +50,6 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 public class NPatch {
 
@@ -424,11 +423,11 @@ public class NPatch {
 
             logger.i("Adding metaloader dex...");
             try (var is = getClass().getClassLoader().getResourceAsStream(Constants.META_LOADER_DEX_ASSET_PATH)) {
-                var dexCount = srcZFile.entries().stream().filter(entry -> {
-                    var name = entry.getCentralDirectoryHeader().getName();
-                    return name.startsWith("classes") && name.endsWith(".dex");
-                }).collect(Collectors.toList()).size() + 1;
-                dstZFile.add("classes" + dexCount + ".dex", is);
+                if (embedOriginal) {
+                    dstZFile.add("classes.dex", is);
+                } else {
+                    dstZFile.add("classes" + (maxDexIndex + 1) + ".dex", is);
+                }
             } catch (Throwable e) {
                 throw new PatchError("Error when adding dex", e);
             }
