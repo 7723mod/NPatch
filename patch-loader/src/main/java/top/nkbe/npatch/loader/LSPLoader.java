@@ -13,21 +13,16 @@ import android.os.RemoteException;
 import android.util.Log;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
@@ -62,6 +57,7 @@ public class LSPLoader {
     }
 
     public static void initModules(LoadedApk loadedApk) {
+        installNativeModuleServiceProxy();
         registerModuleRuntimeAppInfos();
         installModuleSelfPathCompatibility();
         installNativeModuleServiceProxy();
@@ -372,50 +368,7 @@ public class LSPLoader {
     }
 
     private static File prepareNativeLibraryDir(Module module) {
-        try {
-            Application app = currentApplication();
-            if (app == null) return null;
-            
-            File cacheRoot = app.getCacheDir();
-            File moduleRoot = new File(new File(cacheRoot, "native"), module.packageName.replace(".", "_"));
-            File apkFile = new File(module.apkPath);
-            String stamp = apkFile.lastModified() + "-" + apkFile.length();
-            File targetDir = new File(moduleRoot, stamp);
-            
-            if (targetDir.exists() && targetDir.list() != null && targetDir.list().length > 0) {
-                return targetDir;
-            }
-
-            targetDir.mkdirs();
-            String[] abis = Process.is64Bit() ? Build.SUPPORTED_64_BIT_ABIS : Build.SUPPORTED_32_BIT_ABIS;
-            
-            try (ZipFile zip = new ZipFile(apkFile)) {
-                for (String abi : abis) {
-                    String prefix = "lib/" + abi + "/";
-                    boolean extractedAny = false;
-                    Enumeration<? extends ZipEntry> entries = zip.entries();
-                    while (entries.hasMoreElements()) {
-                        ZipEntry entry = entries.nextElement();
-                        if (entry.getName().startsWith(prefix) && entry.getName().endsWith(".so")) {
-                            File outFile = new File(targetDir, new File(entry.getName()).getName());
-                            try (InputStream is = zip.getInputStream(entry);
-                                 FileOutputStream os = new FileOutputStream(outFile)) {
-                                byte[] buffer = new byte[8192];
-                                int len;
-                                while ((len = is.read(buffer)) > 0) os.write(buffer, 0, len);
-                            }
-                            outFile.setExecutable(true, false);
-                            extractedAny = true;
-                        }
-                    }
-                    if (extractedAny) return targetDir;
-                }
-            }
-            return targetDir;
-        } catch (Throwable e) {
-            Log.e(TAG, "Failed to prepare native dir", e);
-            return null;
-        }
+        return ModuleNativeCache.prepare(currentApplication(), module);
     }
 
     private static String buildLibrarySearchPath(Module module, File nativeDir) {

@@ -100,13 +100,16 @@ public class CacheCleaner {
             activeModuleApkPaths.forEach((key, value) -> {
                 if (key != null && value != null) {
                     File apk = new File(value);
-                    String stamp = apk.lastModified() + "-" + apk.length();
-                    activeDirToStamp.put(key.replace(".", "_"), stamp);
+                    String stamp = ModuleNativeCache.stamp(apk);
+                    activeDirToStamp.put(ModuleNativeCache.moduleDirectoryName(key), stamp);
                 }
             });
         }
 
-        sweepModuleNativeRoot(new File(appInfo.dataDir, "cache/native"), activeDirToStamp);
+        File cacheRoot = new File(appInfo.dataDir, "cache");
+        File nativeRoot = new File(cacheRoot, "native");
+        sweepModuleNativeRoot(ModuleNativeCache.root(cacheRoot), activeDirToStamp);
+        sweepLegacyModuleNativeRoot(nativeRoot);
         sweepLegacyNpatchCache(appInfo);
     }
 
@@ -117,9 +120,6 @@ public class CacheCleaner {
         for (File moduleDir : moduleDirs) {
             if (!moduleDir.isDirectory()) {
                 deleteRecursive(moduleDir);
-                continue;
-            }
-            if ("host".equals(moduleDir.getName())) {
                 continue;
             }
 
@@ -135,6 +135,18 @@ public class CacheCleaner {
                         .filter(s -> !s.getName().equals(activeStamp))
                         .forEach(CacheCleaner::deleteRecursive);
             }
+        }
+    }
+
+    private static void sweepLegacyModuleNativeRoot(File nativeRoot) {
+        File[] entries = nativeRoot.listFiles();
+        if (entries == null) return;
+        for (File entry : entries) {
+            String name = entry.getName();
+            if ("host".equals(name) || "modules".equals(name)) {
+                continue;
+            }
+            deleteRecursive(entry);
         }
     }
 
