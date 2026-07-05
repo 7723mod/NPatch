@@ -182,6 +182,17 @@
     <string name="settings_manager_cache_failed">清除管理器缓存失败</string>
     <string name="settings_appearance_theme">外观与主题</string>
     <string name="settings_other_settings">其他设置</string>
+    <string name="settings_network">网络</string>
+    <string name="settings_dns">DNS</string>
+    <string name="settings_dns_summary">NPatch 网络请求使用的 DNS</string>
+    <string name="settings_dns_tencent">腾讯 DoH</string>
+    <string name="settings_dns_google">Google DoH</string>
+    <string name="settings_dns_cloudflare">Cloudflare DoH</string>
+    <string name="settings_dns_system">系统</string>
+    <string name="settings_dns_custom">自定义</string>
+    <string name="settings_dns_custom_url">DoH 地址</string>
+    <string name="settings_dns_custom_summary">请输入完整的 HTTPS DNS-over-HTTPS 服务地址。</string>
+    <string name="settings_dns_custom_invalid">请输入有效的 HTTPS 地址。</string>
     <string name="settings_theme_mode">主题模式</string>
     <string name="settings_theme_mode_system">跟随系统</string>
     <string name="settings_theme_mode_system_summary">自动配合设备的亮色与暗色外观</string>

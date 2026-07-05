@@ -185,6 +185,17 @@
     <string name="settings_manager_cache_failed">Failed to clear manager cache</string>
     <string name="settings_appearance_theme">Appearance &amp; Theme</string>
     <string name="settings_other_settings">Other Settings</string>
+    <string name="settings_network">Network</string>
+    <string name="settings_dns">DNS</string>
+    <string name="settings_dns_summary">DNS used by NPatch network requests</string>
+    <string name="settings_dns_tencent">Tencent DoH</string>
+    <string name="settings_dns_google">Google DoH</string>
+    <string name="settings_dns_cloudflare">Cloudflare DoH</string>
+    <string name="settings_dns_system">System</string>
+    <string name="settings_dns_custom">Custom</string>
+    <string name="settings_dns_custom_url">DoH URL</string>
+    <string name="settings_dns_custom_summary">Enter a complete HTTPS DNS-over-HTTPS endpoint.</string>
+    <string name="settings_dns_custom_invalid">Enter a valid HTTPS URL.</string>
     <string name="settings_theme_mode">Theme Mode</string>
     <string name="settings_theme_mode_system">Follow System</string>
     <string name="settings_theme_mode_system_summary">Match the device light and dark appearance automatically</string>

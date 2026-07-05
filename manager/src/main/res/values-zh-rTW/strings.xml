@@ -182,6 +182,17 @@
     <string name="settings_manager_cache_failed">清除管理器快取失敗</string>
     <string name="settings_appearance_theme">外觀與主題</string>
     <string name="settings_other_settings">其他設定</string>
+    <string name="settings_network">網路</string>
+    <string name="settings_dns">DNS</string>
+    <string name="settings_dns_summary">NPatch 網路請求使用的 DNS</string>
+    <string name="settings_dns_tencent">騰訊 DoH</string>
+    <string name="settings_dns_google">Google DoH</string>
+    <string name="settings_dns_cloudflare">Cloudflare DoH</string>
+    <string name="settings_dns_system">系統</string>
+    <string name="settings_dns_custom">自訂</string>
+    <string name="settings_dns_custom_url">DoH 位址</string>
+    <string name="settings_dns_custom_summary">請輸入完整的 HTTPS DNS-over-HTTPS 服務位址。</string>
+    <string name="settings_dns_custom_invalid">請輸入有效的 HTTPS 位址。</string>
     <string name="settings_theme_mode">主題模式</string>
     <string name="settings_theme_mode_system">跟隨系統</string>
     <string name="settings_theme_mode_system_summary">自動配合裝置的亮色與暗色外觀</string>

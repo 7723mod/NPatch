@@ -67,6 +67,8 @@ import top.nkbe.npatch.config.ThemeSettings
 import top.nkbe.npatch.config.dataStore
 import top.nkbe.npatch.manager.ManagerCacheCleaner
 import top.nkbe.npatch.manager.ManagerLogger
+import top.nkbe.npatch.network.DnsProvider
+import top.nkbe.npatch.network.NetworkDns
 import top.nkbe.npatch.ui.activity.MainActivity
 import top.nkbe.npatch.ui.component.NPatchScaffold
 import top.nkbe.npatch.config.DEFAULT_CUSTOM_COLOR
@@ -135,6 +137,16 @@ fun SettingsScreen() {
             }
 
             item {
+                SmallTitle(text = stringResource(R.string.settings_network))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = backgroundAwareCardColors(),
+                ) {
+                    DnsPreference()
+                }
+            }
+
+            item {
                 SmallTitle(text = stringResource(R.string.settings_other_settings))
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -147,6 +159,91 @@ fun SettingsScreen() {
                     WelcomeGuide()
                     StorageDirectory()
                     ClearManagerCache()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DnsPreference() {
+    val providers = DnsProvider.entries
+    val labels = listOf(
+        stringResource(R.string.settings_dns_tencent),
+        stringResource(R.string.settings_dns_google),
+        stringResource(R.string.settings_dns_cloudflare),
+        stringResource(R.string.settings_dns_system),
+        stringResource(R.string.settings_dns_custom),
+    )
+    var selectedProvider by remember { mutableStateOf(NetworkDns.selectedProvider()) }
+    var showCustomDialog by remember { mutableStateOf(false) }
+
+    OverlayDropdownPreference(
+        title = stringResource(R.string.settings_dns),
+        summary = stringResource(R.string.settings_dns_summary),
+        items = labels,
+        selectedIndex = providers.indexOf(selectedProvider),
+        startAction = { SettingsStartIcon(Icons.Outlined.Language) },
+        onSelectedIndexChange = { index ->
+            val provider = providers[index]
+            if (provider == DnsProvider.CUSTOM) {
+                showCustomDialog = true
+            } else {
+                NetworkDns.setProvider(provider)
+                selectedProvider = provider
+            }
+        }
+    )
+
+    if (showCustomDialog) {
+        var customUrl by rememberSaveable { mutableStateOf(NetworkDns.customUrl()) }
+        var invalidUrl by rememberSaveable { mutableStateOf(false) }
+        OverlayDialog(
+            title = stringResource(R.string.settings_dns_custom),
+            show = true,
+            onDismissRequest = { showCustomDialog = false },
+        ) {
+            Column {
+                Text(
+                    text = stringResource(
+                        if (invalidUrl) R.string.settings_dns_custom_invalid
+                        else R.string.settings_dns_custom_summary
+                    ),
+                    color = if (invalidUrl) MiuixTheme.colorScheme.error
+                    else MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    style = MiuixTheme.textStyles.body2,
+                    modifier = Modifier.padding(bottom = 12.dp),
+                )
+                TextField(
+                    value = customUrl,
+                    onValueChange = {
+                        customUrl = it
+                        invalidUrl = false
+                    },
+                    label = stringResource(R.string.settings_dns_custom_url),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(16.dp))
+                Row(horizontalArrangement = Arrangement.SpaceBetween) {
+                    TextButton(
+                        text = stringResource(android.R.string.cancel),
+                        onClick = { showCustomDialog = false },
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(20.dp))
+                    TextButton(
+                        text = stringResource(android.R.string.ok),
+                        onClick = {
+                            if (NetworkDns.setCustomUrl(customUrl)) {
+                                selectedProvider = DnsProvider.CUSTOM
+                                showCustomDialog = false
+                            } else {
+                                invalidUrl = true
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                    )
                 }
             }
         }

@@ -159,6 +159,7 @@ dependencies {
     implementation(npatch.androidx.room.ktx)
     implementation(npatch.androidx.room.runtime)
     implementation("com.squareup.okhttp3:okhttp:5.3.2")
+    implementation("com.squareup.okhttp3:okhttp-dnsoverhttps:5.3.2")
 
     implementation(libs.material)
     implementation(libs.gson)

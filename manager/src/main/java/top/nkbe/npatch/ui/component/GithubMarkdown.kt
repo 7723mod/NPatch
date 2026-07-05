@@ -31,9 +31,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
 import androidx.webkit.WebViewAssetLoader
 import okhttp3.Headers.Companion.toHeaders
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
+import top.nkbe.npatch.network.NetworkDns
 import okio.IOException
 import top.nkbe.npatch.ui.util.adjustLightnessArgb
 import top.nkbe.npatch.ui.util.cssColorFromArgb
@@ -251,7 +251,7 @@ fun GithubMarkdown(
                         ): WebResourceResponse? {
                             val scheme = request.url.scheme ?: return null
                             if (!scheme.startsWith("http")) return null
-                            val client = OkHttpClient()
+                            val client = NetworkDns.client()
                             val call = client.newCall(
                                 Request.Builder()
                                     .url(request.url.toString())

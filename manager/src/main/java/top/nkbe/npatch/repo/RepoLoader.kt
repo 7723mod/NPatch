@@ -7,11 +7,11 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import okhttp3.Call
 import okhttp3.Callback
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import top.nkbe.npatch.R
 import top.nkbe.npatch.lspApp
+import top.nkbe.npatch.network.NetworkDns
 import java.io.IOException
 import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets
@@ -65,7 +65,6 @@ class RepoLoader private constructor() {
         private const val TAG = "RepoLoader"
         private const val repoBaseUrl = "https://repo.fpfast.top/repo/"
 
-        private val okHttpClient = OkHttpClient()
         private val executorService = Executors.newCachedThreadPool()
 
         @Volatile
@@ -87,7 +86,7 @@ class RepoLoader private constructor() {
         executorService.submit {
             try {
                 val request = Request.Builder().url("${repoBaseUrl}modules").build()
-                okHttpClient.newCall(request).execute().use { response ->
+                NetworkDns.client().newCall(request).execute().use { response ->
                     if (!response.isSuccessful) {
                         throw IOException("HTTP ${response.code}")
                     }
@@ -282,7 +281,7 @@ class RepoLoader private constructor() {
 
     fun loadRemoteReleases(packageName: String) {
         val request = Request.Builder().url("${repoBaseUrl}info/$packageName").build()
-        okHttpClient.newCall(request).enqueue(object : Callback {
+        NetworkDns.client().newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 Log.e(TAG, "${call.request().url} ${e.message}")
                 listeners.forEach { it.onThrowable(e) }
