@@ -18,8 +18,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
 import java.util.ArrayList;
 import java.util.List;
+import java.nio.file.StandardOpenOption;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -27,6 +30,7 @@ public class OriginApkHelper {
 
     private static final String TAG = "NPatch-ApkHelper";
     private static final int PER_USER_RANGE = 100000;
+    private static final String NATIVE_CACHE_COMPLETE = ".complete";
 
     public static Path prepareOriginApk(ApplicationInfo appInfo, ClassLoader baseClassLoader) throws IOException {
         Path internalOriginDir = Paths.get(appInfo.dataDir, "cache/code_cache/");
@@ -82,24 +86,41 @@ public class OriginApkHelper {
             return targetDir;
         }
 
-        FileUtils.deleteFolderIfExists(nativeRoot);
-        Files.createDirectories(targetDir);
-
-        String[] abis = Process.is64Bit() ? Build.SUPPORTED_64_BIT_ABIS : Build.SUPPORTED_32_BIT_ABIS;
-        for (String abi : abis) {
-            boolean extractedAny = false;
-            for (String apkPath : apkPaths) {
-                extractedAny |= extractNativeLibrariesForAbi(apkPath, abi, targetDir);
-            }
-            if (extractedAny) {
-                makeNativeLibrariesReadOnly(targetDir);
-                Log.i(TAG, "Prepared native libraries for " + abi + " at " + targetDir);
+        // Several app processes may bootstrap at once. Serialize extraction so no process can
+        // observe a directory after only the first library has been written and permanently
+        // mistake that partial cache for a complete one.
+        Path nativeCacheDir = nativeRoot.getParent();
+        Files.createDirectories(nativeCacheDir);
+        Path lockPath = nativeCacheDir.resolve("host.lock");
+        try (FileChannel lockChannel = FileChannel.open(lockPath,
+                                                        StandardOpenOption.CREATE,
+                                                        StandardOpenOption.WRITE);
+             FileLock ignored = lockChannel.lock()) {
+            if (hasNativeLibraries(targetDir)) {
                 return targetDir;
             }
-        }
 
-        FileUtils.deleteFolderIfExists(targetDir);
-        return null;
+            FileUtils.deleteFolderIfExists(nativeRoot);
+            Files.createDirectories(targetDir);
+
+            String[] abis = Process.is64Bit() ? Build.SUPPORTED_64_BIT_ABIS : Build.SUPPORTED_32_BIT_ABIS;
+            for (String abi : abis) {
+                boolean extractedAny = false;
+                for (String apkPath : apkPaths) {
+                    extractedAny |= extractNativeLibrariesForAbi(apkPath, abi, targetDir);
+                }
+                if (extractedAny) {
+                    makeNativeLibrariesReadOnly(targetDir);
+                    Files.write(targetDir.resolve(NATIVE_CACHE_COMPLETE), new byte[0],
+                                StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+                    Log.i(TAG, "Prepared native libraries for " + abi + " at " + targetDir);
+                    return targetDir;
+                }
+            }
+
+            FileUtils.deleteFolderIfExists(targetDir);
+            return null;
+        }
     }
 
     public static long getOriginalApkCrc(String sourceDir) throws IOException {
@@ -129,7 +150,9 @@ public class OriginApkHelper {
     }
 
     private static boolean hasNativeLibraries(Path dir) {
-        if (!Files.isDirectory(dir)) return false;
+        if (!Files.isDirectory(dir) || !Files.isRegularFile(dir.resolve(NATIVE_CACHE_COMPLETE))) {
+            return false;
+        }
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, "*.so")) {
             return stream.iterator().hasNext();
         } catch (IOException ignored) {
