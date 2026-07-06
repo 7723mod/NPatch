@@ -787,8 +787,6 @@ public class SigBypass {
                 }
                 if (!isPatchedApkPath) return;
 
-                if (isModuleCaller()) return;
-
                 if (arg0 instanceof String) {
                     param.args[0] = originalApkPath;
                 } else if (arg0 instanceof File) {
