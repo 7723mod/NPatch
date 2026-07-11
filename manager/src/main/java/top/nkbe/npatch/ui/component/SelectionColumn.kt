@@ -2,7 +2,7 @@ package top.nkbe.npatch.ui.component
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -12,8 +12,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import top.nkbe.npatch.R
@@ -40,18 +39,18 @@ object SelectionColumnScope {
             label = "SelectionItemBg"
         ).value
         val selectedLabel = stringResource(R.string.accessibility_selected)
-        val spokenTitle = if (selected) "$title, $selectedLabel" else title
 
         Row(
             modifier = modifier
                 .fillMaxWidth()
                 .heightIn(min = 72.dp)
                 .background(backgroundColor)
-                .semantics(mergeDescendants = true) {
-                    role = Role.Button
-                    contentDescription = spokenTitle
-                }
-                .clickable { onClick() }
+                .semantics { stateDescription = if (selected) selectedLabel else "" }
+                .selectable(
+                    selected = selected,
+                    onClick = onClick,
+                    role = Role.RadioButton
+                )
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically

@@ -63,9 +63,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -259,13 +260,6 @@ fun SearchStatus.SearchPager(
             .fillMaxSize()
             .zIndex(5f)
             .background(colorScheme.surface.copy(alpha = surfaceAlpha))
-            .then(
-                if (!searchStatus.isCollapsed()) {
-                    Modifier
-                        .semantics { onClick { false } }
-                        .pointerInput(Unit) { }
-                } else Modifier
-            )
     ) {
         Row(
             Modifier
@@ -309,6 +303,7 @@ fun SearchStatus.SearchPager(
                     color = colorScheme.primary,
                     modifier = Modifier
                         .padding(start = 4.dp, end = 16.dp, top = searchBarTopPadding)
+                        .semantics { role = Role.Button }
                         .clickable(
                             interactionSource = null,
                             enabled = searchStatus.isExpand(),

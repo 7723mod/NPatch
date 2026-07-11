@@ -119,7 +119,7 @@
     <string name="patch_output_log_to_media_desc">将 Xposed 日志和框架启动日志输出到 Media 目录</string>
     <string name="patch_hide_libs">豁免环境校验</string>
     <string name="patch_hide_libs_desc">为执行基础运行环境校验的应用收敛 ART 与敏感系统库的可见性。</string>
-    <string name="patch_start">開始修補</string>
+    <string name="patch_start">开始打包</string>
     <string name="patch_return">返回</string>
     <string name="patch_uninstall_text">由于签名不同，安装修补的应用前需要先卸载原应用。\n确保您已备份好个人数据。</string>
     <string name="patch_install_successfully">安装成功</string>

@@ -47,7 +47,9 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.invisibleToUser
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -293,6 +295,7 @@ fun FloatingGlassBottomBar(
             Row(
                 Modifier
                     .clearAndSetSemantics {}
+                    .semantics { invisibleToUser() }
                     .alpha(0f)
                     .layerBackdrop(tabsBackdrop)
                     .graphicsLayer { translationX = panelOffset }

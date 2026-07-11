@@ -325,25 +325,20 @@ private fun StatusCard(onManageShortcut: (Int) -> Unit) {
 
 @Composable
 private fun InfoText(title: String, content: String, bottomPadding: Dp = 10.dp) {
-    Text(
-        text = title,
-        fontSize = MiuixTheme.textStyles.headline1.fontSize,
-        color = MiuixTheme.colorScheme.onSurface,
-        fontWeight = FontWeight.Medium,
-        modifier = Modifier.semantics {
-            contentDescription = title
-        }
-    )
-    Text(
-        text = content,
-        fontSize = MiuixTheme.textStyles.body2.fontSize,
-        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-        modifier = Modifier
-            .padding(top = 2.dp, bottom = bottomPadding)
-            .semantics {
-                contentDescription = "$title $content"
-            }
-    )
+    Column(Modifier.semantics(mergeDescendants = true) {}) {
+        Text(
+            text = title,
+            fontSize = MiuixTheme.textStyles.headline1.fontSize,
+            color = MiuixTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.Medium
+        )
+        Text(
+            text = content,
+            fontSize = MiuixTheme.textStyles.body2.fontSize,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            modifier = Modifier.padding(top = 2.dp, bottom = bottomPadding)
+        )
+    }
 }
 
 @Composable
