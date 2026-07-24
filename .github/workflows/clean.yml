@@ -3,10 +3,35 @@ name: Clean Build
 on:
   workflow_dispatch:
 
+permissions:
+  actions: write
+
 jobs:
   clean:
     runs-on: windows-latest
     steps:
+      - name: 清理 GitHub Actions artifacts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const artifacts = await github.paginate(
+              github.rest.actions.listArtifactsForRepo,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 100,
+              },
+            );
+
+            for (const artifact of artifacts) {
+              core.info(`Deleting artifact ${artifact.id}: ${artifact.name}`);
+              await github.rest.actions.deleteArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: artifact.id,
+              });
+            }
+
       - name: 刪除 Gradle 緩存
         run: Remove-Item -Path $env:USERPROFILE\.gradle\caches -Recurse -Force -ErrorAction SilentlyContinue
 

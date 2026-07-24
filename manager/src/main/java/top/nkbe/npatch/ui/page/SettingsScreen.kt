@@ -12,6 +12,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -71,7 +72,6 @@ import top.nkbe.npatch.ui.component.NPatchScaffold
 import top.nkbe.npatch.config.DEFAULT_CUSTOM_COLOR
 import top.nkbe.npatch.config.DEFAULT_CARD_BACKGROUND_ALPHA_PERCENT
 import top.nkbe.npatch.ui.util.BackgroundImageStorage
-import top.nkbe.npatch.ui.util.LocalFloatingGlassBottomBar
 import top.nkbe.npatch.ui.util.LocalSnackbarHost
 import top.nkbe.npatch.ui.util.backgroundAwareCardColors
 import top.yukonga.miuix.kmp.basic.BasicComponent
@@ -102,12 +102,6 @@ private const val TAG = "SettingsScreen"
 @Composable
 fun SettingsScreen() {
     val scrollBehavior = MiuixScrollBehavior()
-    val useFloatingGlassBottomBar = LocalFloatingGlassBottomBar.current
-    val bottomContentPadding = if (useFloatingGlassBottomBar) {
-        68.dp + 12.dp + 8.dp + 28.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    } else {
-        24.dp
-    }
     NPatchScaffold(
         topBar = {
             TopAppBar(
@@ -117,40 +111,44 @@ fun SettingsScreen() {
             )
         }
     ) { innerPadding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
-                .padding(innerPadding)
                 .fillMaxSize()
                 .scrollEndHaptic()
                 .overScrollVertical()
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp)
+                .padding(horizontal = 12.dp),
+            contentPadding = PaddingValues(
+                top = innerPadding.calculateTopPadding() + 12.dp,
+                bottom = innerPadding.calculateBottomPadding() + 24.dp,
+            ),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            SmallTitle(text = stringResource(R.string.settings_appearance_theme))
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = backgroundAwareCardColors(),
-            ) {
-                AppearanceSettings()
+            item {
+                SmallTitle(text = stringResource(R.string.settings_appearance_theme))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = backgroundAwareCardColors(),
+                ) {
+                    AppearanceSettings()
+                }
             }
 
-            Spacer(Modifier.height(12.dp))
-
-            SmallTitle(text = stringResource(R.string.settings_other_settings))
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = backgroundAwareCardColors(),
-            ) {
-                LanguagePreference()
-                KeyStore()
-                DetailPatchLogs()
-                OutputFullLog()
-                WelcomeGuide()
-                StorageDirectory()
-                ClearManagerCache()
+            item {
+                SmallTitle(text = stringResource(R.string.settings_other_settings))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = backgroundAwareCardColors(),
+                ) {
+                    LanguagePreference()
+                    KeyStore()
+                    DetailPatchLogs()
+                    OutputFullLog()
+                    WelcomeGuide()
+                    StorageDirectory()
+                    ClearManagerCache()
+                }
             }
-            Spacer(Modifier.height(bottomContentPadding))
         }
     }
 }

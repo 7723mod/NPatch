@@ -41,7 +41,6 @@ val (coreCommitCount, coreLatestTag) = runCatching {
         }
 }.getOrNull() ?: (3045 to "2.0")
 
-// sync from https://github.com/JingMartix/LSPosed/blob/master/build.gradle.kts
 val defaultManagerPackageName by extra("top.nkbe.npatch")
 val apiCode by extra(101)
 val verCode by extra(commitCount)
@@ -208,36 +207,36 @@ fun Project.configureBaseExtension() {
     }
 
     extensions.findByType(ApplicationAndroidComponentsExtension::class)?.let { androidComponents ->
-        val optimizeReleaseRes = task("optimizeReleaseRes").doLast {
-            val isWindows = System.getProperty("os.name").lowercase().contains("windows")
-            val aapt2Name = if (isWindows) "aapt2.exe" else "aapt2"
+        val optimizeReleaseRes = tasks.register("optimizeReleaseRes") {
+            doLast {
+                val isWindows = System.getProperty("os.name").lowercase().contains("windows")
+                val aapt2Name = if (isWindows) "aapt2.exe" else "aapt2"
 
-            val aapt2 = File(
-                androidComponents.sdkComponents.sdkDirectory.get().asFile,
-                "build-tools/${androidBuildToolsVersion}/$aapt2Name"
-            )
-            val zip = java.nio.file.Paths.get(
-                project.buildDir.path,
-                "intermediates",
-                "optimized_processed_res",
-                "release",
-                "optimizeReleaseResources",
-                "resources-release-optimize.ap_"
-            )
-            val optimized = File("${zip}.opt")
-            val cmd = exec {
-                commandLine(
-                    aapt2, "optimize",
-                    "--collapse-resource-names",
-                    "--enable-sparse-encoding",
-                    "-o", optimized,
-                    zip
+                val aapt2 = File(
+                    androidComponents.sdkComponents.sdkDirectory.get().asFile,
+                    "build-tools/${androidBuildToolsVersion}/$aapt2Name"
                 )
-                isIgnoreExitValue = false
-            }
-            if (cmd.exitValue == 0) {
-                delete(zip)
-                optimized.renameTo(zip.toFile())
+                val zip = project.layout.buildDirectory.get().asFile.toPath()
+                    .resolve("intermediates")
+                    .resolve("optimized_processed_res")
+                    .resolve("release")
+                    .resolve("optimizeReleaseResources")
+                    .resolve("resources-release-optimize.ap_")
+                val optimized = File("${zip}.opt")
+                val cmd = providers.exec {
+                    commandLine(
+                        aapt2, "optimize",
+                        "--collapse-resource-names",
+                        "--enable-sparse-encoding",
+                        "-o", optimized,
+                        zip
+                    )
+                    isIgnoreExitValue = false
+                }.result.get()
+                if (cmd.exitValue == 0) {
+                    delete(zip)
+                    optimized.renameTo(zip.toFile())
+                }
             }
         }
 
