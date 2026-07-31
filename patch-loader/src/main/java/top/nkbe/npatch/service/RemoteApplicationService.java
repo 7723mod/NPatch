@@ -8,8 +8,8 @@ import android.content.ServiceConnection;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
-import android.os.HandlerThread;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.ParcelFileDescriptor;
 import android.os.Parcel;
 import android.os.RemoteException;
@@ -22,106 +22,64 @@ import org.lsposed.lspd.service.IHotReloadTarget;
 import org.lsposed.lspd.service.ILSPApplicationService;
 
 import java.io.File;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class RemoteApplicationService implements ILSPApplicationService {
 
     private static final String TAG = "NPatch";
     private static final String MODULE_SERVICE = "top.nkbe.npatch.manager.ModuleService";
     private static final int CONNECTION_TIMEOUT_SEC = 2;
-    private static final int MAX_BIND_ATTEMPTS = 1;
+    private static final int MAX_BIND_ATTEMPTS = 2;
     private static final int REGISTER_CLIENT_PACKAGE = 0x4E5041;
+    private static final ExecutorService BIND_EXECUTOR =
+            Executors.newCachedThreadPool(runnable -> {
+                Thread thread = new Thread(runnable, "NPatch-ManagerBind");
+                thread.setDaemon(true);
+                return thread;
+            });
 
+    private final Context context;
     private volatile ILSPApplicationService service;
+    private volatile ServiceConnection connection;
 
     @SuppressLint("DiscouragedPrivateApi")
     public RemoteApplicationService(Context context) throws RemoteException {
+        Context appContext = context.getApplicationContext();
+        this.context = appContext == null ? context : appContext;
         try {
             Intent intent = new Intent()
                     .setComponent(new ComponentName(Constants.MANAGER_PACKAGE_NAME, MODULE_SERVICE))
-                    .putExtra("packageName", context.getPackageName());
+                    .putExtra("packageName", this.context.getPackageName());
 
             Throwable lastError = null;
             for (int attempt = 1; attempt <= MAX_BIND_ATTEMPTS && service == null; attempt++) {
-                CountDownLatch latch = new CountDownLatch(1);
-                ServiceConnection conn = new ServiceConnection() {
-                    @Override
-                    public void onServiceConnected(ComponentName name, IBinder binder) {
-                        Log.i(TAG, "Manager binder received");
-                        registerClientPackage(binder, context.getPackageName());
-                        service = Stub.asInterface(binder);
-                        latch.countDown();
-                    }
-
-                    @Override
-                    public void onServiceDisconnected(ComponentName name) {
-                        Log.e(TAG, "Manager service died");
-                        service = null;
-                    }
-                };
-
                 Log.i(TAG, "Requesting manager binder... attempt " + attempt + "/" + MAX_BIND_ATTEMPTS);
                 try {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        boolean bindOk = context.bindService(
-                                intent,
-                                Context.BIND_AUTO_CREATE,
-                                Executors.newSingleThreadExecutor(),
-                                conn
-                        );
-                        if (!bindOk) {
-                            throw new RemoteException("bindService returned false");
-                        }
-                    } else {
-                        HandlerThread handlerThread = new HandlerThread("RemoteApplicationService");
-                        handlerThread.start();
-                        Handler handler = new Handler(handlerThread.getLooper());
-
-                        Class<?> contextImplClass = context.getClass();
-                        Method getUserMethod = contextImplClass.getMethod("getUser");
-                        UserHandle userHandle = (UserHandle) getUserMethod.invoke(context);
-
-                        Method bindServiceAsUserMethod = contextImplClass.getDeclaredMethod(
-                                "bindServiceAsUser",
-                                Intent.class,
-                                ServiceConnection.class,
-                                int.class,
-                                Handler.class,
-                                UserHandle.class
-                        );
-
-                        bindServiceAsUserMethod.invoke(context, intent, conn, Context.BIND_AUTO_CREATE, handler, userHandle);
-                    }
-
-                    boolean success = latch.await(CONNECTION_TIMEOUT_SEC, TimeUnit.SECONDS);
-                    if (!success) {
-                        throw new TimeoutException("Bind service timeout");
-                    }
-                } catch (Exception e) {
-                    lastError = e;
-                    Log.w(TAG, "Manager bind attempt failed", e);
+                    service = bindOnce(intent);
+                } catch (Throwable error) {
+                    lastError = error;
+                    Log.w(TAG, "Manager bind attempt failed", error);
                 }
             }
 
             if (service == null) {
+                RemoteException failure =
+                        new RemoteException("Failed to get manager binder after "
+                                + MAX_BIND_ATTEMPTS + " attempts");
                 if (lastError != null) {
-                    if (lastError instanceof RemoteException) {
-                        throw (RemoteException) lastError;
-                    }
-                    RemoteException remoteException = new RemoteException("Failed to get manager binder");
-                    remoteException.initCause(lastError);
-                    throw remoteException;
+                    failure.initCause(lastError);
                 }
-                throw new TimeoutException("Bind service failed after retries");
+                throw failure;
             }
-
         } catch (Throwable e) {
             if (e instanceof RemoteException) {
                 throw (RemoteException) e;
@@ -132,16 +90,147 @@ public class RemoteApplicationService implements ILSPApplicationService {
         }
     }
 
-    private static void registerClientPackage(IBinder binder, String packageName) {
+    private ILSPApplicationService bindOnce(Intent intent) throws Exception {
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicBoolean cancelled = new AtomicBoolean(false);
+        AtomicBoolean disconnected = new AtomicBoolean(false);
+        AtomicReference<ILSPApplicationService> result = new AtomicReference<>();
+        AtomicReference<Throwable> failure = new AtomicReference<>();
+
+        ServiceConnection candidate = new ServiceConnection() {
+            @Override
+            public void onServiceConnected(ComponentName name, IBinder binder) {
+                if (cancelled.get()) {
+                    safeUnbind(this);
+                    return;
+                }
+                try {
+                    registerClientPackage(binder, context.getPackageName());
+                    ILSPApplicationService connected = Stub.asInterface(binder);
+                    if (connected == null || !binder.isBinderAlive()) {
+                        throw new RemoteException("Manager returned a dead binder");
+                    }
+                    result.set(connected);
+                    Log.i(TAG, "Manager binder received and caller identity registered");
+                } catch (Throwable error) {
+                    failure.set(error);
+                } finally {
+                    latch.countDown();
+                }
+            }
+
+            @Override
+            public void onServiceDisconnected(ComponentName name) {
+                disconnected.set(true);
+                if (connection == this) {
+                    Log.e(TAG, "Manager service disconnected");
+                    service = null;
+                    connection = null;
+                }
+            }
+
+            @Override
+            public void onBindingDied(ComponentName name) {
+                failure.compareAndSet(null, new RemoteException("Manager binding died"));
+                onServiceDisconnected(name);
+                latch.countDown();
+            }
+
+            @Override
+            public void onNullBinding(ComponentName name) {
+                disconnected.set(true);
+                failure.compareAndSet(null, new RemoteException("Manager returned a null binding"));
+                latch.countDown();
+            }
+        };
+
+        boolean bindStarted = bindServiceCompat(intent, candidate);
+        if (!bindStarted) {
+            throw new RemoteException("bindService returned false");
+        }
+
+        if (!latch.await(CONNECTION_TIMEOUT_SEC, TimeUnit.SECONDS)) {
+            cancelled.set(true);
+            safeUnbind(candidate);
+            throw new TimeoutException("Manager bind timed out");
+        }
+
+        Throwable error = failure.get();
+        ILSPApplicationService connected = result.get();
+        if (error != null
+                || disconnected.get()
+                || connected == null
+                || !connected.asBinder().isBinderAlive()) {
+            cancelled.set(true);
+            safeUnbind(candidate);
+            if (error instanceof Exception) {
+                throw (Exception) error;
+            }
+            throw new RemoteException("Manager bind failed");
+        }
+        connection = candidate;
+        if (disconnected.get() || !connected.asBinder().isBinderAlive()) {
+            connection = null;
+            cancelled.set(true);
+            safeUnbind(candidate);
+            throw new RemoteException("Manager disconnected while completing bind");
+        }
+        return connected;
+    }
+
+    @SuppressLint("DiscouragedPrivateApi")
+    private boolean bindServiceCompat(Intent intent, ServiceConnection candidate)
+            throws ReflectiveOperationException {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            return context.bindService(
+                    intent,
+                    Context.BIND_AUTO_CREATE,
+                    BIND_EXECUTOR,
+                    candidate
+            );
+        }
+
+        Class<?> contextImplClass = context.getClass();
+        Method getUserMethod = contextImplClass.getMethod("getUser");
+        UserHandle userHandle = (UserHandle) getUserMethod.invoke(context);
+        Method bindServiceAsUserMethod = contextImplClass.getDeclaredMethod(
+                "bindServiceAsUser",
+                Intent.class,
+                ServiceConnection.class,
+                int.class,
+                Handler.class,
+                UserHandle.class
+        );
+        Object result = bindServiceAsUserMethod.invoke(
+                context,
+                intent,
+                candidate,
+                Context.BIND_AUTO_CREATE,
+                new Handler(Looper.getMainLooper()),
+                userHandle
+        );
+        return !(result instanceof Boolean) || (Boolean) result;
+    }
+
+    private void safeUnbind(ServiceConnection candidate) {
+        try {
+            context.unbindService(candidate);
+        } catch (IllegalArgumentException ignored) {
+            // The framework may dispatch a late callback after an already completed unbind.
+        }
+    }
+
+    private static void registerClientPackage(IBinder binder, String packageName)
+            throws RemoteException {
         Parcel data = Parcel.obtain();
         Parcel reply = Parcel.obtain();
         try {
             data.writeInterfaceToken("org.lsposed.lspd.service.ILSPApplicationService");
             data.writeString(packageName);
-            binder.transact(REGISTER_CLIENT_PACKAGE, data, reply, 0);
+            if (!binder.transact(REGISTER_CLIENT_PACKAGE, data, reply, 0)) {
+                throw new RemoteException("Manager does not support caller registration");
+            }
             reply.readException();
-        } catch (RemoteException | SecurityException error) {
-            Log.w(TAG, "Manager rejected client package " + packageName, error);
         } finally {
             data.recycle();
             reply.recycle();
