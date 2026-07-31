@@ -1,1 +1,0 @@
--keep public class top.nkbe.npatch.remote.NPatchRemoteClient { public *; }
