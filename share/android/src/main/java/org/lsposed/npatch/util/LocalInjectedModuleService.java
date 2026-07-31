@@ -1,199 +1,64 @@
 package top.nkbe.npatch.util;
 
 import android.content.Context;
-import android.content.SharedPreferences;
+import android.os.Binder;
 import android.os.Bundle;
-import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
 
 import org.lsposed.lspd.service.ILSPInjectedModuleService;
 import org.lsposed.lspd.service.IRemotePreferenceCallback;
 
-import java.io.File;
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-
+/**
+ * Read-only injected-module view of an {@link NPatchRemoteStore}.
+ *
+ * <p>Vector API 101/102 deliberately keeps injected remote data read-only. Module applications
+ * perform writes through {@code IXposedService}; this service only delivers snapshots, change
+ * callbacks and read-only files to code running inside hooked targets.</p>
+ */
 public final class LocalInjectedModuleService extends ILSPInjectedModuleService.Stub {
-    private static final long PROP_CAP_REMOTE = 1L << 1;
-
-    private static final class CallbackState {
-        final IRemotePreferenceCallback callback;
-        final IBinder.DeathRecipient deathRecipient;
-        Map<String, Object> lastSnapshot;
-
-        CallbackState(
-                IRemotePreferenceCallback callback,
-                IBinder.DeathRecipient deathRecipient,
-                Map<String, Object> lastSnapshot
-        ) {
-            this.callback = callback;
-            this.deathRecipient = deathRecipient;
-            this.lastSnapshot = lastSnapshot;
-        }
-    }
-
-    private final Context context;
-    private final String packageName;
-    private final Map<String, PreferenceGroupState> preferenceGroups = new ConcurrentHashMap<>();
-
-    private final class PreferenceGroupState {
-        final SharedPreferences preferences;
-        final Map<IBinder, CallbackState> callbacks = new ConcurrentHashMap<>();
-        final SharedPreferences.OnSharedPreferenceChangeListener listener;
-
-        PreferenceGroupState(String group) {
-            preferences = context.getSharedPreferences(preferencesName(group), Context.MODE_PRIVATE);
-            listener = (sharedPreferences, key) -> notifyPreferenceChanges(this);
-            preferences.registerOnSharedPreferenceChangeListener(listener);
-        }
-    }
+    private final NPatchRemoteStore store;
+    private final int allowedUid;
 
     public LocalInjectedModuleService(Context context, String packageName) {
-        Context appContext = context.getApplicationContext();
-        this.context = appContext == null ? context : appContext;
-        this.packageName = packageName;
+        this(context, packageName, -1);
+    }
+
+    public LocalInjectedModuleService(Context context, String packageName, int allowedUid) {
+        store = NPatchRemoteStore.get(context, packageName);
+        this.allowedUid = allowedUid;
     }
 
     @Override
     public long getFrameworkProperties() {
-        return PROP_CAP_REMOTE;
+        enforceCaller();
+        return NPatchRemoteStore.CAP_REMOTE;
     }
 
     @Override
-    public Bundle requestRemotePreferences(String group, IRemotePreferenceCallback callback) {
-        PreferenceGroupState groupState =
-                preferenceGroups.computeIfAbsent(safeName(group), ignored -> new PreferenceGroupState(group));
-        HashMap<String, Object> snapshot = snapshotPreferences(groupState.preferences);
-        if (callback != null) {
-            IBinder callbackBinder = callback.asBinder();
-            IBinder.DeathRecipient deathRecipient =
-                    () -> groupState.callbacks.remove(callbackBinder);
-            CallbackState callbackState =
-                    new CallbackState(callback, deathRecipient, new HashMap<>(snapshot));
-            CallbackState previous = groupState.callbacks.put(callbackBinder, callbackState);
-            if (previous != null) {
-                callbackBinder.unlinkToDeath(previous.deathRecipient, 0);
-            }
-            try {
-                callbackBinder.linkToDeath(deathRecipient, 0);
-            } catch (RemoteException e) {
-                groupState.callbacks.remove(callbackBinder, callbackState);
-            }
-        }
-        Bundle bundle = new Bundle();
-        bundle.putSerializable("map", snapshot);
-        return bundle;
+    public Bundle requestRemotePreferences(
+            String group,
+            IRemotePreferenceCallback callback
+    ) {
+        enforceCaller();
+        return store.requestPreferences(group, callback);
     }
 
     @Override
     public ParcelFileDescriptor openRemoteFile(String path) throws RemoteException {
-        if (!isSafeRelativePath(path)) {
-            return null;
-        }
-        File file = new File(remoteFilesDir(), path);
-        if (!file.isFile()) {
-            return null;
-        }
-        try {
-            return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY);
-        } catch (Throwable t) {
-            RemoteException e = new RemoteException("Cannot open remote file: " + path);
-            e.initCause(t);
-            throw e;
-        }
+        enforceCaller();
+        return store.openFile(path, false);
     }
 
     @Override
     public String[] getRemoteFileList() {
-        String[] files = remoteFilesDir().list();
-        return files == null ? new String[0] : files;
+        enforceCaller();
+        return store.listFiles();
     }
 
-    private void notifyPreferenceChanges(PreferenceGroupState groupState) {
-        HashMap<String, Object> currentSnapshot = snapshotPreferences(groupState.preferences);
-        List<Map.Entry<IBinder, CallbackState>> callbackEntries = new ArrayList<>(groupState.callbacks.entrySet());
-        for (Map.Entry<IBinder, CallbackState> callbackEntry : callbackEntries) {
-            CallbackState callbackState = callbackEntry.getValue();
-            Bundle diff = buildDiffBundle(callbackState.lastSnapshot, currentSnapshot);
-            callbackState.lastSnapshot = new HashMap<>(currentSnapshot);
-            if (diff.isEmpty()) {
-                continue;
-            }
-            try {
-                callbackState.callback.onUpdate(diff);
-            } catch (RemoteException e) {
-                if (groupState.callbacks.remove(callbackEntry.getKey(), callbackState)) {
-                    callbackEntry.getKey().unlinkToDeath(callbackState.deathRecipient, 0);
-                }
-            }
+    private void enforceCaller() {
+        if (allowedUid >= 0 && Binder.getCallingUid() != allowedUid) {
+            throw new SecurityException("Remote service binder was passed to another UID");
         }
-    }
-
-    private static HashMap<String, Object> snapshotPreferences(SharedPreferences preferences) {
-        HashMap<String, Object> snapshot = new HashMap<>();
-        for (Map.Entry<String, ?> entry : preferences.getAll().entrySet()) {
-            Object value = entry.getValue();
-            if (value instanceof Serializable) {
-                snapshot.put(entry.getKey(), value);
-            }
-        }
-        return snapshot;
-    }
-
-    private static Bundle buildDiffBundle(Map<String, Object> previous, Map<String, Object> current) {
-        Set<String> deleted = new HashSet<>();
-        HashMap<String, Object> updated = new HashMap<>();
-
-        for (String key : previous.keySet()) {
-            if (!current.containsKey(key)) {
-                deleted.add(key);
-            }
-        }
-        for (Map.Entry<String, Object> entry : current.entrySet()) {
-            if (!Objects.equals(previous.get(entry.getKey()), entry.getValue())) {
-                updated.put(entry.getKey(), entry.getValue());
-            }
-        }
-
-        Bundle bundle = new Bundle();
-        if (!deleted.isEmpty()) {
-            bundle.putSerializable("delete", new HashSet<>(deleted));
-        }
-        if (!updated.isEmpty()) {
-            bundle.putSerializable("put", updated);
-        }
-        return bundle;
-    }
-
-    private String preferencesName(String group) {
-        return "npatch_remote_" + safeName(packageName) + "_" + safeName(group);
-    }
-
-    private File remoteFilesDir() {
-        return new File(context.getFilesDir(), "npatch/remote/" + safeName(packageName));
-    }
-
-    private static boolean isSafeRelativePath(String path) {
-        return path != null
-                && !path.isEmpty()
-                && !path.equals(".")
-                && !path.equals("..")
-                && path.indexOf('/') < 0
-                && path.indexOf('\\') < 0;
-    }
-
-    private static String safeName(String name) {
-        if (name == null || name.isEmpty()) {
-            return "_";
-        }
-        return name.replaceAll("[^A-Za-z0-9_.-]", "_");
     }
 }

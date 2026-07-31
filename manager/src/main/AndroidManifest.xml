@@ -97,5 +97,11 @@
             android:exported="true"
             android:enabled="true" />
 
+        <provider
+            android:name=".manager.RemoteApiProvider"
+            android:authorities="${applicationId}.remote"
+            android:enabled="true"
+            android:exported="true" />
+
     </application>
 </manifest>

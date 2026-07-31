@@ -15,6 +15,7 @@ import android.util.Log;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import top.nkbe.npatch.loader.util.XLog;
+import top.nkbe.npatch.remote.NPatchRemoteClient;
 import top.nkbe.npatch.util.LocalInjectedModuleService;
 import top.nkbe.npatch.util.ModuleLoader;
 import org.lsposed.lspd.models.Module;
@@ -62,7 +63,7 @@ public class NeoLocalApplicationService extends ILSPApplicationService.Stub {
                 if (path != null && !path.isEmpty() && new File(path).exists()) {
                     loadModuleByPath(context, packageName, path);
                 } else if (packageName != null) {
-                    loadSingleModule(context, pm, packageName);
+                    loadSingleModule(context, pm, packageName, false);
                 }
             }
         } catch (Exception e) {
@@ -113,7 +114,7 @@ public class NeoLocalApplicationService extends ILSPApplicationService.Stub {
                 int colIndex = cursor.getColumnIndex("packageName");
                 if (colIndex != -1) {
                     String packageName = cursor.getString(colIndex);
-                    String apkPath = loadSingleModule(context, pm, packageName);
+                    String apkPath = loadSingleModule(context, pm, packageName, true);
                     if (apkPath != null) {
                         JSONObject moduleObj = new JSONObject();
                         moduleObj.put("path", apkPath);
@@ -130,7 +131,12 @@ public class NeoLocalApplicationService extends ILSPApplicationService.Stub {
         }
     }
 
-    private String loadSingleModule(Context context, PackageManager pm, String pkgName) {
+    private String loadSingleModule(
+            Context context,
+            PackageManager pm,
+            String pkgName,
+            boolean managerBacked
+    ) {
         try {
             ApplicationInfo appInfo = pm.getApplicationInfo(pkgName, 0);
             Module m = new Module();
@@ -145,7 +151,9 @@ public class NeoLocalApplicationService extends ILSPApplicationService.Stub {
                     return null;
                 }
                 m.appId = appInfo.uid;
-                m.service = new LocalInjectedModuleService(context, m.packageName);
+                m.service = managerBacked
+                        ? managerBackedService(context, m.packageName)
+                        : new LocalInjectedModuleService(context, m.packageName);
                 if (m.file != null && m.file.legacy) {
                     legacyModules.add(m);
                 } else {
@@ -158,6 +166,23 @@ public class NeoLocalApplicationService extends ILSPApplicationService.Stub {
             Log.e(TAG, "NeoLocal: Failed to load " + pkgName, e);
         }
         return null;
+    }
+
+    private static org.lsposed.lspd.service.ILSPInjectedModuleService managerBackedService(
+            Context context,
+            String modulePackageName
+    ) {
+        try {
+            return NPatchRemoteClient.connectInjectedService(context, modulePackageName);
+        } catch (Throwable throwable) {
+            Log.w(
+                    TAG,
+                    "NeoLocal: Manager remote store unavailable for " + modulePackageName
+                            + ", using target-local fallback",
+                    throwable
+            );
+            return new LocalInjectedModuleService(context, modulePackageName);
+        }
     }
 
     private void updateModulesCache(Context context, JSONArray modules) {
