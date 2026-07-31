@@ -8,6 +8,8 @@ import android.os.RemoteException
 import androidx.core.os.BundleCompat
 import io.github.libxposed.service.IXposedScopeCallback
 import io.github.libxposed.service.IXposedService
+import io.github.libxposed.service.HookedProcess
+import io.github.libxposed.service.IHotReloadCallback
 import kotlinx.coroutines.runBlocking
 import top.nkbe.npatch.BuildConfig
 import top.nkbe.npatch.config.ConfigManager
@@ -50,6 +52,18 @@ class XposedServiceBinder(private val packageName: String) : IXposedService.Stub
                 ConfigManager.deactivateModule(appPkg, top.nkbe.npatch.database.entity.Module(packageName, ""))
             }
         }
+    }
+
+    override fun getRunningTargets(): List<HookedProcess> {
+        return HotReloadRegistry.getRunningTargets(packageName)
+    }
+
+    override fun hotReloadModule(
+        targetId: Long,
+        data: Bundle?,
+        callback: IHotReloadCallback?,
+    ) {
+        HotReloadRegistry.hotReload(packageName, targetId, data, callback)
     }
 
     override fun requestRemotePreferences(group: String): Bundle {

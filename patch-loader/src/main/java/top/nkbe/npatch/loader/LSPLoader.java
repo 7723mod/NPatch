@@ -34,6 +34,7 @@ import io.github.libxposed.api.XposedModule;
 import io.github.libxposed.api.XposedModuleInterface;
 import org.lsposed.lspd.models.Module;
 import org.lsposed.lspd.service.ILSPApplicationService;
+import org.lsposed.lspd.service.IHotReloadTarget;
 import org.matrix.vector.impl.VectorContext;
 import org.matrix.vector.impl.VectorLifecycleManager;
 import org.matrix.vector.impl.core.VectorServiceClient;
@@ -247,6 +248,11 @@ public class LSPLoader {
         public ParcelFileDescriptor requestInjectedManagerBinder(List<IBinder> binder)
                 throws RemoteException {
             return base.requestInjectedManagerBinder(binder);
+        }
+
+        @Override
+        public void registerHotReloadTarget(IHotReloadTarget target) throws RemoteException {
+            base.registerHotReloadTarget(target);
         }
 
         @Override

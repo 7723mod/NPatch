@@ -15,6 +15,7 @@ import top.nkbe.npatch.util.LocalInjectedModuleService;
 import top.nkbe.npatch.util.ModuleLoader;
 import org.lsposed.lspd.models.Module;
 import org.lsposed.lspd.service.ILSPApplicationService;
+import org.lsposed.lspd.service.IHotReloadTarget;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -153,6 +154,11 @@ public class IntegrApplicationService extends ILSPApplicationService.Stub {
     @Override
     public boolean isLogMuted() throws RemoteException {
         return false;
+    }
+
+    @Override
+    public void registerHotReloadTarget(IHotReloadTarget target) {
+        // Integrated configuration has no manager process that can issue a reload request.
     }
 
 }

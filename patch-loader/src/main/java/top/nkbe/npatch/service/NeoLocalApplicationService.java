@@ -19,6 +19,7 @@ import top.nkbe.npatch.util.LocalInjectedModuleService;
 import top.nkbe.npatch.util.ModuleLoader;
 import org.lsposed.lspd.models.Module;
 import org.lsposed.lspd.service.ILSPApplicationService;
+import org.lsposed.lspd.service.IHotReloadTarget;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -232,5 +233,10 @@ public class NeoLocalApplicationService extends ILSPApplicationService.Stub {
     @Override
     public boolean isLogMuted() throws RemoteException {
         return false;
+    }
+
+    @Override
+    public void registerHotReloadTarget(IHotReloadTarget target) {
+        // Embedded configuration has no manager process that can issue a reload request.
     }
 }

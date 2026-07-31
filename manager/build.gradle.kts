@@ -1,5 +1,6 @@
 import java.util.Base64
 import java.util.Locale
+import com.android.build.api.artifact.SingleArtifact
 
 val defaultManagerPackageName: String by rootProject.extra
 val apiCode: Int by rootProject.extra
@@ -24,10 +25,10 @@ fun encodeAllowlistEntry(value: String): String {
 
 plugins {
     alias(libs.plugins.agp.app)
+    alias(npatch.plugins.kotlin.android)
     alias(npatch.plugins.compose.compiler)
     alias(npatch.plugins.google.devtools.ksp)
     alias(npatch.plugins.rikka.tools.refine)
-    alias(npatch.plugins.kotlin.android)
     id("kotlin-parcelize")
 }
 
@@ -89,23 +90,12 @@ android {
         buildConfig = true
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.15"
-    }
-
     namespace = "top.nkbe.npatch"
 
-    applicationVariants.all {
-        kotlin.sourceSets {
-            getByName(name) {
-                kotlin.srcDir("build/generated/ksp/$name/kotlin")
-            }
-        }
-    }
 }
 
-afterEvaluate {
-    android.applicationVariants.forEach { variant ->
+androidComponents {
+    onVariants { variant ->
         val variantLowered = variant.name.lowercase()
         val variantCapped = variant.name.replaceFirstChar { it.uppercase() }
 
@@ -122,13 +112,15 @@ afterEvaluate {
             from("${rootProject.projectDir}/out/assets/${variant.name}")
         }
 
-        tasks.named("merge${variantCapped}Assets").configure {
-            dependsOn(copyAssetsTaskProvider)
+        tasks.configureEach {
+            if (name == "merge${variantCapped}Assets") {
+                dependsOn(copyAssetsTaskProvider)
+            }
         }
 
         tasks.register<Copy>("build$variantCapped") {
             dependsOn("assemble$variantCapped")
-            from(variant.outputs.map { it.outputFile })
+            from(variant.artifacts.get(SingleArtifact.APK))
             into("${rootProject.projectDir}/out/$variantLowered")
             rename(".*.apk", "NPatch-v$verName-$verCode-$variantLowered.apk")
         }

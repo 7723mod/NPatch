@@ -11,12 +11,14 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
+import android.os.Parcel;
 import android.os.RemoteException;
 import android.os.UserHandle;
 import android.util.Log;
 
 import top.nkbe.npatch.share.Constants;
 import org.lsposed.lspd.models.Module;
+import org.lsposed.lspd.service.IHotReloadTarget;
 import org.lsposed.lspd.service.ILSPApplicationService;
 
 import java.io.File;
@@ -35,6 +37,7 @@ public class RemoteApplicationService implements ILSPApplicationService {
     private static final String MODULE_SERVICE = "top.nkbe.npatch.manager.ModuleService";
     private static final int CONNECTION_TIMEOUT_SEC = 2;
     private static final int MAX_BIND_ATTEMPTS = 1;
+    private static final int REGISTER_CLIENT_PACKAGE = 0x4E5041;
 
     private volatile ILSPApplicationService service;
 
@@ -52,6 +55,7 @@ public class RemoteApplicationService implements ILSPApplicationService {
                     @Override
                     public void onServiceConnected(ComponentName name, IBinder binder) {
                         Log.i(TAG, "Manager binder received");
+                        registerClientPackage(binder, context.getPackageName());
                         service = Stub.asInterface(binder);
                         latch.countDown();
                     }
@@ -128,6 +132,22 @@ public class RemoteApplicationService implements ILSPApplicationService {
         }
     }
 
+    private static void registerClientPackage(IBinder binder, String packageName) {
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken("org.lsposed.lspd.service.ILSPApplicationService");
+            data.writeString(packageName);
+            binder.transact(REGISTER_CLIENT_PACKAGE, data, reply, 0);
+            reply.readException();
+        } catch (RemoteException | SecurityException error) {
+            Log.w(TAG, "Manager rejected client package " + packageName, error);
+        } finally {
+            data.recycle();
+            reply.recycle();
+        }
+    }
+
     @Override
     public List<Module> getLegacyModulesList() throws RemoteException {
         return service == null ? new ArrayList<>() : service.getLegacyModulesList();
@@ -174,5 +194,12 @@ public class RemoteApplicationService implements ILSPApplicationService {
     @Override
     public boolean isLogMuted() throws RemoteException {
         return false;
+    }
+
+    @Override
+    public void registerHotReloadTarget(IHotReloadTarget target) throws RemoteException {
+        if (service != null) {
+            service.registerHotReloadTarget(target);
+        }
     }
 }

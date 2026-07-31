@@ -1,5 +1,6 @@
 package top.nkbe.npatch.manager
 
+import android.app.ActivityManager
 import android.os.Binder
 import android.os.IBinder
 import android.os.ParcelFileDescriptor
@@ -8,6 +9,7 @@ import kotlinx.coroutines.runBlocking
 import top.nkbe.npatch.config.ConfigManager
 import top.nkbe.npatch.lspApp
 import org.lsposed.lspd.models.Module
+import org.lsposed.lspd.service.IHotReloadTarget
 import org.lsposed.lspd.service.ILSPApplicationService
 
 object ManagerService : ILSPApplicationService.Stub() {
@@ -16,6 +18,26 @@ object ManagerService : ILSPApplicationService.Stub() {
 
     private fun getCallingPackageName(): String? {
         return lspApp.packageManager.getNameForUid(Binder.getCallingUid())
+    }
+
+    private fun getCallingProcessName(): String {
+        val pid = Binder.getCallingPid()
+        val activityManager = lspApp.getSystemService(ActivityManager::class.java)
+        return activityManager.runningAppProcesses
+            ?.firstOrNull { it.pid == pid }
+            ?.processName
+            ?: getCallingPackageName()
+            ?: "pid:$pid"
+    }
+
+    private fun recordModules(modules: List<Module>): List<Module> {
+        HotReloadRegistry.recordModules(
+            Binder.getCallingUid(),
+            Binder.getCallingPid(),
+            getCallingProcessName(),
+            modules,
+        )
+        return modules
     }
 
     override fun isLogMuted(): Boolean {
@@ -28,7 +50,7 @@ object ManagerService : ILSPApplicationService.Stub() {
             runBlocking { ConfigManager.getModuleFilesForApp(it) }
         }.orEmpty().filter { it.file?.legacy == true }
         Log.d(TAG, "$app calls getLegacyModulesList: $list")
-        return list
+        return recordModules(list)
     }
 
     override fun getModulesList(): List<Module> {
@@ -37,7 +59,7 @@ object ManagerService : ILSPApplicationService.Stub() {
             runBlocking { ConfigManager.getModuleFilesForApp(it) }
         }.orEmpty().filter { it.file?.legacy == false }
         Log.d(TAG, "$app calls getModulesList: $list")
-        return list
+        return recordModules(list)
     }
 
     override fun getPrefsPath(packageName: String): String {
@@ -55,5 +77,14 @@ object ManagerService : ILSPApplicationService.Stub() {
             binder.add(XposedServiceBinder(it))
         }
         return null
+    }
+
+    override fun registerHotReloadTarget(target: IHotReloadTarget) {
+        HotReloadRegistry.register(
+            Binder.getCallingUid(),
+            Binder.getCallingPid(),
+            getCallingProcessName(),
+            target,
+        )
     }
 }

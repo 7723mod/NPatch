@@ -4,7 +4,6 @@ import com.android.build.gradle.BaseExtension
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.internal.storage.file.FileRepository
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
-import com.android.build.gradle.LibraryExtension
 import org.gradle.kotlin.dsl.extra
 
 plugins {
@@ -85,33 +84,6 @@ fun Project.configureBaseExtension() {
         defaultConfig {
             minSdk = androidMinSdkVersion
             targetSdk = androidTargetSdkVersion
-            versionCode = verCode
-            versionName = verName
-
-            signingConfigs.create("config") {
-                val androidStoreFile = (
-                    System.getenv("ANDROID_STORE_FILE")
-                        ?: project.findProperty("androidStoreFile")?.toString()
-                    )?.takeIf { it.isNotBlank() }
-                val androidStorePassword = System.getenv("ANDROID_STORE_PASSWORD")
-                    ?: project.findProperty("androidStorePassword")?.toString()
-                val androidKeyAlias = System.getenv("ANDROID_KEY_ALIAS")
-                    ?: project.findProperty("androidKeyAlias")?.toString()
-                val androidKeyPassword = System.getenv("ANDROID_KEY_PASSWORD")
-                    ?: project.findProperty("androidKeyPassword")?.toString()
-
-                if (androidStoreFile != null && androidStorePassword != null && androidKeyAlias != null && androidKeyPassword != null) {
-                    storeFile = rootProject.file(androidStoreFile)
-                    storePassword = androidStorePassword
-                    keyAlias = androidKeyAlias
-                    keyPassword = androidKeyPassword
-                }
-
-                if (this is com.android.build.api.dsl.ApkSigningConfig) {
-                    enableV2Signing = true
-                    enableV3Signing = true
-                }
-            }
 
             externalNativeBuild {
                 cmake {
@@ -150,9 +122,6 @@ fun Project.configureBaseExtension() {
         }
 
         buildTypes {
-            all {
-                signingConfig = if (signingConfigs["config"].storeFile != null) signingConfigs["config"] else signingConfigs["debug"]
-            }
             named("debug") {
                 externalNativeBuild {
                     cmake {
@@ -166,7 +135,6 @@ fun Project.configureBaseExtension() {
                 }
             }
             named("release") {
-                signingConfig = if (signingConfigs["config"].storeFile != null) signingConfigs["config"] else signingConfigs["debug"]
                 externalNativeBuild {
                     cmake {
                         val flags = arrayOf(
@@ -200,10 +168,44 @@ fun Project.configureBaseExtension() {
             }
         }
     }
+}
 
-    extensions.findByType(ApplicationExtension::class)?.lint {
-        abortOnError = true
-        checkReleaseBuilds = false
+fun Project.configureApplicationExtension(extension: ApplicationExtension) {
+    extension.run {
+        defaultConfig {
+            versionCode = verCode
+            versionName = verName
+        }
+
+        val config = signingConfigs.create("config") {
+            val androidStoreFile = (
+                System.getenv("ANDROID_STORE_FILE")
+                    ?: project.findProperty("androidStoreFile")?.toString()
+                )?.takeIf { it.isNotBlank() }
+            val androidStorePassword = System.getenv("ANDROID_STORE_PASSWORD")
+                ?: project.findProperty("androidStorePassword")?.toString()
+            val androidKeyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                ?: project.findProperty("androidKeyAlias")?.toString()
+            val androidKeyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+                ?: project.findProperty("androidKeyPassword")?.toString()
+
+            if (androidStoreFile != null && androidStorePassword != null && androidKeyAlias != null && androidKeyPassword != null) {
+                storeFile = rootProject.file(androidStoreFile)
+                storePassword = androidStorePassword
+                keyAlias = androidKeyAlias
+                keyPassword = androidKeyPassword
+            }
+            enableV2Signing = true
+            enableV3Signing = true
+        }
+        val selectedSigningConfig = if (config.storeFile != null) config else signingConfigs["debug"]
+        buildTypes.configureEach {
+            signingConfig = selectedSigningConfig
+        }
+        lint {
+            abortOnError = true
+            checkReleaseBuilds = false
+        }
     }
 
     extensions.findByType(ApplicationAndroidComponentsExtension::class)?.let { androidComponents ->
@@ -251,6 +253,9 @@ fun Project.configureBaseExtension() {
 subprojects {
     plugins.withId("com.android.application") {
         configureBaseExtension()
+        extensions.findByType(ApplicationExtension::class)?.let {
+            configureApplicationExtension(it)
+        }
     }
     plugins.withId("com.android.library") {
         configureBaseExtension()
