@@ -22,12 +22,10 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.FileOutputStream;
 import java.lang.reflect.Method;
-import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.zip.ZipFile;
 
 @SuppressLint("UnsafeDynamicallyLoadedCode")
 public class LSPAppComponentFactoryStub extends AppComponentFactory {
@@ -61,18 +59,14 @@ public class LSPAppComponentFactoryStub extends AppComponentFactory {
             String arch = (String) vmInstructionSet.invoke(getRuntime.invoke(null));
             String libName = archToLib.get(arch);
 
-            String soPath;
-            boolean useManager = false;
             int sigBypassLevel = Constants.SIGBYPASS_NONE;
 
-            try (var is = cl.getResourceAsStream(Constants.CONFIG_ASSET_PATH);
+            try (var is = requireResource(cl, Constants.CONFIG_ASSET_PATH);
                  var reader = new JsonReader(new InputStreamReader(is))) {
                 reader.beginObject();
                 while (reader.hasNext()) {
                     var name = reader.nextName();
-                    if (name.equals("useManager")) {
-                        useManager = reader.nextBoolean();
-                    } else if (name.equals("hideLibs")) {
+                    if (name.equals("hideLibs")) {
                         hideLibs = reader.nextBoolean();
                     } else if (name.equals("sigBypassLevel")) {
                         sigBypassLevel = reader.nextInt();
@@ -85,42 +79,19 @@ public class LSPAppComponentFactoryStub extends AppComponentFactory {
             hideLibs = hideLibs && sigBypassLevel > Constants.SIGBYPASS_NONE;
 
             int currentUserId = Process.myUid() / 100000;
-
-            String soAssetPath;
-            File soSourceApk = null;
-            if (useManager) {
-                Log.i(TAG, "Bootstrap loader from manager");
-                var ipm = IPackageManager.Stub.asInterface(ServiceManager.getService("package"));
-                ApplicationInfo manager;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    manager = (ApplicationInfo) HiddenApiBypass.invoke(IPackageManager.class, ipm, "getApplicationInfo", Constants.MANAGER_PACKAGE_NAME, 0L, currentUserId);
-                } else {
-                    manager = ipm.getApplicationInfo(Constants.MANAGER_PACKAGE_NAME, 0, currentUserId);
-                }
-                try (var zip = new ZipFile(new File(manager.sourceDir));
-                     var is = zip.getInputStream(zip.getEntry(Constants.LOADER_DEX_ASSET_PATH));
-                     var os = new ByteArrayOutputStream()) {
-                    transfer(is, os);
-                    dex = os.toByteArray();
-                }
-                soSourceApk = new File(manager.sourceDir);
-                soAssetPath = "assets/npatch/so/" + libName + "/libnpatch.so";
-            } else {
-                Log.i(TAG, "Bootstrap loader from embedment");
-                try (var is = cl.getResourceAsStream(Constants.LOADER_DEX_ASSET_PATH);
-                     var os = new ByteArrayOutputStream()) {
-                    transfer(is, os);
-                    dex = os.toByteArray();
-                }
-                soAssetPath = "assets/npatch/so/" + libName + "/libnpatch.so";
+            if (libName == null) {
+                throw new IOException("Unsupported instruction set: " + arch);
             }
 
-            try (var is = soSourceApk != null
-                    ? new ZipFile(soSourceApk).getInputStream(new ZipFile(soSourceApk).getEntry(soAssetPath))
-                    : cl.getResourceAsStream(soAssetPath)) {
-                if (is == null) {
-                    throw new RuntimeException("Should not happen: libnpatch.so not found in assets");
-                }
+            Log.i(TAG, "Bootstrap loader from patched APK");
+            try (var is = requireResource(cl, Constants.LOADER_DEX_ASSET_PATH);
+                 var os = new ByteArrayOutputStream()) {
+                transfer(is, os);
+                dex = os.toByteArray();
+            }
+
+            String soAssetPath = "assets/npatch/so/" + libName + "/libnpatch.so";
+            try (var is = requireResource(cl, soAssetPath)) {
                 File soFile = createTempSoFile(currentUserId);
                 try (var os = new FileOutputStream(soFile)) {
                     transfer(is, os);
@@ -131,8 +102,19 @@ public class LSPAppComponentFactoryStub extends AppComponentFactory {
                 clearDexBuffer();
             }
         } catch (Throwable e) {
+            Log.e(TAG, "Bootstrap failed", e);
+            clearDexBuffer();
             throw new ExceptionInInitializerError(e);
         }
+    }
+
+    private static InputStream requireResource(ClassLoader classLoader, String path)
+            throws IOException {
+        InputStream input = classLoader.getResourceAsStream(path);
+        if (input == null) {
+            throw new IOException("Missing bootstrap resource: " + path);
+        }
+        return input;
     }
 
     private static void clearDexBuffer() {

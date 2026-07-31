@@ -356,32 +356,33 @@ public class NPatch {
                 }
             }
 
-            if (!useManager) {
-                logger.i("Adding loader dex...");
-                try (var is = getClass().getClassLoader().getResourceAsStream(LOADER_DEX_ASSET_PATH)) {
+            // Manager mode controls module discovery, not bootstrap ownership. Keep every patched
+            // APK independently bootable so its process never needs to read another package's APK.
+            logger.i("Adding loader dex...");
+            try (var is = getClass().getClassLoader().getResourceAsStream(LOADER_DEX_ASSET_PATH)) {
+                if (is == null) {
+                    throw new PatchError("Fatal: Could not find " + LOADER_DEX_ASSET_PATH + " in the patcher resources!");
+                }
+                dstZFile.add(LOADER_DEX_ASSET_PATH, is);
+            } catch (Throwable e) {
+                throw new PatchError("Error when adding loader.bin", e);
+            }
+
+            logger.i("Adding native lib...");
+            for (String arch : ARCHES) {
+                String entryName = "assets/npatch/so/" + arch + "/libnpatch.so";
+                try (var is = getClass().getClassLoader().getResourceAsStream(entryName)) {
                     if (is == null) {
-                        throw new PatchError("Fatal: Could not find " + LOADER_DEX_ASSET_PATH + " in the patcher resources!");
+                        throw new PatchError("Fatal: Could not find " + entryName + " in the patcher resources!");
                     }
-                    dstZFile.add(LOADER_DEX_ASSET_PATH, is);
+                    dstZFile.add(entryName, is, false);
+                    logger.d("added " + entryName);
                 } catch (Throwable e) {
-                    throw new PatchError("Error when adding loader.bin", e);
+                    throw new PatchError("Error when adding native lib " + arch, e);
                 }
+            }
 
-                logger.i("Adding native lib...");
-                for (String arch : ARCHES) {
-                    String entryName = "assets/npatch/so/" + arch + "/libnpatch.so";
-                    try (var is = getClass().getClassLoader().getResourceAsStream(entryName)) {
-                        if (is != null) {
-                            dstZFile.add(entryName, is, false);
-                            logger.d("added " + entryName);
-                        } else {
-                            logger.e("Native lib not found: " + entryName);
-                        }
-                    } catch (Throwable e) {
-                        throw new PatchError("Error when adding native lib", e);
-                    }
-                }
-
+            if (!useManager) {
                 logger.i("Embedding modules...");
                 embedModules(dstZFile);
             }
