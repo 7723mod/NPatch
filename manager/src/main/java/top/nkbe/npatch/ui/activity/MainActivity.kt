@@ -55,8 +55,8 @@ import top.nkbe.npatch.ui.util.LocalCardBackgroundAlpha
 import top.nkbe.npatch.ui.util.LocalFloatingGlassBottomBar
 import top.nkbe.npatch.ui.util.LocalFloatingGlassBottomBarBlur
 import top.nkbe.npatch.ui.util.LocalSnackbarHost
-import top.yukonga.miuix.kmp.basic.SnackbarHostState
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+import io.github.suqi8.coui.kmp.basic.SnackbarHostState
+import io.github.suqi8.coui.kmp.theme.COUITheme
 
 class MainActivity : ComponentActivity() {
 
@@ -152,7 +152,7 @@ class MainActivity : ComponentActivity() {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .background(MiuixTheme.colorScheme.background)
+                                        .background(COUITheme.colorScheme.background)
                                 )
                             }
                         }

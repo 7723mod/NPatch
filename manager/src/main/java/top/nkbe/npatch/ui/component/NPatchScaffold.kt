@@ -8,10 +8,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.union
-import top.yukonga.miuix.kmp.basic.FabPosition
-import top.yukonga.miuix.kmp.basic.Scaffold as MiuixScaffold
-import top.yukonga.miuix.kmp.basic.ToolbarPosition
-import top.yukonga.miuix.kmp.utils.MiuixPopupUtils.Companion.MiuixPopupHost
+import io.github.suqi8.coui.kmp.basic.FabPosition
+import io.github.suqi8.coui.kmp.basic.Scaffold as COUIScaffold
+import io.github.suqi8.coui.kmp.basic.ToolbarPosition
+import io.github.suqi8.coui.kmp.utils.COUIPopupUtils.Companion.COUIPopupHost
 
 @Composable
 fun NPatchScaffold(
@@ -23,12 +23,12 @@ fun NPatchScaffold(
     floatingToolbar: @Composable () -> Unit = {},
     floatingToolbarPosition: ToolbarPosition = ToolbarPosition.BottomCenter,
     snackbarHost: @Composable () -> Unit = {},
-    popupHost: @Composable () -> Unit = { MiuixPopupHost() },
+    popupHost: @Composable () -> Unit = { COUIPopupHost() },
     containerColor: Color = Color.Transparent,
     contentWindowInsets: WindowInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout),
     content: @Composable (PaddingValues) -> Unit,
 ) {
-    MiuixScaffold(
+    COUIScaffold(
         modifier = modifier,
         topBar = topBar,
         bottomBar = bottomBar,

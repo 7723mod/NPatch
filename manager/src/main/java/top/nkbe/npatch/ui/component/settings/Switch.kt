@@ -9,7 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
-import top.yukonga.miuix.kmp.basic.Switch
+import io.github.suqi8.coui.kmp.basic.Switch
 
 @Composable
 fun SettingsSwitch(

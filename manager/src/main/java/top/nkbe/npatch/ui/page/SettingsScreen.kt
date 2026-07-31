@@ -12,7 +12,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -74,26 +73,27 @@ import top.nkbe.npatch.ui.component.NPatchScaffold
 import top.nkbe.npatch.config.DEFAULT_CUSTOM_COLOR
 import top.nkbe.npatch.config.DEFAULT_CARD_BACKGROUND_ALPHA_PERCENT
 import top.nkbe.npatch.ui.util.BackgroundImageStorage
+import top.nkbe.npatch.ui.util.LocalFloatingGlassBottomBar
 import top.nkbe.npatch.ui.util.LocalSnackbarHost
 import top.nkbe.npatch.ui.util.backgroundAwareCardColors
-import top.yukonga.miuix.kmp.basic.BasicComponent
-import top.yukonga.miuix.kmp.basic.ButtonDefaults
-import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Slider
-import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.basic.TextField
-import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.preference.ArrowPreference
-import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
-import top.yukonga.miuix.kmp.preference.SwitchPreference
-import top.yukonga.miuix.kmp.overlay.OverlayDialog
-import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.utils.overScrollVertical
-import top.yukonga.miuix.kmp.utils.scrollEndHaptic
+import io.github.suqi8.coui.kmp.basic.BasicComponent
+import io.github.suqi8.coui.kmp.basic.ButtonDefaults
+import io.github.suqi8.coui.kmp.basic.Card
+import io.github.suqi8.coui.kmp.basic.Icon
+import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
+import io.github.suqi8.coui.kmp.basic.Slider
+import io.github.suqi8.coui.kmp.basic.SmallTitle
+import io.github.suqi8.coui.kmp.basic.Text
+import io.github.suqi8.coui.kmp.basic.TextButton
+import io.github.suqi8.coui.kmp.basic.TextField
+import io.github.suqi8.coui.kmp.basic.TopAppBar
+import io.github.suqi8.coui.kmp.preference.ArrowPreference
+import io.github.suqi8.coui.kmp.preference.OverlayDropdownPreference
+import io.github.suqi8.coui.kmp.preference.SwitchPreference
+import io.github.suqi8.coui.kmp.overlay.OverlayDialog
+import io.github.suqi8.coui.kmp.theme.COUITheme
+import io.github.suqi8.coui.kmp.utils.overScrollVertical
+import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.security.KeyStore
@@ -103,7 +103,14 @@ private const val TAG = "SettingsScreen"
 
 @Composable
 fun SettingsScreen() {
-    val scrollBehavior = MiuixScrollBehavior()
+    val scrollBehavior = COUIScrollBehavior()
+    val useFloatingGlassBottomBar = LocalFloatingGlassBottomBar.current
+    val bottomContentPadding = if (useFloatingGlassBottomBar) {
+        68.dp + 12.dp + 8.dp + 28.dp +
+            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    } else {
+        24.dp
+    }
     NPatchScaffold(
         topBar = {
             TopAppBar(
@@ -113,54 +120,50 @@ fun SettingsScreen() {
             )
         }
     ) { innerPadding ->
-        LazyColumn(
+        Column(
             modifier = Modifier
+                .padding(innerPadding)
                 .fillMaxSize()
                 .scrollEndHaptic()
                 .overScrollVertical()
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 12.dp),
-            contentPadding = PaddingValues(
-                top = innerPadding.calculateTopPadding() + 12.dp,
-                bottom = innerPadding.calculateBottomPadding() + 24.dp,
-            ),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item {
-                SmallTitle(text = stringResource(R.string.settings_appearance_theme))
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = backgroundAwareCardColors(),
-                ) {
-                    AppearanceSettings()
-                }
+            SmallTitle(text = stringResource(R.string.settings_appearance_theme))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = backgroundAwareCardColors(),
+            ) {
+                AppearanceSettings()
             }
 
-            item {
-                SmallTitle(text = stringResource(R.string.settings_network))
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = backgroundAwareCardColors(),
-                ) {
-                    DnsPreference()
-                }
+            Spacer(Modifier.height(12.dp))
+
+            SmallTitle(text = stringResource(R.string.settings_network))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = backgroundAwareCardColors(),
+            ) {
+                DnsPreference()
             }
 
-            item {
-                SmallTitle(text = stringResource(R.string.settings_other_settings))
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = backgroundAwareCardColors(),
-                ) {
-                    LanguagePreference()
-                    KeyStore()
-                    DetailPatchLogs()
-                    OutputFullLog()
-                    WelcomeGuide()
-                    StorageDirectory()
-                    ClearManagerCache()
-                }
+            Spacer(Modifier.height(12.dp))
+
+            SmallTitle(text = stringResource(R.string.settings_other_settings))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = backgroundAwareCardColors(),
+            ) {
+                LanguagePreference()
+                KeyStore()
+                DetailPatchLogs()
+                OutputFullLog()
+                WelcomeGuide()
+                StorageDirectory()
+                ClearManagerCache()
             }
+            Spacer(Modifier.height(bottomContentPadding))
         }
     }
 }
@@ -209,9 +212,9 @@ private fun DnsPreference() {
                         if (invalidUrl) R.string.settings_dns_custom_invalid
                         else R.string.settings_dns_custom_summary
                     ),
-                    color = if (invalidUrl) MiuixTheme.colorScheme.error
-                    else MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    style = MiuixTheme.textStyles.body2,
+                    color = if (invalidUrl) COUITheme.colorScheme.error
+                    else COUITheme.colorScheme.onSurfaceVariantSummary,
+                    style = COUITheme.textStyles.body2,
                     modifier = Modifier.padding(bottom = 12.dp),
                 )
                 TextField(
@@ -377,13 +380,13 @@ fun AppearanceSettings() {
                                 context.dataStore.edit { it[ThemeConfig.BG_IMAGE_URI] = "" }
                             }
                         }
-                        .background(MiuixTheme.colorScheme.error.copy(alpha = 0.1f))
+                        .background(COUITheme.colorScheme.error.copy(alpha = 0.1f))
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Text(
                         text = stringResource(R.string.settings_clear),
-                        color = MiuixTheme.colorScheme.error,
-                        style = MiuixTheme.textStyles.body2
+                        color = COUITheme.colorScheme.error,
+                        style = COUITheme.textStyles.body2
                     )
                 }
             }
@@ -405,19 +408,19 @@ fun AppearanceSettings() {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = stringResource(R.string.settings_card_background_alpha),
-                    style = MiuixTheme.textStyles.body1,
-                    color = MiuixTheme.colorScheme.onSurface
+                    style = COUITheme.textStyles.body1,
+                    color = COUITheme.colorScheme.onSurface
                 )
                 Text(
                     text = stringResource(R.string.settings_card_background_alpha_summary),
-                    style = MiuixTheme.textStyles.body2,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                    style = COUITheme.textStyles.body2,
+                    color = COUITheme.colorScheme.onSurfaceVariantSummary
                 )
             }
             Text(
                 text = "${cardBackgroundAlphaSlider.roundToInt()}%",
-                style = MiuixTheme.textStyles.body2,
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                style = COUITheme.textStyles.body2,
+                color = COUITheme.colorScheme.onSurfaceVariantSummary
             )
         }
         Slider(
@@ -446,8 +449,8 @@ fun AppearanceSettings() {
         Column {
             Text(
                 text = stringResource(R.string.settings_builtin_theme_color),
-                style = MiuixTheme.textStyles.body2,
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                style = COUITheme.textStyles.body2,
+                color = COUITheme.colorScheme.onSurfaceVariantSummary,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
             )
             Row(
@@ -499,8 +502,8 @@ fun AppearanceSettings() {
                         }
                         Text(
                             text = colorName,
-                            style = MiuixTheme.textStyles.footnote1,
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                            style = COUITheme.textStyles.footnote1,
+                            color = COUITheme.colorScheme.onSurfaceVariantSummary,
                             textAlign = TextAlign.Center,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
@@ -522,7 +525,7 @@ private fun SettingsStartIcon(imageVector: ImageVector) {
             imageVector = imageVector,
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
-            tint = MiuixTheme.colorScheme.onBackground
+            tint = COUITheme.colorScheme.onBackground
         )
     }
 }
@@ -709,8 +712,8 @@ private fun KeyStore() {
                 Text(
                     modifier = Modifier.padding(bottom = 8.dp),
                     text = wrongText ?: stringResource(R.string.settings_keystore_desc),
-                    color = if (wrongText != null) MiuixTheme.colorScheme.error else MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    style = MiuixTheme.textStyles.body2,
+                    color = if (wrongText != null) COUITheme.colorScheme.error else COUITheme.colorScheme.onSurfaceVariantSummary,
+                    style = COUITheme.textStyles.body2,
                     textAlign = TextAlign.Center
                 )
 

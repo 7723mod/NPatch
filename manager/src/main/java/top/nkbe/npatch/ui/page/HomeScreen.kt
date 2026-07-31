@@ -40,18 +40,18 @@ import top.nkbe.npatch.ui.util.LocalSnackbarHost
 import top.nkbe.npatch.ui.util.backgroundAwareCardColors
 import top.nkbe.npatch.ui.viewmodel.manage.AppManageViewModel
 import top.nkbe.npatch.ui.viewmodel.manage.ModuleManageViewModel
-import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.preference.ArrowPreference
-import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.utils.PressFeedbackType
-import top.yukonga.miuix.kmp.utils.overScrollVertical
-import top.yukonga.miuix.kmp.utils.scrollEndHaptic
+import io.github.suqi8.coui.kmp.basic.Card
+import io.github.suqi8.coui.kmp.basic.Icon
+import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
+import io.github.suqi8.coui.kmp.basic.Text
+import io.github.suqi8.coui.kmp.basic.TopAppBar
+import io.github.suqi8.coui.kmp.icon.COUIIcons
+import io.github.suqi8.coui.kmp.icon.extended.Back
+import io.github.suqi8.coui.kmp.preference.ArrowPreference
+import io.github.suqi8.coui.kmp.theme.COUITheme
+import io.github.suqi8.coui.kmp.utils.PressFeedbackType
+import io.github.suqi8.coui.kmp.utils.overScrollVertical
+import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
 
 @SuppressLint("ContextCastToActivity")
 @Composable
@@ -59,7 +59,7 @@ fun HomeScreen(
     navigator: Navigator,
     onManageShortcut: (Int) -> Unit = {},
 ) {
-    val scrollBehavior = MiuixScrollBehavior()
+    val scrollBehavior = COUIScrollBehavior()
     var isIntentLaunched by rememberSaveable { mutableStateOf(false) }
     val activity = LocalContext.current as Activity
     val intent = activity.intent
@@ -133,18 +133,18 @@ private fun StatusCard(onManageShortcut: (Int) -> Unit) {
     }
 
     val isGranted = ShizukuApi.isPermissionGranted
-    val warningContainer = if (MiuixTheme.colorScheme.surface.luminance() > 0.5f) {
+    val warningContainer = if (COUITheme.colorScheme.surface.luminance() > 0.5f) {
         Color(0xFFFFE08A)
     } else {
         Color(0xFF5C4800)
     }
-    val warningContent = if (MiuixTheme.colorScheme.surface.luminance() > 0.5f) {
+    val warningContent = if (COUITheme.colorScheme.surface.luminance() > 0.5f) {
         Color(0xFF5A4300)
     } else {
         Color(0xFFFFF1BF)
     }
-    val containerColor = if (isGranted) MiuixTheme.colorScheme.primaryContainer else warningContainer
-    val contentColor = if (isGranted) MiuixTheme.colorScheme.onPrimaryContainer else warningContent
+    val containerColor = if (isGranted) COUITheme.colorScheme.primaryContainer else warningContainer
+    val contentColor = if (isGranted) COUITheme.colorScheme.onPrimaryContainer else warningContent
 
     val appViewModel = viewModel<AppManageViewModel>()
     val moduleViewModel = viewModel<ModuleManageViewModel>()
@@ -253,20 +253,20 @@ private fun StatusCard(onManageShortcut: (Int) -> Unit) {
                             text = stringResource(R.string.apps),
                             fontWeight = FontWeight.Medium,
                             fontSize = 15.sp,
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                            color = COUITheme.colorScheme.onSurfaceVariantSummary,
                         )
                         Text(
                             modifier = Modifier.fillMaxWidth(),
                             text = appsCount.toString(),
                             fontSize = 26.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = MiuixTheme.colorScheme.onSurface,
+                            color = COUITheme.colorScheme.onSurface,
                         )
                     }
                     Icon(
-                        imageVector = MiuixIcons.Regular.Back,
+                        imageVector = COUIIcons.Regular.Back,
                         contentDescription = null,
-                        tint = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                        tint = COUITheme.colorScheme.onSurface.copy(alpha = 0.4f),
                         modifier = Modifier
                             .graphicsLayer(rotationZ = 180f)
                             .size(18.dp)
@@ -299,20 +299,20 @@ private fun StatusCard(onManageShortcut: (Int) -> Unit) {
                             text = stringResource(R.string.modules),
                             fontWeight = FontWeight.Medium,
                             fontSize = 15.sp,
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                            color = COUITheme.colorScheme.onSurfaceVariantSummary,
                         )
                         Text(
                             modifier = Modifier.fillMaxWidth(),
                             text = modulesCount.toString(),
                             fontSize = 26.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = MiuixTheme.colorScheme.onSurface,
+                            color = COUITheme.colorScheme.onSurface,
                         )
                     }
                     Icon(
-                        imageVector = MiuixIcons.Regular.Back,
+                        imageVector = COUIIcons.Regular.Back,
                         contentDescription = null,
-                        tint = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                        tint = COUITheme.colorScheme.onSurface.copy(alpha = 0.4f),
                         modifier = Modifier
                             .graphicsLayer(rotationZ = 180f)
                             .size(18.dp)
@@ -328,14 +328,14 @@ private fun InfoText(title: String, content: String, bottomPadding: Dp = 10.dp) 
     Column(Modifier.semantics(mergeDescendants = true) {}) {
         Text(
             text = title,
-            fontSize = MiuixTheme.textStyles.headline1.fontSize,
-            color = MiuixTheme.colorScheme.onSurface,
+            fontSize = COUITheme.textStyles.headline1.fontSize,
+            color = COUITheme.colorScheme.onSurface,
             fontWeight = FontWeight.Medium
         )
         Text(
             text = content,
-            fontSize = MiuixTheme.textStyles.body2.fontSize,
-            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            fontSize = COUITheme.textStyles.body2.fontSize,
+            color = COUITheme.colorScheme.onSurfaceVariantSummary,
             modifier = Modifier.padding(top = 2.dp, bottom = bottomPadding)
         )
     }
@@ -437,7 +437,7 @@ private fun SupportCard(navigator: Navigator) {
                         Icons.Outlined.Info,
                         modifier = Modifier.padding(end = 6.dp),
                         contentDescription = null,
-                        tint = MiuixTheme.colorScheme.onBackground
+                        tint = COUITheme.colorScheme.onBackground
                     )
                 },
                 onClick = {

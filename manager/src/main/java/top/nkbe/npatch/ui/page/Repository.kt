@@ -58,27 +58,27 @@ import top.nkbe.npatch.ui.util.backgroundAwareHazeStyle
 import top.nkbe.npatch.ui.viewmodel.RepoSort
 import top.nkbe.npatch.ui.viewmodel.RepoUiModel
 import top.nkbe.npatch.ui.viewmodel.RepositoryViewModel
-import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.HorizontalDivider
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
-import top.yukonga.miuix.kmp.basic.ListPopupColumn
-import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.PopupPositionProvider
-import top.yukonga.miuix.kmp.basic.ScrollBehavior
-import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Download
-import top.yukonga.miuix.kmp.icon.extended.Ok
-import top.yukonga.miuix.kmp.icon.extended.Recent
-import top.yukonga.miuix.kmp.icon.extended.Sort
-import top.yukonga.miuix.kmp.overlay.OverlayListPopup
-import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
-import top.yukonga.miuix.kmp.utils.MiuixPopupUtils.Companion.MiuixPopupHost
-import top.yukonga.miuix.kmp.utils.PressFeedbackType
+import io.github.suqi8.coui.kmp.basic.Card
+import io.github.suqi8.coui.kmp.basic.HorizontalDivider
+import io.github.suqi8.coui.kmp.basic.Icon
+import io.github.suqi8.coui.kmp.basic.IconButton
+import io.github.suqi8.coui.kmp.basic.InfiniteProgressIndicator
+import io.github.suqi8.coui.kmp.basic.ListPopupColumn
+import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
+import io.github.suqi8.coui.kmp.basic.PopupPositionProvider
+import io.github.suqi8.coui.kmp.basic.ScrollBehavior
+import io.github.suqi8.coui.kmp.basic.Text
+import io.github.suqi8.coui.kmp.basic.rememberPullToRefreshState
+import io.github.suqi8.coui.kmp.icon.COUIIcons
+import io.github.suqi8.coui.kmp.icon.extended.Download
+import io.github.suqi8.coui.kmp.icon.extended.Ok
+import io.github.suqi8.coui.kmp.icon.extended.Recent
+import io.github.suqi8.coui.kmp.icon.extended.Sort
+import io.github.suqi8.coui.kmp.overlay.OverlayListPopup
+import io.github.suqi8.coui.kmp.theme.COUITheme
+import io.github.suqi8.coui.kmp.theme.COUITheme.colorScheme
+import io.github.suqi8.coui.kmp.utils.COUIPopupUtils.Companion.COUIPopupHost
+import io.github.suqi8.coui.kmp.utils.PressFeedbackType
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
@@ -101,7 +101,7 @@ fun RepositoryScreen(
     val selectedScopeTarget by viewModel.selectedScopeTarget.collectAsStateWithLifecycle()
 
     val pullToRefreshState = rememberPullToRefreshState()
-    val scrollBehavior = MiuixScrollBehavior()
+    val scrollBehavior = COUIScrollBehavior()
     val dynamicTopPadding by remember {
         derivedStateOf { 12.dp * (1f - scrollBehavior.state.collapsedFraction) }
     }
@@ -146,7 +146,7 @@ fun RepositoryScreen(
                         Box {
                             IconButton(onClick = { showSortMenu.value = true }) {
                                 Icon(
-                                    imageVector = MiuixIcons.Regular.Sort,
+                                    imageVector = COUIIcons.Regular.Sort,
                                     contentDescription = stringResource(R.string.accessibility_sort)
                                 )
                             }
@@ -218,7 +218,7 @@ fun RepositoryScreen(
                     }
                 }
             ) {}
-            MiuixPopupHost()
+            COUIPopupHost()
         }
     ) { innerPadding ->
         searchStatus.SearchBox(
@@ -275,7 +275,7 @@ fun RepoListContent(
                 Text(
                     text = stringResource(R.string.repo_loading_mirror),
                     color = colorScheme.onSurfaceVariantSummary,
-                    style = MiuixTheme.textStyles.body2
+                    style = COUITheme.textStyles.body2
                 )
             }
         }
@@ -354,7 +354,7 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
                     if (item.isUpgradable) {
                         Spacer(modifier = Modifier.width(4.dp))
                         Icon(
-                            imageVector = MiuixIcons.Regular.Download,
+                            imageVector = COUIIcons.Regular.Download,
                             contentDescription = stringResource(R.string.need_update),
                             tint = colorScheme.primary,
                             modifier = Modifier.size(18.dp)
@@ -362,7 +362,7 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
                     } else if (item.isInstalled) {
                         Spacer(modifier = Modifier.width(4.dp))
                         Icon(
-                            imageVector = MiuixIcons.Regular.Ok,
+                            imageVector = COUIIcons.Regular.Ok,
                             contentDescription = stringResource(R.string.installed),
                             tint = colorScheme.onSurfaceVariantSummary.copy(alpha = 0.5f),
                             modifier = Modifier.size(18.dp)
@@ -421,7 +421,7 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = MiuixIcons.Regular.Recent,
+                        imageVector = COUIIcons.Regular.Recent,
                         contentDescription = stringResource(R.string.sort_by_update_time),
                         tint = colorScheme.onSurfaceVariantSummary.copy(alpha = 0.6f),
                         modifier = Modifier.size(14.dp)
@@ -429,7 +429,7 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = updatedTime,
-                        style = MiuixTheme.textStyles.body2,
+                        style = COUITheme.textStyles.body2,
                         color = colorScheme.onSurfaceVariantSummary.copy(alpha = 0.6f),
                         fontSize = 12.sp
                     )

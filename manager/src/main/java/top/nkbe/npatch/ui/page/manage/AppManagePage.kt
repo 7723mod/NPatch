@@ -64,21 +64,21 @@ import top.nkbe.npatch.ui.viewmodel.manage.ModuleManageViewModel
 import top.nkbe.npatch.ui.viewstate.ProcessingState
 import nkbe.util.NeoPackageManager
 import nkbe.util.ShizukuApi
-import top.yukonga.miuix.kmp.basic.ButtonDefaults
-import top.yukonga.miuix.kmp.basic.FloatingActionButton
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
-import top.yukonga.miuix.kmp.basic.ListPopupColumn
-import top.yukonga.miuix.kmp.basic.PopupPositionProvider
-import top.yukonga.miuix.kmp.basic.ScrollBehavior
-import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
-import top.yukonga.miuix.kmp.overlay.OverlayDialog
-import top.yukonga.miuix.kmp.overlay.OverlayListPopup
-import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.utils.overScrollVertical
-import top.yukonga.miuix.kmp.utils.scrollEndHaptic
+import io.github.suqi8.coui.kmp.basic.ButtonDefaults
+import io.github.suqi8.coui.kmp.basic.FloatingActionButton
+import io.github.suqi8.coui.kmp.basic.Icon
+import io.github.suqi8.coui.kmp.basic.InfiniteProgressIndicator
+import io.github.suqi8.coui.kmp.basic.ListPopupColumn
+import io.github.suqi8.coui.kmp.basic.PopupPositionProvider
+import io.github.suqi8.coui.kmp.basic.ScrollBehavior
+import io.github.suqi8.coui.kmp.basic.Text
+import io.github.suqi8.coui.kmp.basic.TextButton
+import io.github.suqi8.coui.kmp.basic.rememberPullToRefreshState
+import io.github.suqi8.coui.kmp.overlay.OverlayDialog
+import io.github.suqi8.coui.kmp.overlay.OverlayListPopup
+import io.github.suqi8.coui.kmp.theme.COUITheme
+import io.github.suqi8.coui.kmp.utils.overScrollVertical
+import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
 import java.io.IOException
 
 private const val TAG = "AppManagePage"
@@ -222,14 +222,14 @@ fun AppManageBody(
                                 Spacer(Modifier.height(16.dp))
                                 Text(
                                     text = stringResource(R.string.manage_loading),
-                                    style = MiuixTheme.textStyles.body1,
-                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                                    style = COUITheme.textStyles.body1,
+                                    color = COUITheme.colorScheme.onSurfaceVariantSummary
                                 )
                             } else {
                                 Text(
                                     text = if (searchQuery.isNotEmpty()) stringResource(R.string.manage_no_search_results) else stringResource(R.string.manage_no_apps),
-                                    style = MiuixTheme.textStyles.body1,
-                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                                    style = COUITheme.textStyles.body1,
+                                    color = COUITheme.colorScheme.onSurfaceVariantSummary
                                 )
                             }
                         }
@@ -272,7 +272,7 @@ fun AppManageBody(
                             label = appInfo.label,
                             packageName = appInfo.app.packageName,
                             summaryRow = {
-                                val patchColor = if (isLocal) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurfaceVariantSummary
+                                val patchColor = if (isLocal) COUITheme.colorScheme.primary else COUITheme.colorScheme.onSurfaceVariantSummary
 
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     val modeLabel = if (isLocal) {
@@ -557,7 +557,7 @@ fun AppManageFab(
         Icon(
             imageVector = Icons.Filled.Add,
             contentDescription = stringResource(R.string.add),
-            tint = MiuixTheme.colorScheme.onPrimary
+            tint = COUITheme.colorScheme.onPrimary
         )
     }
 }

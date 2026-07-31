@@ -10,8 +10,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
-import top.yukonga.miuix.kmp.overlay.OverlayDialog
+import io.github.suqi8.coui.kmp.basic.CircularProgressIndicator
+import io.github.suqi8.coui.kmp.overlay.OverlayDialog
 
 @Composable
 fun LoadingDialog(

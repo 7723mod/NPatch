@@ -36,18 +36,18 @@ import top.nkbe.npatch.ui.component.NPatchPullToRefresh
 import top.nkbe.npatch.ui.viewmodel.manage.ModuleManageViewModel
 import top.nkbe.npatch.ui.util.ensureVisibleByMix
 import top.nkbe.npatch.ui.util.relativeLuminance
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
-import top.yukonga.miuix.kmp.basic.ListPopupColumn
-import top.yukonga.miuix.kmp.basic.PopupPositionProvider
-import top.yukonga.miuix.kmp.basic.ScrollBehavior
-import top.yukonga.miuix.kmp.basic.Surface
-import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
-import top.yukonga.miuix.kmp.overlay.OverlayListPopup
-import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.utils.overScrollVertical
-import top.yukonga.miuix.kmp.utils.scrollEndHaptic
+import io.github.suqi8.coui.kmp.basic.Icon
+import io.github.suqi8.coui.kmp.basic.InfiniteProgressIndicator
+import io.github.suqi8.coui.kmp.basic.ListPopupColumn
+import io.github.suqi8.coui.kmp.basic.PopupPositionProvider
+import io.github.suqi8.coui.kmp.basic.ScrollBehavior
+import io.github.suqi8.coui.kmp.basic.Surface
+import io.github.suqi8.coui.kmp.basic.Text
+import io.github.suqi8.coui.kmp.basic.rememberPullToRefreshState
+import io.github.suqi8.coui.kmp.overlay.OverlayListPopup
+import io.github.suqi8.coui.kmp.theme.COUITheme
+import io.github.suqi8.coui.kmp.utils.overScrollVertical
+import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
 
 private data class ModuleBadgeColors(
     val container: Color,
@@ -59,7 +59,7 @@ private fun rememberModuleBadgeColors(
     isModern: Boolean,
     isLegacy: Boolean
 ): ModuleBadgeColors {
-    val surfaceArgb = MiuixTheme.colorScheme.surface.toArgb()
+    val surfaceArgb = COUITheme.colorScheme.surface.toArgb()
     val surfaceIsDark = relativeLuminance(surfaceArgb) < 0.5
     fun boostedContainer(candidate: Color): Color {
         val mixed = ensureVisibleByMix(
@@ -73,18 +73,18 @@ private fun rememberModuleBadgeColors(
 
     return when {
         isModern -> ModuleBadgeColors(
-            container = boostedContainer(MiuixTheme.colorScheme.primaryContainer),
-            content = MiuixTheme.colorScheme.onPrimaryContainer
+            container = boostedContainer(COUITheme.colorScheme.primaryContainer),
+            content = COUITheme.colorScheme.onPrimaryContainer
         )
 
         isLegacy -> ModuleBadgeColors(
-            container = boostedContainer(MiuixTheme.colorScheme.secondaryContainer),
-            content = MiuixTheme.colorScheme.onSecondaryContainer
+            container = boostedContainer(COUITheme.colorScheme.secondaryContainer),
+            content = COUITheme.colorScheme.onSecondaryContainer
         )
 
         else -> ModuleBadgeColors(
-            container = MiuixTheme.colorScheme.error,
-            content = MiuixTheme.colorScheme.onError
+            container = COUITheme.colorScheme.error,
+            content = COUITheme.colorScheme.onError
         )
     }
 }
@@ -136,14 +136,14 @@ fun ModuleManageBody(
                                 Spacer(Modifier.height(16.dp))
                                 Text(
                                     text = stringResource(R.string.manage_loading),
-                                    style = MiuixTheme.textStyles.body1,
-                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                                    style = COUITheme.textStyles.body1,
+                                    color = COUITheme.colorScheme.onSurfaceVariantSummary
                                 )
                             } else {
                                 Text(
                                     text = if (searchQuery.isNotEmpty()) stringResource(R.string.manage_no_search_results) else stringResource(R.string.manage_no_modules),
-                                    style = MiuixTheme.textStyles.body1,
-                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                                    style = COUITheme.textStyles.body1,
+                                    color = COUITheme.colorScheme.onSurfaceVariantSummary
                                 )
                             }
                         }
@@ -182,7 +182,7 @@ fun ModuleManageBody(
                                         imageVector = Icons.Outlined.CheckCircle,
                                         contentDescription = null,
                                         modifier = Modifier.size(18.dp),
-                                        tint = MiuixTheme.colorScheme.primary
+                                        tint = COUITheme.colorScheme.primary
                                     )
                                 }
                             },
@@ -209,7 +209,7 @@ fun ModuleManageBody(
                                         text = item.metadata.version,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Medium,
-                                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                                        color = COUITheme.colorScheme.onSurfaceVariantSummary
                                     )
                                 }
                             },

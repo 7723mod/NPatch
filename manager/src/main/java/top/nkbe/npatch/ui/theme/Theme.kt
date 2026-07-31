@@ -5,9 +5,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import top.nkbe.npatch.config.DEFAULT_CUSTOM_COLOR
-import top.yukonga.miuix.kmp.theme.ColorSchemeMode
-import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.theme.ThemeController
+import io.github.suqi8.coui.kmp.theme.ColorSchemeMode
+import io.github.suqi8.coui.kmp.theme.COUITheme
+import io.github.suqi8.coui.kmp.theme.ThemeController
 
 @Composable
 fun LSPTheme(
@@ -26,7 +26,7 @@ fun LSPTheme(
             )
         }
     }
-    MiuixTheme(
+    COUITheme(
         controller = controller,
         content = content
     )

@@ -87,33 +87,33 @@ import top.nkbe.npatch.ui.component.NPatchScaffold
 import top.nkbe.npatch.ui.component.NPatchTopAppBar
 import top.nkbe.npatch.ui.util.backgroundAwareColor
 import top.nkbe.npatch.ui.util.backgroundAwareCardColors
-import top.yukonga.miuix.kmp.basic.ButtonDefaults
-import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
-import top.yukonga.miuix.kmp.basic.HorizontalDivider
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
-import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.ScrollBehavior
-import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.basic.Surface
-import top.yukonga.miuix.kmp.basic.TabRow
-import top.yukonga.miuix.kmp.basic.TabRowDefaults
-import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.preference.ArrowPreference
-import top.yukonga.miuix.kmp.overlay.OverlayDialog
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.extended.Contacts
-import top.yukonga.miuix.kmp.icon.extended.Download
-import top.yukonga.miuix.kmp.icon.extended.File
-import top.yukonga.miuix.kmp.icon.extended.Link
-import top.yukonga.miuix.kmp.icon.extended.Ok
-import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
-import top.yukonga.miuix.kmp.utils.overScrollVertical
-import top.yukonga.miuix.kmp.utils.scrollEndHaptic
+import io.github.suqi8.coui.kmp.basic.ButtonDefaults
+import io.github.suqi8.coui.kmp.basic.Card
+import io.github.suqi8.coui.kmp.basic.CircularProgressIndicator
+import io.github.suqi8.coui.kmp.basic.HorizontalDivider
+import io.github.suqi8.coui.kmp.basic.Icon
+import io.github.suqi8.coui.kmp.basic.IconButton
+import io.github.suqi8.coui.kmp.basic.InfiniteProgressIndicator
+import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
+import io.github.suqi8.coui.kmp.basic.ScrollBehavior
+import io.github.suqi8.coui.kmp.basic.SmallTitle
+import io.github.suqi8.coui.kmp.basic.Surface
+import io.github.suqi8.coui.kmp.basic.TabRow
+import io.github.suqi8.coui.kmp.basic.TabRowDefaults
+import io.github.suqi8.coui.kmp.basic.Text
+import io.github.suqi8.coui.kmp.basic.TextButton
+import io.github.suqi8.coui.kmp.preference.ArrowPreference
+import io.github.suqi8.coui.kmp.overlay.OverlayDialog
+import io.github.suqi8.coui.kmp.icon.COUIIcons
+import io.github.suqi8.coui.kmp.icon.extended.Back
+import io.github.suqi8.coui.kmp.icon.extended.Contacts
+import io.github.suqi8.coui.kmp.icon.extended.Download
+import io.github.suqi8.coui.kmp.icon.extended.File
+import io.github.suqi8.coui.kmp.icon.extended.Link
+import io.github.suqi8.coui.kmp.icon.extended.Ok
+import io.github.suqi8.coui.kmp.theme.COUITheme.colorScheme
+import io.github.suqi8.coui.kmp.utils.overScrollVertical
+import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -165,7 +165,7 @@ fun RepositoryDetailScreen(
     }
 
     val pagerState = rememberPagerState(pageCount = { tabs.size })
-    val scrollBehavior: ScrollBehavior = MiuixScrollBehavior()
+    val scrollBehavior: ScrollBehavior = COUIScrollBehavior()
     val hazeState = rememberHazeState()
 
     val msgUnknownAuthor = stringResource(R.string.unknown_author)
@@ -185,7 +185,7 @@ fun RepositoryDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            MiuixIcons.Regular.Back,
+                            COUIIcons.Regular.Back,
                             contentDescription = stringResource(R.string.nav_back)
                         )
                     }
@@ -198,7 +198,7 @@ fun RepositoryDetailScreen(
                             }
                         }) {
                             Icon(
-                                MiuixIcons.Regular.Link,
+                                COUIIcons.Regular.Link,
                                 contentDescription = stringResource(R.string.menu_open_in_browser)
                             )
                         }
@@ -351,7 +351,7 @@ fun RepositoryDetailScreen(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Icon(
-                                            MiuixIcons.Regular.Ok,
+                                            COUIIcons.Regular.Ok,
                                             contentDescription = null,
                                             modifier = Modifier.size(14.dp),
                                             tint = colorScheme.onSurface
@@ -676,7 +676,7 @@ fun InfoTab(
                 ) {
                     if (!module.homepageUrl.isNullOrEmpty()) {
                         InfoRowItem(
-                            icon = MiuixIcons.Regular.Link,
+                            icon = COUIIcons.Regular.Link,
                             title = stringResource(R.string.module_information_homepage),
                             summary = module.homepageUrl,
                             onClick = {
@@ -688,7 +688,7 @@ fun InfoTab(
                     }
                     if (!module.sourceUrl.isNullOrEmpty()) {
                         InfoRowItem(
-                            icon = MiuixIcons.Regular.File,
+                            icon = COUIIcons.Regular.File,
                             title = stringResource(R.string.module_information_source_url),
                             summary = module.sourceUrl,
                             onClick = {
@@ -727,7 +727,7 @@ fun InfoTab(
                                 val name = collaborator.name ?: collaborator.login
                                 ?: stringResource(R.string.unknown_author)
                                 InfoRowItem(
-                                    icon = MiuixIcons.Regular.Contacts,
+                                    icon = COUIIcons.Regular.Contacts,
                                     title = name,
                                     summary = collaborator.login,
                                     onClick = {
@@ -883,7 +883,7 @@ fun ReleaseAssetItem(
         ) {
             Icon(
                 modifier = Modifier.size(18.dp),
-                imageVector = MiuixIcons.Regular.Link,
+                imageVector = COUIIcons.Regular.Link,
                 tint = colorScheme.onSurface,
                 contentDescription = null
             )
@@ -913,7 +913,7 @@ fun ReleaseAssetItem(
                 ) {
                     Icon(
                         modifier = Modifier.size(18.dp),
-                        imageVector = MiuixIcons.Regular.Download,
+                        imageVector = COUIIcons.Regular.Download,
                         tint = colorScheme.onSurface,
                         contentDescription = stringResource(R.string.download_asset)
                     )

@@ -10,13 +10,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+import io.github.suqi8.coui.kmp.theme.COUITheme
 
 private val ShimmerColorShades
     @Composable get() = listOf(
-        MiuixTheme.colorScheme.secondaryContainer.copy(0.9f),
-        MiuixTheme.colorScheme.secondaryContainer.copy(0.2f),
-        MiuixTheme.colorScheme.secondaryContainer.copy(0.9f)
+        COUITheme.colorScheme.secondaryContainer.copy(0.9f),
+        COUITheme.colorScheme.secondaryContainer.copy(0.2f),
+        COUITheme.colorScheme.secondaryContainer.copy(0.9f)
     )
 
 class ShimmerScope(val brush: Brush)

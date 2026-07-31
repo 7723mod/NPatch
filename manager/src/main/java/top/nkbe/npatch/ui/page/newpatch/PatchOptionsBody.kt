@@ -26,10 +26,10 @@ import top.nkbe.npatch.ui.component.settings.SettingsEditor
 import top.nkbe.npatch.ui.util.backgroundAwareCardColors
 import top.nkbe.npatch.ui.viewmodel.NewPatchViewModel
 import top.nkbe.npatch.ui.viewmodel.NewPatchViewModel.ViewAction
-import top.yukonga.miuix.kmp.basic.*
-import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
-import top.yukonga.miuix.kmp.preference.SwitchPreference
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+import io.github.suqi8.coui.kmp.basic.*
+import io.github.suqi8.coui.kmp.preference.OverlayDropdownPreference
+import io.github.suqi8.coui.kmp.preference.SwitchPreference
+import io.github.suqi8.coui.kmp.theme.COUITheme
 
 @Composable
 fun ConfiguringTopBar(scrollBehavior: ScrollBehavior, onBackClick: () -> Unit) {
@@ -58,11 +58,11 @@ fun ConfiguringFab() {
             Icon(
                 imageVector = Icons.Outlined.AutoFixHigh,
                 contentDescription = null,
-                tint = MiuixTheme.colorScheme.onPrimary
+                tint = COUITheme.colorScheme.onPrimary
             )
             Text(
                 text = stringResource(R.string.patch_start),
-                color = MiuixTheme.colorScheme.onPrimary
+                color = COUITheme.colorScheme.onPrimary
             )
         }
     }
@@ -116,11 +116,11 @@ fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
             colors = backgroundAwareCardColors(),
         ) {
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
-                Text(text = viewModel.patchApp.label, style = MiuixTheme.textStyles.headline1)
+                Text(text = viewModel.patchApp.label, style = COUITheme.textStyles.headline1)
                 Text(
                     text = viewModel.patchApp.app.packageName,
-                    style = MiuixTheme.textStyles.body2,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    style = COUITheme.textStyles.body2,
+                    color = COUITheme.colorScheme.onSurfaceVariantSummary,
                 )
             }
         }
@@ -161,8 +161,8 @@ fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
                             modifier = Modifier
                                 .padding(top = 8.dp)
                                 .clickable(onClick = onAddEmbed),
-                            color = MiuixTheme.colorScheme.primary,
-                            style = MiuixTheme.textStyles.body2
+                            color = COUITheme.colorScheme.primary,
+                            style = COUITheme.textStyles.body2
                         )
                     }
                 )

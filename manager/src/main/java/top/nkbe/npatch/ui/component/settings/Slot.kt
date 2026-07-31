@@ -7,9 +7,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+import io.github.suqi8.coui.kmp.basic.Icon
+import io.github.suqi8.coui.kmp.basic.Text
+import io.github.suqi8.coui.kmp.theme.COUITheme
 
 @Composable
 fun SettingsSlot(
@@ -42,12 +42,12 @@ fun SettingsSlot(
             }
         }
         Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
-            Text(text = title, style = MiuixTheme.textStyles.headline2)
+            Text(text = title, style = COUITheme.textStyles.headline2)
             Column {
                 if (desc != null) {
                     Text(
                         text = desc,
-                        style = MiuixTheme.textStyles.body2,
+                        style = COUITheme.textStyles.body2,
                         modifier = Modifier
                             .alpha(0.69f)
                             .padding(top = 4.dp)

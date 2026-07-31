@@ -80,14 +80,14 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.blur.HazeBlurStyle
 import dev.chrisbanes.haze.blur.blurEffect
 import dev.chrisbanes.haze.hazeEffect
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.InputField
-import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.basic.Search
-import top.yukonga.miuix.kmp.icon.basic.SearchCleanup
-import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
-import top.yukonga.miuix.kmp.utils.overScrollVertical
+import io.github.suqi8.coui.kmp.basic.Icon
+import io.github.suqi8.coui.kmp.basic.InputField
+import io.github.suqi8.coui.kmp.basic.Text
+import io.github.suqi8.coui.kmp.icon.COUIIcons
+import io.github.suqi8.coui.kmp.icon.basic.Search
+import io.github.suqi8.coui.kmp.icon.basic.SearchCleanup
+import io.github.suqi8.coui.kmp.theme.COUITheme.colorScheme
+import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import top.nkbe.npatch.ui.util.BG_SURFACE_ALPHA
 import top.nkbe.npatch.ui.util.LocalBackgroundImagePath
 
@@ -367,7 +367,7 @@ fun SearchBar(
         label = "",
         leadingIcon = {
             Icon(
-                imageVector = MiuixIcons.Basic.Search,
+                imageVector = COUIIcons.Basic.Search,
                 contentDescription = null,
                 modifier = Modifier
                     .size(44.dp)
@@ -382,7 +382,7 @@ fun SearchBar(
                 exit = fadeOut() + scaleOut(),
             ) {
                 Icon(
-                    imageVector = MiuixIcons.Basic.SearchCleanup,
+                    imageVector = COUIIcons.Basic.SearchCleanup,
                     tint = colorScheme.onSurface,
                     contentDescription = null,
                     modifier = Modifier
@@ -437,7 +437,7 @@ fun SearchBarFake(
         label = label,
         leadingIcon = {
             Icon(
-                imageVector = MiuixIcons.Basic.Search,
+                imageVector = COUIIcons.Basic.Search,
                 contentDescription = null,
                 modifier = Modifier
                     .size(44.dp)

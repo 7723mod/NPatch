@@ -28,9 +28,9 @@ import top.nkbe.npatch.ui.viewmodel.NewPatchViewModel
 import top.nkbe.npatch.ui.viewmodel.NewPatchViewModel.PatchState
 import top.nkbe.npatch.ui.viewmodel.NewPatchViewModel.ViewAction
 import top.nkbe.npatch.ui.page.SelectAppsResult
-import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.overlay.OverlayDialog
+import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
+import io.github.suqi8.coui.kmp.basic.TextButton
+import io.github.suqi8.coui.kmp.overlay.OverlayDialog
 
 const val ACTION_STORAGE = 0
 const val ACTION_APPLIST = 1
@@ -44,7 +44,7 @@ fun NewPatchScreen(
     val navigator = LocalNavigator.current
     val viewModel = viewModel<NewPatchViewModel>()
     val snackbarHost = LocalSnackbarHost.current
-    val scrollBehavior = MiuixScrollBehavior()
+    val scrollBehavior = COUIScrollBehavior()
     val context = LocalContext.current
     val activityScope = (context as ComponentActivity).lifecycleScope
     val scope = rememberCoroutineScope()

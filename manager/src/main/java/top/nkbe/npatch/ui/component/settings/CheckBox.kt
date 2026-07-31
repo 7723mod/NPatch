@@ -10,7 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.state.ToggleableState
-import top.yukonga.miuix.kmp.basic.Checkbox
+import io.github.suqi8.coui.kmp.basic.Checkbox
 
 @Composable
 fun SettingsCheckBox(

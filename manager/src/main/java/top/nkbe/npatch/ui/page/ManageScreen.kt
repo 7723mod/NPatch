@@ -40,10 +40,10 @@ import top.nkbe.npatch.ui.component.NPatchTopAppBar
 import top.nkbe.npatch.ui.util.LocalFloatingGlassBottomBar
 import top.nkbe.npatch.ui.util.backgroundAwareHazeStyle
 import top.nkbe.npatch.ui.viewmodel.manage.ModuleManageViewModel
-import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.ScrollBehavior
-import top.yukonga.miuix.kmp.basic.TabRow
-import top.yukonga.miuix.kmp.basic.TabRowDefaults
+import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
+import io.github.suqi8.coui.kmp.basic.ScrollBehavior
+import io.github.suqi8.coui.kmp.basic.TabRow
+import io.github.suqi8.coui.kmp.basic.TabRowDefaults
 
 @Composable
 fun ManageScreen(
@@ -63,7 +63,7 @@ fun ManageScreen(
     val settledPage by remember(pagerState) {
         derivedStateOf { pagerState.settledPage }
     }
-    val scrollBehavior = MiuixScrollBehavior()
+    val scrollBehavior = COUIScrollBehavior()
 
     val manageSearchLabel = stringResource(R.string.manage_search)
     val searchStatus = remember(manageSearchLabel) { SearchStatus(manageSearchLabel) }

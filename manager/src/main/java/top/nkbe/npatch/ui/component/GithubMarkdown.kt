@@ -39,7 +39,7 @@ import top.nkbe.npatch.ui.util.adjustLightnessArgb
 import top.nkbe.npatch.ui.util.cssColorFromArgb
 import top.nkbe.npatch.ui.util.ensureVisibleByMix
 import top.nkbe.npatch.ui.util.relativeLuminance
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+import io.github.suqi8.coui.kmp.theme.COUITheme
 import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
 import kotlin.math.abs
@@ -62,7 +62,7 @@ fun GithubMarkdown(
     val isDark = isSystemInDarkTheme()
     val dir = if (LocalLayoutDirection.current == LayoutDirection.Rtl) "rtl" else "ltr"
 
-    val bgArgb = MiuixTheme.colorScheme.surfaceContainer.toArgb()
+    val bgArgb = COUITheme.colorScheme.surfaceContainer.toArgb()
     val bgLuminance = relativeLuminance(bgArgb)
 
     fun makeVariant(delta: Float): Int {
@@ -75,9 +75,9 @@ fun GithubMarkdown(
     val bgMuted = cssColorFromArgb(makeVariant(if (bgLuminance > 0.6) -0.06f else 0.06f))
     val bgNeutralMuted = cssColorFromArgb(makeVariant(if (bgLuminance > 0.6) -0.12f else 0.12f))
     val bgAttentionMuted = cssColorFromArgb(makeVariant(-0.12f))
-    val fgDefault = cssColorFromArgb(MiuixTheme.colorScheme.onSurface.toArgb())
-    val fgMuted = cssColorFromArgb(MiuixTheme.colorScheme.onSurfaceVariantSummary.toArgb())
-    val fgLink = cssColorFromArgb(MiuixTheme.colorScheme.primary.toArgb())
+    val fgDefault = cssColorFromArgb(COUITheme.colorScheme.onSurface.toArgb())
+    val fgMuted = cssColorFromArgb(COUITheme.colorScheme.onSurfaceVariantSummary.toArgb())
+    val fgLink = cssColorFromArgb(COUITheme.colorScheme.primary.toArgb())
 
     val colorsCss =
         "https://appassets.androidplatform.net/assets/webview/${if (isDark) "colors_dark.css" else "colors_light.css"}"

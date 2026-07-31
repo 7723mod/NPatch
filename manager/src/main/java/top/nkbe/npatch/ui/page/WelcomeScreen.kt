@@ -70,14 +70,14 @@ import top.nkbe.npatch.config.Configs
 import top.nkbe.npatch.ui.component.NPatchScaffold
 import top.nkbe.npatch.ui.util.backgroundAwareCardColors
 import top.nkbe.npatch.ui.util.backgroundAwareColor
-import top.yukonga.miuix.kmp.basic.Button
-import top.yukonga.miuix.kmp.basic.ButtonDefaults
-import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+import io.github.suqi8.coui.kmp.basic.Button
+import io.github.suqi8.coui.kmp.basic.ButtonDefaults
+import io.github.suqi8.coui.kmp.basic.Card
+import io.github.suqi8.coui.kmp.basic.Icon
+import io.github.suqi8.coui.kmp.basic.SmallTitle
+import io.github.suqi8.coui.kmp.basic.Text
+import io.github.suqi8.coui.kmp.basic.TextButton
+import io.github.suqi8.coui.kmp.theme.COUITheme
 
 private val welcomeShizukuListener: (Int, Int) -> Unit = { _, grantResult ->
     ShizukuApi.isPermissionGranted = grantResult == PackageManager.PERMISSION_GRANTED
@@ -214,16 +214,16 @@ private fun WelcomeIntroPage() {
                 Spacer(Modifier.height(18.dp))
                 Text(
                     text = stringResource(R.string.app_name),
-                    style = MiuixTheme.textStyles.title1,
+                    style = COUITheme.textStyles.title1,
                     fontWeight = FontWeight.SemiBold,
-                    color = MiuixTheme.colorScheme.onSurface,
+                    color = COUITheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
                     text = versionLabel,
-                    style = MiuixTheme.textStyles.body2,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    style = COUITheme.textStyles.body2,
+                    color = COUITheme.colorScheme.onSurfaceVariantSummary,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.semantics {
                         contentDescription = versionLabel
@@ -232,15 +232,15 @@ private fun WelcomeIntroPage() {
                 Spacer(Modifier.height(18.dp))
                 Text(
                     text = stringResource(R.string.welcome_intro_content),
-                    style = MiuixTheme.textStyles.body1,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    style = COUITheme.textStyles.body1,
+                    color = COUITheme.colorScheme.onSurfaceVariantSummary,
                     textAlign = TextAlign.Center
                 )
                 Spacer(Modifier.height(10.dp))
                 Text(
                     text = stringResource(R.string.welcome_intro_detail),
-                    style = MiuixTheme.textStyles.body2,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    style = COUITheme.textStyles.body2,
+                    color = COUITheme.colorScheme.onSurfaceVariantSummary,
                     textAlign = TextAlign.Start
                 )
             }
@@ -325,18 +325,18 @@ private fun OptionalFeatureCard() {
     }
 
     val isGranted = ShizukuApi.isPermissionGranted
-    val warningContainer = if (MiuixTheme.colorScheme.surface.luminance() > 0.5f) {
+    val warningContainer = if (COUITheme.colorScheme.surface.luminance() > 0.5f) {
         Color(0xFFFFE08A)
     } else {
         Color(0xFF5C4800)
     }
-    val warningContent = if (MiuixTheme.colorScheme.surface.luminance() > 0.5f) {
+    val warningContent = if (COUITheme.colorScheme.surface.luminance() > 0.5f) {
         Color(0xFF5A4300)
     } else {
         Color(0xFFFFF1BF)
     }
-    val containerColor = if (isGranted) MiuixTheme.colorScheme.primaryContainer else warningContainer
-    val contentColor = if (isGranted) MiuixTheme.colorScheme.onPrimaryContainer else warningContent
+    val containerColor = if (isGranted) COUITheme.colorScheme.primaryContainer else warningContainer
+    val contentColor = if (isGranted) COUITheme.colorScheme.onPrimaryContainer else warningContent
     val shizukuApiVersion = ShizukuApi.getVersionOrNull()
     val shizukuStatusDescription = shizukuApiVersion?.let {
         stringResource(R.string.home_api_version) + " $it"
@@ -368,20 +368,20 @@ private fun OptionalFeatureCard() {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = stringResource(R.string.welcome_optional_title),
-                    style = MiuixTheme.textStyles.title3,
+                    style = COUITheme.textStyles.title3,
                     color = contentColor
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = stringResource(if (isGranted) R.string.shizuku_available else R.string.shizuku_unavailable),
-                    style = MiuixTheme.textStyles.body1,
+                    style = COUITheme.textStyles.body1,
                     color = contentColor.copy(alpha = 0.92f)
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = shizukuApiVersion?.let { "API $it" }
                         ?: stringResource(R.string.home_shizuku_warning),
-                    style = MiuixTheme.textStyles.body2,
+                    style = COUITheme.textStyles.body2,
                     color = contentColor.copy(alpha = 0.82f),
                     modifier = Modifier.semantics {
                         contentDescription = shizukuStatusDescription
@@ -390,7 +390,7 @@ private fun OptionalFeatureCard() {
                 Spacer(Modifier.height(8.dp))
                 Text(
                     text = stringResource(R.string.welcome_optional_summary),
-                    style = MiuixTheme.textStyles.body2,
+                    style = COUITheme.textStyles.body2,
                     fontSize = 13.sp,
                     color = contentColor.copy(alpha = 0.9f)
                 )
@@ -416,8 +416,8 @@ private fun WelcomeDisclaimerPage() {
             Column(Modifier.padding(18.dp)) {
                 Text(
                     text = stringResource(R.string.welcome_disclaimer_content),
-                    style = MiuixTheme.textStyles.body1,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                    style = COUITheme.textStyles.body1,
+                    color = COUITheme.colorScheme.onSurfaceVariantSummary
                 )
             }
         }
@@ -452,28 +452,28 @@ private fun WelcomePageHeader(
             modifier = Modifier
                 .size(46.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(backgroundAwareColor(MiuixTheme.colorScheme.primaryContainer)),
+                .background(backgroundAwareColor(COUITheme.colorScheme.primaryContainer)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MiuixTheme.colorScheme.onPrimaryContainer
+                tint = COUITheme.colorScheme.onPrimaryContainer
             )
         }
         Spacer(Modifier.width(12.dp))
         Column {
             Text(
                 text = title,
-                style = MiuixTheme.textStyles.title2,
+                style = COUITheme.textStyles.title2,
                 fontWeight = FontWeight.SemiBold,
-                color = MiuixTheme.colorScheme.onSurface
+                color = COUITheme.colorScheme.onSurface
             )
             Spacer(Modifier.height(2.dp))
             Text(
                 text = summary,
-                style = MiuixTheme.textStyles.body2,
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                style = COUITheme.textStyles.body2,
+                color = COUITheme.colorScheme.onSurfaceVariantSummary
             )
         }
     }
@@ -502,20 +502,20 @@ private fun PermissionStatusCard(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MiuixTheme.colorScheme.primary
+                tint = COUITheme.colorScheme.primary
             )
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = MiuixTheme.textStyles.title3,
-                    color = MiuixTheme.colorScheme.onSurface
+                    style = COUITheme.textStyles.title3,
+                    color = COUITheme.colorScheme.onSurface
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = summary,
-                    style = MiuixTheme.textStyles.body2,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                    style = COUITheme.textStyles.body2,
+                    color = COUITheme.colorScheme.onSurfaceVariantSummary
                 )
             }
             Spacer(Modifier.width(12.dp))
@@ -523,13 +523,13 @@ private fun PermissionStatusCard(
                 Icon(
                     imageVector = Icons.Outlined.CheckCircle,
                     contentDescription = stringResource(R.string.welcome_permission_granted),
-                    tint = MiuixTheme.colorScheme.primary
+                    tint = COUITheme.colorScheme.primary
                 )
             } else {
                 Text(
                     text = stringResource(R.string.welcome_permission_authorize),
-                    style = MiuixTheme.textStyles.body2,
-                    color = MiuixTheme.colorScheme.primary
+                    style = COUITheme.textStyles.body2,
+                    color = COUITheme.colorScheme.primary
                 )
             }
         }
@@ -564,7 +564,7 @@ private fun WelcomeBottomBar(
         ) {
             Text(
                 text = stringResource(if (page == 2) R.string.welcome_btn_finish else R.string.welcome_btn_next),
-                style = MiuixTheme.textStyles.button
+                style = COUITheme.textStyles.button
             )
         }
     }

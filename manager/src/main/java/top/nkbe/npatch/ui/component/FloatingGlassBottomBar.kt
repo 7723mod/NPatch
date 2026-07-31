@@ -73,9 +73,9 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import top.nkbe.npatch.ui.component.miuix.animation.DampedDragAnimation
 import top.nkbe.npatch.ui.component.miuix.animation.InteractiveHighlight
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+import io.github.suqi8.coui.kmp.basic.Icon
+import io.github.suqi8.coui.kmp.basic.Text
+import io.github.suqi8.coui.kmp.theme.COUITheme
 import kotlin.math.abs
 import kotlin.math.sign
 
@@ -139,8 +139,8 @@ fun FloatingGlassBottomBar(
     }
 
     val isInLightTheme = !isSystemInDarkTheme()
-    val accentColor = MiuixTheme.colorScheme.primary
-    val containerColor = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.18f)
+    val accentColor = COUITheme.colorScheme.primary
+    val containerColor = COUITheme.colorScheme.surfaceContainer.copy(alpha = 0.18f)
 
     val tabsBackdrop = rememberLayerBackdrop()
     val density = LocalDensity.current
@@ -396,9 +396,9 @@ private fun FloatingGlassBottomBarFallback(
 ) {
     val hasBackgroundImage = LocalBackgroundImagePath.current.isNotEmpty()
     val barColor = if (hasBackgroundImage) {
-        MiuixTheme.colorScheme.surfaceContainer.copy(alpha = BG_SURFACE_ALPHA)
+        COUITheme.colorScheme.surfaceContainer.copy(alpha = BG_SURFACE_ALPHA)
     } else {
-        MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.94f)
+        COUITheme.colorScheme.surfaceContainer.copy(alpha = 0.94f)
     }
     Box(
         modifier = modifier.width(IntrinsicSize.Min),
@@ -428,7 +428,7 @@ fun FloatingGlassBottomBarIcon(
     Icon(
         imageVector = if (selected) selectedIcon else unselectedIcon,
         contentDescription = null,
-        tint = MiuixTheme.colorScheme.onSurface
+        tint = COUITheme.colorScheme.onSurface
     )
 }
 
@@ -440,7 +440,7 @@ fun FloatingGlassBottomBarLabel(
         text = label,
         fontSize = 11.sp,
         lineHeight = 14.sp,
-        color = MiuixTheme.colorScheme.onSurface,
+        color = COUITheme.colorScheme.onSurface,
         maxLines = 1,
         softWrap = false,
         overflow = TextOverflow.Visible

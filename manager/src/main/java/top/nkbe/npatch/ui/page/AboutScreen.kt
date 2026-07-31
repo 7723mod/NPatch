@@ -50,19 +50,19 @@ import top.nkbe.npatch.R
 import top.nkbe.npatch.ui.component.NPatchScaffold
 import top.nkbe.npatch.ui.util.backgroundAwareCardColors
 import top.nkbe.npatch.ui.util.backgroundAwareColor
-import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.preference.ArrowPreference
-import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.utils.PressFeedbackType
-import top.yukonga.miuix.kmp.utils.overScrollVertical
-import top.yukonga.miuix.kmp.utils.scrollEndHaptic
+import io.github.suqi8.coui.kmp.basic.Card
+import io.github.suqi8.coui.kmp.basic.Icon
+import io.github.suqi8.coui.kmp.basic.IconButton
+import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
+import io.github.suqi8.coui.kmp.basic.Text
+import io.github.suqi8.coui.kmp.basic.TopAppBar
+import io.github.suqi8.coui.kmp.icon.COUIIcons
+import io.github.suqi8.coui.kmp.icon.extended.Back
+import io.github.suqi8.coui.kmp.preference.ArrowPreference
+import io.github.suqi8.coui.kmp.theme.COUITheme
+import io.github.suqi8.coui.kmp.utils.PressFeedbackType
+import io.github.suqi8.coui.kmp.utils.overScrollVertical
+import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
 
 private data class AboutLink(
     val title: String,
@@ -76,7 +76,7 @@ private data class AboutLink(
 @Composable
 fun AboutScreen(onBack: () -> Unit) {
     val context = LocalContext.current
-    val scrollBehavior = MiuixScrollBehavior()
+    val scrollBehavior = COUIScrollBehavior()
     val showTopBarContent by remember {
         derivedStateOf { scrollBehavior.state.collapsedFraction == 0f }
     }
@@ -90,9 +90,9 @@ fun AboutScreen(onBack: () -> Unit) {
                     if (showTopBarContent) {
                         IconButton(onClick = onBack) {
                             Icon(
-                                imageVector = MiuixIcons.Regular.Back,
+                                imageVector = COUIIcons.Regular.Back,
                                 contentDescription = stringResource(R.string.nav_back),
-                                tint = MiuixTheme.colorScheme.onSurface
+                                tint = COUITheme.colorScheme.onSurface
                             )
                         }
                     }
@@ -170,14 +170,14 @@ private fun ModuleIntroCard() {
                 text = "NPatch",
                 fontSize = 30.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = MiuixTheme.colorScheme.primary,
+                color = COUITheme.colorScheme.primary,
                 textAlign = TextAlign.Center
             )
             Spacer(Modifier.height(8.dp))
             Text(
                 text = stringResource(R.string.home_description),
-                fontSize = MiuixTheme.textStyles.body2.fontSize,
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                fontSize = COUITheme.textStyles.body2.fontSize,
+                color = COUITheme.colorScheme.onSurfaceVariantSummary,
                 textAlign = TextAlign.Center
             )
         }
@@ -228,8 +228,8 @@ private fun DisclaimerCard() {
             Spacer(Modifier.height(10.dp))
             Text(
                 text = stringResource(R.string.about_disclaimer_body),
-                fontSize = MiuixTheme.textStyles.body2.fontSize,
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                fontSize = COUITheme.textStyles.body2.fontSize,
+                color = COUITheme.colorScheme.onSurfaceVariantSummary,
                 textAlign = TextAlign.Start
             )
         }
@@ -307,14 +307,14 @@ private fun AboutSectionHeader(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = MiuixTheme.colorScheme.primary
+            tint = COUITheme.colorScheme.primary
         )
         Spacer(Modifier.width(8.dp))
         Text(
             text = title,
             fontSize = 18.sp,
             fontWeight = FontWeight.SemiBold,
-            color = MiuixTheme.colorScheme.onSurface
+            color = COUITheme.colorScheme.onSurface
         )
     }
 }
@@ -326,7 +326,7 @@ private fun LinkIcon(link: AboutLink) {
             .padding(end = 12.dp)
             .size(42.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(backgroundAwareColor(MiuixTheme.colorScheme.primaryContainer)),
+            .background(backgroundAwareColor(COUITheme.colorScheme.primaryContainer)),
         contentAlignment = Alignment.Center
     ) {
         when {
@@ -353,7 +353,7 @@ private fun LinkIcon(link: AboutLink) {
                     imageVector = link.icon,
                     contentDescription = null,
                     modifier = Modifier.size(22.dp),
-                    tint = MiuixTheme.colorScheme.onPrimaryContainer
+                    tint = COUITheme.colorScheme.onPrimaryContainer
                 )
             }
         }

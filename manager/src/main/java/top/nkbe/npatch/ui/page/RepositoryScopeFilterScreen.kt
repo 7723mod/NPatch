@@ -39,19 +39,19 @@ import top.nkbe.npatch.ui.component.AppItem
 import top.nkbe.npatch.ui.component.NPatchScaffold
 import top.nkbe.npatch.ui.util.backgroundAwareCardColors
 import top.nkbe.npatch.ui.viewmodel.RepositoryViewModel
-import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.InputField
-import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.basic.Search
-import top.yukonga.miuix.kmp.icon.basic.SearchCleanup
-import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.extended.Ok
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+import io.github.suqi8.coui.kmp.basic.Card
+import io.github.suqi8.coui.kmp.basic.Icon
+import io.github.suqi8.coui.kmp.basic.IconButton
+import io.github.suqi8.coui.kmp.basic.InputField
+import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
+import io.github.suqi8.coui.kmp.basic.Text
+import io.github.suqi8.coui.kmp.basic.TopAppBar
+import io.github.suqi8.coui.kmp.icon.COUIIcons
+import io.github.suqi8.coui.kmp.icon.basic.Search
+import io.github.suqi8.coui.kmp.icon.basic.SearchCleanup
+import io.github.suqi8.coui.kmp.icon.extended.Back
+import io.github.suqi8.coui.kmp.icon.extended.Ok
+import io.github.suqi8.coui.kmp.theme.COUITheme
 
 private val RepoScopeHorizontalPadding = 12.dp
 
@@ -64,7 +64,7 @@ fun RepositoryScopeFilterScreen(
 ) {
     val targets by viewModel.availableScopeTargets.collectAsStateWithLifecycle()
     val currentScope by viewModel.scopeFilter.collectAsStateWithLifecycle()
-    val scrollBehavior = MiuixScrollBehavior()
+    val scrollBehavior = COUIScrollBehavior()
     val selectedScope = currentScope ?: selectedPackageName
     var searchQuery by remember { mutableStateOf("") }
     val filteredTargets = remember(targets, searchQuery) {
@@ -92,7 +92,7 @@ fun RepositoryScopeFilterScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            imageVector = MiuixIcons.Regular.Back,
+                            imageVector = COUIIcons.Regular.Back,
                             contentDescription = stringResource(R.string.nav_back)
                         )
                     }
@@ -143,7 +143,7 @@ fun RepositoryScopeFilterScreen(
                             } else {
                                 stringResource(R.string.list_empty)
                             },
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                            color = COUITheme.colorScheme.onSurfaceVariantSummary
                         )
                     }
                 }
@@ -172,15 +172,15 @@ fun RepositoryScopeFilterScreen(
                             trailingContent = {
                                 if (selectedScope == target.packageName) {
                                     Icon(
-                                        imageVector = MiuixIcons.Regular.Ok,
+                                        imageVector = COUIIcons.Regular.Ok,
                                         contentDescription = null,
                                         modifier = Modifier.size(18.dp),
-                                        tint = MiuixTheme.colorScheme.primary
+                                        tint = COUITheme.colorScheme.primary
                                     )
                                 }
                             },
                             cardColors = backgroundAwareCardColors(
-                                color = MiuixTheme.colorScheme.surfaceContainer
+                                color = COUITheme.colorScheme.surfaceContainer
                             ),
                             onClick = { select(target.packageName) }
                         )
@@ -199,7 +199,7 @@ private fun ScopeFilterCard(content: @Composable ColumnScope.() -> Unit) {
             .padding(horizontal = RepoScopeHorizontalPadding)
             .padding(bottom = 8.dp),
         colors = backgroundAwareCardColors(
-            color = MiuixTheme.colorScheme.surfaceContainer
+            color = COUITheme.colorScheme.surfaceContainer
         ),
         insideMargin = PaddingValues(0.dp),
         showIndication = false,
@@ -220,7 +220,7 @@ private fun ScopeFilterSearchCard(
             .padding(horizontal = RepoScopeHorizontalPadding)
             .padding(bottom = 8.dp),
         colors = backgroundAwareCardColors(
-            color = MiuixTheme.colorScheme.surfaceContainer
+            color = COUITheme.colorScheme.surfaceContainer
         ),
         insideMargin = PaddingValues(0.dp),
         showIndication = false
@@ -231,18 +231,18 @@ private fun ScopeFilterSearchCard(
             label = stringResource(R.string.manage_search),
             leadingIcon = {
                 Icon(
-                    imageVector = MiuixIcons.Basic.Search,
+                    imageVector = COUIIcons.Basic.Search,
                     contentDescription = null,
                     modifier = Modifier
                         .size(44.dp)
                         .padding(start = 16.dp, end = 8.dp),
-                    tint = MiuixTheme.colorScheme.onSurfaceContainerHigh
+                    tint = COUITheme.colorScheme.onSurfaceContainerHigh
                 )
             },
             trailingIcon = {
                 if (query.isNotEmpty()) {
                     Icon(
-                        imageVector = MiuixIcons.Basic.SearchCleanup,
+                        imageVector = COUIIcons.Basic.SearchCleanup,
                         contentDescription = null,
                         modifier = Modifier
                             .size(44.dp)
@@ -255,7 +255,7 @@ private fun ScopeFilterSearchCard(
                                 indication = null,
                                 onClick = onClear
                             ),
-                        tint = MiuixTheme.colorScheme.onSurface
+                        tint = COUITheme.colorScheme.onSurface
                     )
                 }
             },

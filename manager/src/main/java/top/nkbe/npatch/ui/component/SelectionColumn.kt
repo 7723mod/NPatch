@@ -16,9 +16,9 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import top.nkbe.npatch.R
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+import io.github.suqi8.coui.kmp.basic.Icon
+import io.github.suqi8.coui.kmp.basic.Text
+import io.github.suqi8.coui.kmp.theme.COUITheme
 import androidx.compose.ui.res.stringResource
 
 object SelectionColumnScope {
@@ -34,7 +34,7 @@ object SelectionColumnScope {
         extraContent: (@Composable ColumnScope.() -> Unit)? = null
     ) {
         val backgroundColor = animateColorAsState(
-            targetValue = if (selected) MiuixTheme.colorScheme.primary.copy(alpha = 0.1f)
+            targetValue = if (selected) COUITheme.colorScheme.primary.copy(alpha = 0.1f)
             else Color.Transparent,
             label = "SelectionItemBg"
         ).value
@@ -59,12 +59,12 @@ object SelectionColumnScope {
                 imageVector = icon,
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
-                tint = if (selected) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurface
+                tint = if (selected) COUITheme.colorScheme.primary else COUITheme.colorScheme.onSurface
             )
             Column(Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = MiuixTheme.textStyles.title3
+                    style = COUITheme.textStyles.title3
                 )
                 if (desc != null || extraContent != null) {
                     AnimatedVisibility(
@@ -77,8 +77,8 @@ object SelectionColumnScope {
                                 Text(
                                     text = desc,
                                     modifier = Modifier.padding(top = 4.dp),
-                                    style = MiuixTheme.textStyles.body2,
-                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary.copy(alpha = 0.67f)
+                                    style = COUITheme.textStyles.body2,
+                                    color = COUITheme.colorScheme.onSurfaceVariantSummary.copy(alpha = 0.67f)
                                 )
                             }
                             extraContent?.invoke(this)
