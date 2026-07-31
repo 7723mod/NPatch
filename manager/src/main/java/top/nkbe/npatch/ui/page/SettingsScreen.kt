@@ -50,6 +50,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.edit
 import kotlinx.coroutines.launch
@@ -905,11 +906,16 @@ fun ClearManagerCache() {
             title = clearText,
             show = showDialog.value,
             onDismissRequest = { showDialog.value = false },
+            titleColor = COUITheme.colorScheme.onSurfaceContainer,
+            summaryColor = COUITheme.colorScheme.onSurfaceVariantSummary,
+            backgroundColor = COUITheme.colorScheme.surfaceContainer,
+            insideMargin = DpSize(24.dp, 24.dp),
         ) {
             Column {
                 Text(
                     text = dialogText,
                     modifier = Modifier.padding(bottom = 16.dp),
+                    color = COUITheme.colorScheme.onSurfaceContainer,
                 )
                 Row(horizontalArrangement = Arrangement.SpaceBetween) {
                     TextButton(

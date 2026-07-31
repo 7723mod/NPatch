@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.viewModelScope
@@ -48,6 +49,7 @@ import top.nkbe.npatch.config.ConfigManager
 import top.nkbe.npatch.config.Configs
 import top.nkbe.npatch.database.entity.Module
 import top.nkbe.npatch.manager.ModuleScopeSyncStore
+import top.nkbe.npatch.manager.DiagnosticLogExporter
 import top.nkbe.npatch.share.Constants
 import top.nkbe.npatch.share.LSPConfig
 
@@ -376,6 +378,45 @@ fun AppManageBody(
                                     }
                                 })
                             }
+                            actions.add(stringResource(R.string.manage_export_diagnostics) to {
+                                scope.launch {
+                                    runCatching {
+                                        val result = DiagnosticLogExporter.export(
+                                            context,
+                                            appInfo.app.packageName,
+                                        )
+                                        val uri = FileProvider.getUriForFile(
+                                            context,
+                                            "${context.packageName}.fileprovider",
+                                            result.file,
+                                        )
+                                        Intent(Intent.ACTION_SEND).apply {
+                                            type = "application/zip"
+                                            putExtra(Intent.EXTRA_STREAM, uri)
+                                            clipData = ClipData.newUri(
+                                                context.contentResolver,
+                                                result.file.name,
+                                                uri,
+                                            )
+                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }.let { shareIntent ->
+                                            context.startActivity(
+                                                Intent.createChooser(
+                                                    shareIntent,
+                                                    context.getString(R.string.manage_export_diagnostics_chooser),
+                                                ),
+                                            )
+                                        }
+                                    }.onFailure {
+                                        Log.e(TAG, "Failed to export diagnostics for ${appInfo.app.packageName}", it)
+                                        Toast.makeText(
+                                            context,
+                                            R.string.manage_export_diagnostics_failed,
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                    }
+                                }
+                            })
                             val shizukuUnavailable = stringResource(R.string.shizuku_unavailable)
                             actions.add(stringResource(R.string.manage_optimize) to {
                                 scope.launch {
@@ -473,6 +514,9 @@ fun AppManageFab(
             title = stringResource(R.string.patch_select_dir_title),
             show = shouldSelectDirectory.value,
             onDismissRequest = { shouldSelectDirectory.value = false },
+            titleColor = COUITheme.colorScheme.onSurfaceContainer,
+            summaryColor = COUITheme.colorScheme.onSurfaceVariantSummary,
+            backgroundColor = COUITheme.colorScheme.surfaceContainer,
         ) {
             Column {
                 Text(
@@ -505,6 +549,9 @@ fun AppManageFab(
             title = stringResource(R.string.screen_new_patch),
             show = showNewPatchDialog.value,
             onDismissRequest = { showNewPatchDialog.value = false },
+            titleColor = COUITheme.colorScheme.onSurfaceContainer,
+            summaryColor = COUITheme.colorScheme.onSurfaceVariantSummary,
+            backgroundColor = COUITheme.colorScheme.surfaceContainer,
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(

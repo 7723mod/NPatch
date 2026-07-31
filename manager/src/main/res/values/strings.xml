@@ -74,6 +74,9 @@
     <string name="manage_no_modules">No modules yet</string>
     <string name="manage_module_settings">Module settings</string>
     <string name="manage_app_info">App info</string>
+    <string name="manage_export_diagnostics">Export diagnostic logs</string>
+    <string name="manage_export_diagnostics_chooser">Share patched-app diagnostic logs</string>
+    <string name="manage_export_diagnostics_failed">Failed to export diagnostic logs</string>
     <string name="manage_module_pipeline_modern" translatable="false">Modern</string>
 <string name="manage_module_pipeline_legacy" translatable="false">Legacy</string>
     <string name="manage_module_pipeline_unsupported">Unsupported</string>

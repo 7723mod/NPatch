@@ -74,6 +74,9 @@
     <string name="manage_no_modules">尚无模块</string>
     <string name="manage_module_settings">模块设置</string>
     <string name="manage_app_info">应用信息</string>
+    <string name="manage_export_diagnostics">导出诊断日志</string>
+    <string name="manage_export_diagnostics_chooser">分享已打包应用的诊断日志</string>
+    <string name="manage_export_diagnostics_failed">导出诊断日志失败</string>
     <string name="manage_module_pipeline_unsupported">不支持的架构</string>
     <string name="manage_module_api_unsupported">不支持的 API %1$d</string>
     <string name="manage_module_unsupported_warning">Modern 架构不支持 API %1$d</string>
