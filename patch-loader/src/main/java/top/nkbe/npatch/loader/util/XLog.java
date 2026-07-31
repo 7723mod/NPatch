@@ -13,7 +13,9 @@ public class XLog {
 
     public static void init(String targetPkg, String currentProc, boolean enableMirror) {
         targetPackageName = targetPkg;
-        isTargetProcess = targetPkg != null && targetPkg.equals(currentProc);
+        isTargetProcess = targetPkg != null
+                && currentProc != null
+                && (targetPkg.equals(currentProc) || currentProc.startsWith(targetPkg + ":"));
         mirrorToMedia = enableMirror;
     }
 

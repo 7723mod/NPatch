@@ -26,6 +26,7 @@ import org.json.JSONObject;
 import org.lsposed.lspd.models.Module;
 import org.lsposed.lspd.service.ILSPApplicationService;
 import org.matrix.vector.Startup;
+import org.matrix.vector.impl.VectorLogBridge;
 import top.nkbe.npatch.loader.util.XLog;
 import top.nkbe.npatch.service.IntegrApplicationService;
 import top.nkbe.npatch.service.NeoLocalApplicationService;
@@ -74,6 +75,9 @@ public class LSPApplication {
     private static LoadedApk stubLoadedApk;
     private static LoadedApk appLoadedApk;
     private static Thread.UncaughtExceptionHandler previousUncaughtExceptionHandler;
+    private static boolean crashInterceptorInstalled;
+    private static boolean outputLoggingConfigured;
+    private static volatile Throwable lastCoreCapturedCrash;
 
     private static PatchConfig config;
 
@@ -286,16 +290,13 @@ public class LSPApplication {
         registerModuleCallerPrefixes(service);
         SigBypass.doSigBypass(context, config.lspConfig.sigBypassLevel, config.hideLibs);
         disableProfile(context);
+
         Startup.initXposed(false, ActivityThread.currentProcessName(), context.getApplicationInfo().dataDir, service);
         Startup.bootstrapXposed(false);
 
         // WARN: Since it uses `XResource`, the following class should not be initialized
         // before forkPostCommon is invoke. Otherwise, you will get failure of XResources
 
-        if (config.outputLog) {
-            XposedBridge.setLogPrinter(new XposedLogPrinter(0, "NPatch"));
-            installCrashInterceptor(context);
-        }
         logInfo("Load modules");
         LSPLoader.initModules(appLoadedApk);
         logInfo("Modules initialized");
@@ -316,21 +317,27 @@ public class LSPApplication {
     }
 
     private static void installCrashInterceptor(Context context) {
-        if (previousUncaughtExceptionHandler != null) {
+        if (crashInterceptorInstalled) {
             return;
         }
 
+        crashInterceptorInstalled = true;
         previousUncaughtExceptionHandler = Thread.getDefaultUncaughtExceptionHandler();
         Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
             try {
-                XLog.e(TAG, "Uncaught exception in " + thread.getName(), throwable);
-                new Handler(Looper.getMainLooper()).post(() ->
-                        Toast.makeText(
-                                context.getApplicationContext(),
-                                "Crash log saved to Media directory",
-                                Toast.LENGTH_LONG
-                        ).show()
-                );
+                if (lastCoreCapturedCrash != throwable) {
+                    XLog.e(TAG, "Uncaught exception in " + thread.getName(), throwable);
+                }
+                lastCoreCapturedCrash = null;
+                if (context != null) {
+                    new Handler(Looper.getMainLooper()).post(() ->
+                            Toast.makeText(
+                                    context.getApplicationContext(),
+                                    "Crash log saved to Media directory",
+                                    Toast.LENGTH_LONG
+                            ).show()
+                    );
+                }
             } catch (Throwable ignored) {
             }
 
@@ -338,6 +345,22 @@ public class LSPApplication {
                 previousUncaughtExceptionHandler.uncaughtException(thread, throwable);
             }
         });
+    }
+
+    private static synchronized void configureOutputLogging(Context context) {
+        if (outputLoggingConfigured || config == null || !config.outputLog) {
+            return;
+        }
+        outputLoggingConfigured = true;
+        XposedLogPrinter printer = new XposedLogPrinter(0, "NPatch");
+        XposedBridge.setLogPrinter(printer);
+        VectorLogBridge.setSink((priority, tag, message, throwable) -> {
+            if ("NPatchCrash".equals(tag) && throwable != null) {
+                lastCoreCapturedCrash = throwable;
+            }
+            XposedLogPrinter.log(priority, tag, message, throwable);
+        });
+        installCrashInterceptor(context);
     }
 
     private static Context createLoadedApkWithContext() {
@@ -361,6 +384,7 @@ public class LSPApplication {
             // Keep the effective bypass level out of the editable config.json copy.
             config.lspConfig.sigBypassLevel = resolveSigBypassLevel(appInfo, config.sigBypassLevel);
             XLog.init(config.newPackage, ActivityThread.currentProcessName(), config.outputLog);
+            configureOutputLogging(null);
             logInfo("Loaded patch config for " + config.newPackage + ", useManager=" + config.useManager + ", outputLog=" + config.outputLog);
             Log.i(TAG, "Use manager: " + config.useManager);
             Log.i(TAG, "Signature bypass level: " + config.lspConfig.sigBypassLevel);
@@ -481,7 +505,7 @@ public class LSPApplication {
             Log.i(TAG, "createLoadedApkWithContext cost: " + (System.currentTimeMillis() - timeStart) + "ms");
             return context;
         } catch (Throwable e) {
-            Log.e(TAG, "createLoadedApk", e);
+            XLog.e(TAG, "createLoadedApk", e);
             return null;
         }
     }
