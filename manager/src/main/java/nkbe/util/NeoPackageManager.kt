@@ -15,7 +15,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -25,10 +24,11 @@ import kotlinx.coroutines.withContext
 import kotlinx.parcelize.Parcelize
 import me.zhanghai.android.appiconloader.AppIconLoader
 import top.nkbe.npatch.config.ConfigManager
-import top.nkbe.npatch.config.Configs
 import top.nkbe.npatch.ShizukuService
+import top.nkbe.npatch.install.ApkInstallSet
+import top.nkbe.npatch.install.SystemInstallResult
+import top.nkbe.npatch.install.SystemPackageInstaller
 import top.nkbe.npatch.lspApp
-import top.nkbe.npatch.share.Constants
 import java.io.File
 import java.io.IOException
 import java.text.Collator
@@ -40,8 +40,20 @@ object NeoPackageManager {
 
     private const val TAG = "NeoPackageManager"
     private const val SETTINGS_CATEGORY = "de.robv.android.xposed.category.MODULE_SETTINGS"
+    private const val MAX_ARCHIVE_APK_COUNT = 256
+    private const val MAX_ARCHIVE_EXTRACTED_BYTES = 4L * 1024 * 1024 * 1024
 
     const val STATUS_USER_CANCELLED = -2
+
+    enum class InstallMethod {
+        SYSTEM,
+        SHIZUKU,
+    }
+
+    sealed interface InstallOutcome {
+        data class Completed(val status: Int, val message: String?) : InstallOutcome
+        data object PermissionRequired : InstallOutcome
+    }
 
     private val appScanDispatcher by lazy {
         Dispatchers.IO.limitedParallelism(maxOf(2, minOf(Runtime.getRuntime().availableProcessors(), 8)))
@@ -148,21 +160,41 @@ object NeoPackageManager {
         }
     }
 
-    suspend fun install(): Pair<Int, String?> {
-        Log.i(TAG, "Perform install patched apks")
-        var status = PackageInstaller.STATUS_FAILURE
-        var message: String? = null
-        withContext(Dispatchers.IO) {
+    suspend fun install(method: InstallMethod): InstallOutcome {
+        Log.i(TAG, "Installing patched APK set with $method")
+        return withContext(Dispatchers.IO) {
             runCatching {
-                val result = ShizukuApi.installApks(collectInstallApkFiles())
-                status = result.getInt(ShizukuService.KEY_STATUS, PackageInstaller.STATUS_FAILURE)
-                message = result.getString(ShizukuService.KEY_MESSAGE)
-            }.onFailure {
-                status = PackageInstaller.STATUS_FAILURE
-                message = it.message + "\n" + it.stackTraceToString()
+                val installSet = ApkInstallSet.fromFiles(lspApp, collectInstallApkFiles())
+                when (method) {
+                    InstallMethod.SHIZUKU -> {
+                        val result = ShizukuApi.installApks(installSet)
+                        InstallOutcome.Completed(
+                            result.getInt(
+                                ShizukuService.KEY_STATUS,
+                                PackageInstaller.STATUS_FAILURE,
+                            ),
+                            result.getString(ShizukuService.KEY_MESSAGE),
+                        )
+                    }
+
+                    InstallMethod.SYSTEM -> when (
+                        val result = SystemPackageInstaller.install(lspApp, installSet)
+                    ) {
+                        is SystemInstallResult.Completed -> InstallOutcome.Completed(
+                            result.status,
+                            result.message,
+                        )
+
+                        SystemInstallResult.PermissionRequired -> InstallOutcome.PermissionRequired
+                    }
+                }
+            }.getOrElse { error ->
+                InstallOutcome.Completed(
+                    PackageInstaller.STATUS_FAILURE,
+                    error.message + "\n" + error.stackTraceToString(),
+                )
             }
         }
-        return Pair(status, message)
     }
 
     suspend fun uninstall(packageName: String): Pair<Int, String?> {
@@ -182,30 +214,9 @@ object NeoPackageManager {
     }
 
     private fun collectInstallApkFiles(): List<File> {
-        val localApkFiles = lspApp.targetApkFiles
-            ?.filter { it.isFile && it.name.endsWith(Constants.PATCH_FILE_SUFFIX) }
-            .orEmpty()
-        if (localApkFiles.isNotEmpty()) {
-            return localApkFiles
-        }
-
-        val uri = Configs.storageDirectory?.toUri() ?: throw IOException("Uri is null")
-        val root = DocumentFile.fromTreeUri(lspApp, uri) ?: throw IOException("DocumentFile is null")
-        val apkFiles = mutableListOf<File>()
-        root.listFiles().forEach { file ->
-            val fileName = file.name ?: return@forEach
-            when {
-                fileName.endsWith(Constants.PATCH_FILE_SUFFIX) -> {
-                    apkFiles.add(copyDocumentToTempFile(file.uri, sanitizeVisibleFileName(fileName)))
-                }
-
-                fileName.endsWith(Constants.PATCH_ARCHIVE_SUFFIX) -> {
-                    val copiedArchive = copyDocumentToTempFile(file.uri, sanitizeVisibleFileName(fileName))
-                    apkFiles.addAll(extractApkArchive(copiedArchive, fileName))
-                }
-            }
-        }
-        if (apkFiles.isEmpty()) throw IOException("No target APK files found for installation")
+        val apkFiles = lspApp.targetApkFiles.orEmpty().toList()
+        if (apkFiles.isEmpty()) throw IOException("No active patched APK set")
+        if (apkFiles.any { !it.isFile }) throw IOException("Patched APK set is no longer available")
         return apkFiles
     }
 
@@ -221,9 +232,7 @@ object NeoPackageManager {
     suspend fun getAppInfoFromApks(apks: List<Uri>): Result<List<AppInfo>> {
         return withContext(Dispatchers.IO) {
             runCatching {
-                var primary: ApplicationInfo? = null
-                val splits = mutableListOf<String>()
-                val appInfos = mutableListOf<AppInfo>()
+                val candidates = mutableListOf<File>()
 
                 apks.forEachIndexed { index, uri ->
                     val src = DocumentFile.fromSingleUri(lspApp, uri)
@@ -235,39 +244,34 @@ object NeoPackageManager {
                         sanitizeVisibleFileName(srcName)
                     }
                     val copiedFile = copyDocumentToTempFile(uri, copiedName)
-                    val candidates =
+                    val selectedFiles =
                         if (isApksArchive(srcName)) extractApkArchive(copiedFile, srcName)
                         else listOf(copiedFile)
-
-                    var uriPrimary: ApplicationInfo? = null
-                    candidates.forEach { candidate ->
-                        val pkgInfo = lspApp.packageManager.getPackageArchiveInfo(
-                            candidate.absolutePath, PackageManager.GET_META_DATA
-                        )
-                        val appInfo = pkgInfo?.applicationInfo
-                        appInfo?.sourceDir = candidate.absolutePath
-                        if (appInfo == null || uriPrimary != null) {
-                            splits.add(candidate.absolutePath)
-                            return@forEach
-                        }
-                        uriPrimary = appInfo
-                        if (primary == null) primary = appInfo
-                        val label = lspApp.packageManager.getApplicationLabel(appInfo).toString()
-                        appInfos.add(
-                            AppInfo(
-                                app = appInfo,
-                                label = label,
-                                versionName = pkgInfo.versionName ?: "",
-                                versionCode = androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(pkgInfo),
-                                moduleMetadata = ModuleMetadataReader.read(pkgInfo, lspApp.packageManager)
-                            )
-                        )
-                    }
+                    candidates += selectedFiles
                 }
 
-                primary?.splitSourceDirs = splits.toTypedArray()
-                if (appInfos.isEmpty()) throw IOException("No apks")
-                appInfos
+                val installSet = ApkInstallSet.fromFiles(lspApp, candidates)
+                val baseFile = installSet.entries.first().file
+                val pkgInfo = lspApp.packageManager.getPackageArchiveInfo(
+                    baseFile.absolutePath,
+                    PackageManager.GET_META_DATA or PackageManager.GET_SIGNING_CERTIFICATES,
+                ) ?: throw IOException("Unable to parse base APK: ${baseFile.name}")
+                val appInfo = pkgInfo.applicationInfo
+                    ?: throw IOException("Base APK has no application info: ${baseFile.name}")
+                appInfo.sourceDir = baseFile.absolutePath
+                appInfo.splitSourceDirs = installSet.entries
+                    .drop(1)
+                    .map { it.file.absolutePath }
+                    .toTypedArray()
+                listOf(
+                    AppInfo(
+                        app = appInfo,
+                        label = lspApp.packageManager.getApplicationLabel(appInfo).toString(),
+                        versionName = pkgInfo.versionName ?: "",
+                        versionCode = androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(pkgInfo),
+                        moduleMetadata = ModuleMetadataReader.read(pkgInfo, lspApp.packageManager),
+                    )
+                )
             }.recoverCatching { t ->
                 cleanTmpApkDir()
                 Log.e(TAG, "Failed to load apks", t)
@@ -296,32 +300,79 @@ object NeoPackageManager {
         val extracted = mutableListOf<File>()
         val prefix = sanitizeVisibleFileName(archiveName.substringBeforeLast('.', archiveName))
             .ifEmpty { "archive" }
+        var extractedBytes = 0L
 
-        ZipFile(archiveFile).use { zipFile ->
-            val entries = selectInstallableApkEntries(Collections.list(zipFile.entries()))
-            if (entries.isEmpty()) {
-                throw IOException("No APK entries found in archive: $archiveName")
-            }
-
-            entries.forEachIndexed { index, entry ->
-                val entryName = entry.name.substringAfterLast('/').ifEmpty { "part-$index.apk" }
-                val lowerName = entryName.lowercase(Locale.ROOT)
-                val outName = when {
-                    lowerName == "base.apk" -> "base_${prefix}.apk"
-                    lowerName.startsWith("split_") -> "split_${prefix}_${sanitizeVisibleFileName(entryName)}"
-                    else -> "split_${prefix}_${sanitizeVisibleFileName(entryName)}"
+        try {
+            ZipFile(archiveFile).use { zipFile ->
+                val entries = selectInstallableApkEntries(Collections.list(zipFile.entries()))
+                if (entries.isEmpty()) {
+                    throw IOException("No APK entries found in archive: $archiveName")
                 }
-                val dst = uniqueTempFile(outName)
-                zipFile.getInputStream(entry).use { input ->
-                    dst.outputStream().use { output ->
-                        input.copyTo(output)
+                if (entries.size > MAX_ARCHIVE_APK_COUNT) {
+                    throw IOException("Too many APK entries in archive: ${entries.size}")
+                }
+
+                val duplicatePath = entries
+                    .groupingBy { normalizeZipPath(it.name) }
+                    .eachCount()
+                    .entries
+                    .firstOrNull { it.value > 1 }
+                if (duplicatePath != null) {
+                    throw IOException("Duplicate APK entry in archive: ${duplicatePath.key}")
+                }
+
+                entries.forEachIndexed { index, entry ->
+                    val entryName = entry.name.substringAfterLast('/').ifEmpty { "part-$index.apk" }
+                    val lowerName = entryName.lowercase(Locale.ROOT)
+                    val outName = when {
+                        lowerName == "base.apk" -> "base_${prefix}.apk"
+                        else -> "split_${prefix}_${sanitizeVisibleFileName(entryName)}"
+                    }
+                    val dst = uniqueTempFile(outName)
+                    val remaining = MAX_ARCHIVE_EXTRACTED_BYTES - extractedBytes
+                    extractedBytes += copyArchiveEntry(zipFile, entry, dst, remaining)
+                    extracted.add(dst)
+                }
+            }
+            return extracted
+        } catch (error: Throwable) {
+            extracted.forEach(File::delete)
+            throw error
+        } finally {
+            archiveFile.delete()
+        }
+    }
+
+    private fun copyArchiveEntry(
+        zipFile: ZipFile,
+        entry: java.util.zip.ZipEntry,
+        destination: File,
+        remainingBytes: Long,
+    ): Long {
+        if (remainingBytes <= 0L || entry.size > remainingBytes) {
+            throw IOException("APK archive exceeds extraction size limit")
+        }
+        var written = 0L
+        try {
+            zipFile.getInputStream(entry).use { input ->
+                destination.outputStream().use { output ->
+                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                    while (true) {
+                        val read = input.read(buffer)
+                        if (read < 0) break
+                        written += read
+                        if (written > remainingBytes) {
+                            throw IOException("APK archive exceeds extraction size limit")
+                        }
+                        output.write(buffer, 0, read)
                     }
                 }
-                extracted.add(dst)
             }
+            return written
+        } catch (error: Throwable) {
+            destination.delete()
+            throw error
         }
-        archiveFile.delete()
-        return extracted
     }
 
     private fun selectInstallableApkEntries(entries: List<java.util.zip.ZipEntry>): List<java.util.zip.ZipEntry> {

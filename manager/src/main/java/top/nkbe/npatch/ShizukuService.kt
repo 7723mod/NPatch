@@ -36,14 +36,25 @@ class ShizukuService : INPatchShizukuService.Stub() {
     override fun installApks(
         apkFiles: Array<ParcelFileDescriptor>,
         names: Array<String>,
+        packageName: String,
+        totalSize: Long,
         userId: Int,
     ): Bundle {
         return runBlocking {
             runCatching {
                 require(apkFiles.isNotEmpty()) { "No APK files provided" }
                 require(apkFiles.size == names.size) { "APK file count does not match name count" }
+                require(packageName.isNotBlank()) { "Package name is empty" }
+                require(totalSize > 0L) { "APK set size is invalid" }
+                require(names.distinct().size == names.size) { "Duplicate APK session names" }
+                require(names.all { it.endsWith(".apk") && '/' !in it && '\\' !in it }) {
+                    "Invalid APK session name"
+                }
 
-                val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
+                val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
+                    setAppPackageName(packageName)
+                    setSize(totalSize)
+                }
                 var flags = Refine.unsafeCast<SessionParamsHidden>(params).installFlags
                 flags = flags or PackageManagerHidden.INSTALL_ALLOW_TEST or PackageManagerHidden.INSTALL_REPLACE_EXISTING
                 Refine.unsafeCast<SessionParamsHidden>(params).installFlags = flags

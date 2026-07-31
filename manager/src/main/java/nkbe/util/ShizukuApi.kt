@@ -20,6 +20,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeout
 import top.nkbe.npatch.INPatchShizukuService
 import top.nkbe.npatch.ShizukuService
+import top.nkbe.npatch.install.ApkInstallSet
 import top.nkbe.npatch.lspApp
 import rikka.shizuku.Shizuku
 import rikka.shizuku.ShizukuBinderWrapper
@@ -249,14 +250,16 @@ object ShizukuApi {
         return (app != null) && (app.metaData?.containsKey("npatch") != true)
     }
 
-    suspend fun installApks(apkFiles: List<File>): Bundle {
-        val descriptors = apkFiles.map {
-            ParcelFileDescriptor.open(it, ParcelFileDescriptor.MODE_READ_ONLY)
+    suspend fun installApks(installSet: ApkInstallSet): Bundle {
+        val descriptors = installSet.entries.map { entry ->
+            ParcelFileDescriptor.open(entry.file, ParcelFileDescriptor.MODE_READ_ONLY)
         }
         return try {
             getUserService().installApks(
                 descriptors.toTypedArray(),
-                apkFiles.map { it.name }.toTypedArray(),
+                installSet.entries.map { it.sessionName }.toTypedArray(),
+                installSet.packageName,
+                installSet.totalSize,
                 Process.myUserHandle().hashCode(),
             )
         } finally {

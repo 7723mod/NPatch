@@ -1,17 +1,15 @@
 package top.nkbe.npatch.ui.page.newpatch
 
 import android.annotation.SuppressLint
-import android.content.BroadcastReceiver
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.Context.RECEIVER_NOT_EXPORTED
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.PackageInstaller
-import android.os.Build
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -35,7 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import nkbe.util.NeoPackageManager
@@ -45,15 +43,11 @@ import top.nkbe.npatch.R
 import top.nkbe.npatch.lspApp
 import top.nkbe.npatch.ui.component.ShimmerAnimation
 import top.nkbe.npatch.ui.page.Navigator
-import top.nkbe.npatch.ui.util.InstallResultReceiver
 import top.nkbe.npatch.ui.util.LocalSnackbarHost
 import top.nkbe.npatch.ui.util.backgroundAwareCardColors
 import top.nkbe.npatch.ui.util.checkIsApkFixedByLSP
-import top.nkbe.npatch.ui.util.installApk
-import top.nkbe.npatch.ui.util.installApks
 import top.nkbe.npatch.ui.util.isScrolledToEnd
 import top.nkbe.npatch.ui.util.lastItemIndex
-import top.nkbe.npatch.ui.util.uninstallApkByPackageName
 import top.nkbe.npatch.ui.viewmodel.NewPatchViewModel
 import top.nkbe.npatch.ui.viewmodel.NewPatchViewModel.PatchState
 import top.nkbe.npatch.ui.viewmodel.NewPatchViewModel.ViewAction
@@ -79,34 +73,6 @@ fun DoPatchBody(modifier: Modifier, navigator: Navigator) {
     val snackbarHost = LocalSnackbarHost.current
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-
-    // 監聽應用安裝廣播
-    DisposableEffect(viewModel.patchApp.app.packageName) {
-        val receiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context, intent: Intent) {
-                val action = intent.action
-                val data = intent.data
-                val pkgName = data?.schemeSpecificPart
-
-                if (pkgName == viewModel.patchApp.app.packageName) {
-                    if (action == Intent.ACTION_PACKAGE_ADDED || action == Intent.ACTION_PACKAGE_REPLACED) {
-                        scope.launch {
-                            snackbarHost.showSnackbar(context.getString(R.string.patch_install_successfully))
-                            viewModel.reset()
-                            navigator.pop()
-                        }
-                    }
-                }
-            }
-        }
-        val filter = IntentFilter().apply {
-            addAction(Intent.ACTION_PACKAGE_ADDED)
-            addAction(Intent.ACTION_PACKAGE_REPLACED)
-            addDataScheme("package")
-        }
-        context.registerReceiver(receiver, filter)
-        onDispose { context.unregisterReceiver(receiver) }
-    }
 
     LaunchedEffect(Unit) {
         if (viewModel.logs.isEmpty()) {
@@ -271,18 +237,14 @@ fun DoPatchBody(modifier: Modifier, navigator: Navigator) {
                 val onFinish: (Int, String?) -> Unit = { status, message ->
                     scope.launch {
                         if (status == PackageInstaller.STATUS_SUCCESS) {
-                            if (installation == NewPatchViewModel.InstallMethod.SHIZUKU) {
-                                installation = null
-                                viewModel.reset()
-                                navigator.pop()
-                                Toast.makeText(
-                                    context.applicationContext,
-                                    context.getString(R.string.patch_install_successfully),
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            } else {
-                                Log.i(TAG, "Install reported success, waiting for broadcast to navigate.")
-                            }
+                            installation = null
+                            viewModel.reset()
+                            navigator.pop()
+                            Toast.makeText(
+                                context.applicationContext,
+                                context.getString(R.string.patch_install_successfully),
+                                Toast.LENGTH_SHORT,
+                            ).show()
                         } else if (status != NeoPackageManager.STATUS_USER_CANCELLED) {
                             val result = snackbarHost.showSnackbar(installFailed, copyError)
                             if (result == SnackbarResult.ActionPerformed) {
@@ -296,8 +258,18 @@ fun DoPatchBody(modifier: Modifier, navigator: Navigator) {
                     }
                 }
                 when (installation) {
-                    NewPatchViewModel.InstallMethod.SYSTEM -> InstallDialog2(viewModel.patchApp, onFinish)
-                    NewPatchViewModel.InstallMethod.SHIZUKU -> InstallDialog(viewModel.patchApp, onFinish)
+                    NewPatchViewModel.InstallMethod.SYSTEM -> InstallDialog(
+                        patchApp = viewModel.patchApp,
+                        method = NeoPackageManager.InstallMethod.SYSTEM,
+                        onFinish = onFinish,
+                    )
+
+                    NewPatchViewModel.InstallMethod.SHIZUKU -> InstallDialog(
+                        patchApp = viewModel.patchApp,
+                        method = NeoPackageManager.InstallMethod.SHIZUKU,
+                        onFinish = onFinish,
+                    )
+
                     null -> {}
                 }
                 Row(
@@ -395,23 +367,56 @@ fun UninstallConfirmationDialog(
 }
 
 @Composable
-fun InstallDialog(patchApp: AppInfo, onFinish: (Int, String?) -> Unit) {
+fun InstallDialog(
+    patchApp: AppInfo,
+    method: NeoPackageManager.InstallMethod,
+    onFinish: (Int, String?) -> Unit,
+) {
     val scope = rememberCoroutineScope()
-    var uninstallFirst by remember { mutableStateOf(ShizukuApi.isPackageInstalledWithoutPatch(patchApp.app.packageName)) }
+    val context = LocalContext.current
+    var uninstallFirst by remember(method, patchApp.app.packageName) {
+        mutableStateOf(
+            if (method == NeoPackageManager.InstallMethod.SHIZUKU) {
+                ShizukuApi.isPackageInstalledWithoutPatch(patchApp.app.packageName)
+            } else {
+                checkIsApkFixedByLSP(context, patchApp.app.packageName)
+            },
+        )
+    }
     var installing by remember { mutableStateOf(0) }
     var installStarted by remember { mutableStateOf(false) }
-
-    suspend fun doInstall() {
-        Log.i(TAG, "Installing app ${patchApp.app.packageName}")
-        installStarted = true
-        installing = 1
-        val (status, message) = NeoPackageManager.install()
-        installing = 0
-        Log.i(TAG, "Installation end: $status, $message")
-        onFinish(status, message)
+    val uninstallLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) {
+        if (checkIsApkFixedByLSP(context, patchApp.app.packageName)) {
+            onFinish(PackageInstaller.STATUS_FAILURE, "Original application was not uninstalled")
+        } else {
+            uninstallFirst = false
+        }
     }
 
-    LaunchedEffect(uninstallFirst) {
+    suspend fun doInstall() {
+        Log.i(TAG, "Installing ${patchApp.app.packageName} with $method")
+        installStarted = true
+        installing = 1
+        val outcome = NeoPackageManager.install(method)
+        installing = 0
+        Log.i(TAG, "Installation end: $outcome")
+        when (outcome) {
+            is NeoPackageManager.InstallOutcome.Completed ->
+                onFinish(outcome.status, outcome.message)
+
+            NeoPackageManager.InstallOutcome.PermissionRequired -> {
+                installStarted = false
+                onFinish(
+                    NeoPackageManager.STATUS_USER_CANCELLED,
+                    "Package install permission is required; retry after granting it",
+                )
+            }
+        }
+    }
+
+    LaunchedEffect(uninstallFirst, method) {
         if (!uninstallFirst && !installStarted) {
             doInstall()
         }
@@ -421,17 +426,25 @@ fun InstallDialog(patchApp: AppInfo, onFinish: (Int, String?) -> Unit) {
         UninstallConfirmationDialog(
             onDismiss = { onFinish(NeoPackageManager.STATUS_USER_CANCELLED, "User cancelled") },
             onConfirm = {
-                scope.launch {
-                    Log.i(TAG, "Uninstalling app ${patchApp.app.packageName}")
-                    installing = 2
-                    val (status, message) = NeoPackageManager.uninstall(patchApp.app.packageName)
-                    installing = 0
-                    Log.i(TAG, "Uninstallation end: $status, $message")
-                    if (status == PackageInstaller.STATUS_SUCCESS) {
-                        uninstallFirst = false
-                    } else {
-                        onFinish(status, message)
+                if (method == NeoPackageManager.InstallMethod.SHIZUKU) {
+                    scope.launch {
+                        Log.i(TAG, "Uninstalling app ${patchApp.app.packageName}")
+                        installing = 2
+                        val (status, message) = NeoPackageManager.uninstall(patchApp.app.packageName)
+                        installing = 0
+                        Log.i(TAG, "Uninstallation end: $status, $message")
+                        if (status == PackageInstaller.STATUS_SUCCESS) {
+                            uninstallFirst = false
+                        } else {
+                            onFinish(status, message)
+                        }
                     }
+                } else {
+                    uninstallLauncher.launch(
+                        Intent(Intent.ACTION_DELETE).apply {
+                            data = "package:${patchApp.app.packageName}".toUri()
+                        },
+                    )
                 }
             }
         )
@@ -452,68 +465,5 @@ fun InstallDialog(patchApp: AppInfo, onFinish: (Int, String?) -> Unit) {
                 CircularProgressIndicator(modifier = Modifier.padding(16.dp).size(48.dp))
             }
         }
-    }
-}
-
-@Composable
-fun InstallDialog2(patchApp: AppInfo, onFinish: (Int, String?) -> Unit) {
-    val scope = rememberCoroutineScope()
-    var uninstallFirst by remember { mutableStateOf(checkIsApkFixedByLSP(lspApp, patchApp.app.packageName)) }
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val splitInstallReceiver = remember { InstallResultReceiver() }
-
-    fun doInstall() {
-        Log.i(TAG, "Installing app with system installer: ${patchApp.app.packageName}")
-        val apkFiles = lspApp.targetApkFiles
-        if (apkFiles.isNullOrEmpty()) {
-            onFinish(PackageInstaller.STATUS_FAILURE, "No target APK files found for installation")
-            return
-        }
-        if (apkFiles.size > 1) {
-            scope.launch {
-                val success = installApks(lspApp, apkFiles)
-                onFinish(
-                    if (success) PackageInstaller.STATUS_SUCCESS else PackageInstaller.STATUS_FAILURE,
-                    if (success) "Split APKs installed successfully" else "Failed to install split APKs"
-                )
-            }
-        } else {
-            installApk(lspApp, apkFiles.first())
-        }
-    }
-
-    DisposableEffect(lifecycleOwner, context) {
-        val intentFilter = IntentFilter(InstallResultReceiver.ACTION_INSTALL_STATUS)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(splitInstallReceiver, intentFilter, RECEIVER_NOT_EXPORTED)
-        } else {
-            context.registerReceiver(splitInstallReceiver, intentFilter)
-        }
-
-        onDispose {
-            context.unregisterReceiver(splitInstallReceiver)
-        }
-    }
-
-    LaunchedEffect(uninstallFirst) {
-        if (!uninstallFirst) {
-            Log.d(TAG, "State changed to install, starting installation via system.")
-            doInstall()
-            onFinish(NeoPackageManager.STATUS_USER_CANCELLED, "Handed over to system installer")
-        }
-    }
-
-    if (uninstallFirst) {
-        UninstallConfirmationDialog(
-            onDismiss = { onFinish(NeoPackageManager.STATUS_USER_CANCELLED, "User cancelled") },
-            onConfirm = {
-                scope.launch {
-                    Log.i(TAG, "Uninstalling app ${patchApp.app.packageName}")
-                    uninstallApkByPackageName(lspApp, patchApp.app.packageName)
-                    uninstallFirst = false
-                }
-            }
-        )
     }
 }

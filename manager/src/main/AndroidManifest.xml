@@ -59,12 +59,8 @@
         </activity-alias>
 
         <receiver
-            android:name=".ui.util.InstallResultReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="${applicationId}.INSTALL_STATUS" />
-            </intent-filter>
-        </receiver>
+            android:name=".install.InstallResultReceiver"
+            android:exported="false" />
 
 
         <service

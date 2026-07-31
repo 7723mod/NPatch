@@ -20,8 +20,6 @@ import top.nkbe.npatch.Patcher
 import top.nkbe.npatch.lspApp
 import top.nkbe.npatch.share.Constants
 import top.nkbe.npatch.share.PatchConfig
-import top.nkbe.npatch.ui.util.installApk
-import top.nkbe.npatch.ui.util.installApks
 import top.nkbe.npatch.ui.viewstate.ProcessingState
 import nkbe.util.NeoPackageManager
 import nkbe.util.NeoPackageManager.AppInfo
@@ -185,20 +183,23 @@ class AppManageViewModel : ViewModel() {
                     }
                 }
                 Patcher.patch(logger, Patcher.Options(appInfo.app.packageName, config, patchPaths, embeddedModulePaths))
-                if (!ShizukuApi.isReady) {
-                    val apkFiles = lspApp.targetApkFiles
-                    if (apkFiles.isNullOrEmpty()){
-                        Log.e(TAG, "No patched APK files found")
-                        throw RuntimeException("No patched APK files found")
-                    }
-                    if (apkFiles.size > 1) {
-                        val success = installApks(lspApp, apkFiles)
-                    } else  {
-                        installApk(lspApp, apkFiles.first())
-                    }
+                val method = if (ShizukuApi.isReady) {
+                    NeoPackageManager.InstallMethod.SHIZUKU
                 } else {
-                    val (status, message) = NeoPackageManager.install()
-                    if (status != PackageInstaller.STATUS_SUCCESS) throw RuntimeException(message)
+                    NeoPackageManager.InstallMethod.SYSTEM
+                }
+                when (val outcome = NeoPackageManager.install(method)) {
+                    is NeoPackageManager.InstallOutcome.Completed -> {
+                        if (outcome.status != PackageInstaller.STATUS_SUCCESS) {
+                            throw RuntimeException(outcome.message)
+                        }
+                    }
+
+                    NeoPackageManager.InstallOutcome.PermissionRequired -> {
+                        throw RuntimeException(
+                            "Package install permission is required; retry after granting it",
+                        )
+                    }
                 }
             }
         }
