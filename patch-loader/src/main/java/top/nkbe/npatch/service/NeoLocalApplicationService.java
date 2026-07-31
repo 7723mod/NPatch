@@ -15,8 +15,8 @@ import android.util.Log;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import top.nkbe.npatch.loader.util.XLog;
-import top.nkbe.npatch.remote.NPatchRemoteClient;
 import top.nkbe.npatch.util.LocalInjectedModuleService;
+import top.nkbe.npatch.util.ManagerRemoteServiceBridge;
 import top.nkbe.npatch.util.ModuleLoader;
 import org.lsposed.lspd.models.Module;
 import org.lsposed.lspd.service.ILSPApplicationService;
@@ -240,7 +240,7 @@ public class NeoLocalApplicationService extends ILSPApplicationService.Stub {
             String modulePackageName
     ) {
         try {
-            return NPatchRemoteClient.connectInjectedService(context, modulePackageName);
+            return ManagerRemoteServiceBridge.connect(context, modulePackageName);
         } catch (Throwable throwable) {
             Log.w(
                     TAG,

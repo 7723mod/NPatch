@@ -63,6 +63,7 @@ listOf("Debug", "Release").forEach { variant ->
         description = "Build NPatch with $variant"
         dependsOn(tasks.findByPath(":jar:build$variant") ?: "jar:build$variant")
         dependsOn(tasks.findByPath(":manager:build$variant") ?: "manager:build$variant")
+        dependsOn(tasks.findByPath(":remote-api:build$variant") ?: "remote-api:build$variant")
     }
 }
 

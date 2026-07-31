@@ -8,8 +8,6 @@ import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
 
-import org.lsposed.lspd.service.ILSPInjectedModuleService;
-
 import java.io.FileNotFoundException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -36,14 +34,13 @@ import io.github.libxposed.service.IXposedService;
  * Public NPatch client for module applications that cannot receive the normal libxposed provider
  * callback in local patching mode.
  *
- * <p>Writes use the standard {@link IXposedService} contract. Injected targets use Vector's
- * separate read-only {@link ILSPInjectedModuleService} contract.</p>
+ * <p>Writes use the standard {@link IXposedService} contract. Injected target access is a
+ * framework-internal, read-only path and is intentionally not exposed by this module-app SDK.</p>
  */
 public final class NPatchRemoteClient {
     public static final String AUTHORITY = "top.nkbe.npatch.remote";
 
     private static final String METHOD_GET_REMOTE_SERVICE = "getRemoteService";
-    private static final String METHOD_GET_INJECTED_SERVICE = "getInjectedRemoteService";
     private static final String KEY_MODULE_PACKAGE = "modulePackageName";
     private static final String KEY_BINDER = "binder";
     private static final long CONNECT_TIMEOUT_SECONDS = 3;
@@ -88,21 +85,6 @@ public final class NPatchRemoteClient {
         IXposedService service = IXposedService.Stub.asInterface(binder);
         if (service == null) {
             throw new IllegalStateException("NPatch remote service returned an invalid binder");
-        }
-        return service;
-    }
-
-    /**
-     * Requests the read-only service intended for code running in a configured target process.
-     */
-    public static ILSPInjectedModuleService connectInjectedService(
-            Context context,
-            String modulePackageName
-    ) {
-        IBinder binder = requestBinder(context, METHOD_GET_INJECTED_SERVICE, modulePackageName);
-        ILSPInjectedModuleService service = ILSPInjectedModuleService.Stub.asInterface(binder);
-        if (service == null) {
-            throw new IllegalStateException("NPatch injected service returned an invalid binder");
         }
         return service;
     }

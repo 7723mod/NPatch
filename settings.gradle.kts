@@ -32,6 +32,7 @@ include(
     ":meta-loader",
     ":patch",
     ":patch-loader",
+    ":remote-api",
     ":share:android",
     ":share:java",
 )
