@@ -22,8 +22,13 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.CompletableFuture;
 
 import io.github.libxposed.service.IXposedService;
 
@@ -41,6 +46,13 @@ public final class NPatchRemoteClient {
     private static final String METHOD_GET_INJECTED_SERVICE = "getInjectedRemoteService";
     private static final String KEY_MODULE_PACKAGE = "modulePackageName";
     private static final String KEY_BINDER = "binder";
+    private static final long CONNECT_TIMEOUT_SECONDS = 3;
+    private static final ExecutorService CONNECTION_EXECUTOR =
+            Executors.newCachedThreadPool(runnable -> {
+                Thread thread = new Thread(runnable, "NPatch-RemoteConnect");
+                thread.setDaemon(true);
+                return thread;
+            });
 
     private final IXposedService service;
     private final Map<String, RemotePreferences> preferences = new ConcurrentHashMap<>();
@@ -55,6 +67,20 @@ public final class NPatchRemoteClient {
 
     public static NPatchRemoteClient connect(Context context, String modulePackageName) {
         return new NPatchRemoteClient(connectService(context, modulePackageName));
+    }
+
+    public static CompletableFuture<NPatchRemoteClient> connectAsync(Context context) {
+        return connectAsync(context, context.getPackageName());
+    }
+
+    public static CompletableFuture<NPatchRemoteClient> connectAsync(
+            Context context,
+            String modulePackageName
+    ) {
+        return CompletableFuture.supplyAsync(
+                () -> connect(context, modulePackageName),
+                CONNECTION_EXECUTOR
+        );
     }
 
     public static IXposedService connectService(Context context, String modulePackageName) {
@@ -119,16 +145,30 @@ public final class NPatchRemoteClient {
         Objects.requireNonNull(modulePackageName, "modulePackageName");
         Bundle extras = new Bundle();
         extras.putString(KEY_MODULE_PACKAGE, modulePackageName);
+        Future<Bundle> call = CONNECTION_EXECUTOR.submit(
+                () -> context.getContentResolver().call(
+                        Uri.parse("content://" + AUTHORITY),
+                        method,
+                        null,
+                        extras
+                )
+        );
         Bundle result;
         try {
-            result = context.getContentResolver().call(
-                    Uri.parse("content://" + AUTHORITY),
-                    method,
-                    null,
-                    extras
-            );
-        } catch (RuntimeException exception) {
-            throw new IllegalStateException("NPatch remote service is unavailable", exception);
+            result = call.get(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        } catch (TimeoutException exception) {
+            call.cancel(true);
+            throw new IllegalStateException("NPatch remote service connection timed out", exception);
+        } catch (InterruptedException exception) {
+            call.cancel(true);
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("NPatch remote service connection interrupted", exception);
+        } catch (ExecutionException exception) {
+            Throwable cause = exception.getCause();
+            if (cause instanceof SecurityException) {
+                throw (SecurityException) cause;
+            }
+            throw new IllegalStateException("NPatch remote service is unavailable", cause);
         }
         IBinder binder = result == null ? null : result.getBinder(KEY_BINDER);
         if (binder == null) {
