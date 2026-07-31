@@ -14,6 +14,7 @@ import top.nkbe.npatch.patch.util.Logger
 import java.io.File
 import java.io.IOException
 import java.io.OutputStream
+import java.util.UUID
 import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -26,6 +27,9 @@ object Patcher {
         private val apkPaths: List<String>,
         private val embeddedModules: List<String>?
     ) {
+        internal val inputApks: List<File>
+            get() = apkPaths.map { File(it).absoluteFile }
+
         fun toStringArray(): Array<String> {
             return buildList {
                 add("-o"); add(lspApp.tmpApkDir.absolutePath)
@@ -56,52 +60,155 @@ object Patcher {
 
     suspend fun patch(logger: Logger, options: Options) {
         withContext(Dispatchers.IO) {
+            val inputApks = options.inputApks
+            validateInputSet(inputApks)
+            val outputsBeforePatch = currentPatchOutputs()
             NPatch(logger, *options.toStringArray()).doCommandLine()
 
             val uri = Configs.storageDirectory?.toUri()
                 ?: throw IOException("Uri is null")
             val root = DocumentFile.fromTreeUri(lspApp, uri)
                 ?: throw IOException("DocumentFile is null")
-            lspApp.targetApkFiles?.clear()
-            val apkFileList = arrayListOf<File>()
-            lspApp.tmpApkDir.listFiles()
-                .orEmpty()
-                .filter { it.isFile && it.name.endsWith(Constants.PATCH_FILE_SUFFIX) }
-                .forEach { tempApkFile ->
-                    val cachedApkFile = File(lspApp.externalCacheDir, tempApkFile.name)
-                    if (cachedApkFile.exists()) cachedApkFile.delete()
-                    if (tempApkFile.renameTo(cachedApkFile).not()) {
-                        tempApkFile.copyTo(cachedApkFile, overwrite = true)
-                        tempApkFile.delete()
-                    }
-                    apkFileList.add(cachedApkFile)
-                }
-            if (apkFileList.isEmpty()) {
-                throw IOException("No patched APK files found")
+            val producedOutputs = currentPatchOutputs() - outputsBeforePatch
+            val orderedOutputs = matchOutputsToInputs(inputApks, producedOutputs)
+            val installDir = createInstallSetDirectory()
+            val apkFileList = orderedOutputs.map { tempApkFile ->
+                moveToInstallSet(tempApkFile, installDir.resolve(tempApkFile.name))
             }
 
-            lspApp.targetApkFiles = apkFileList
-            if (apkFileList.size == 1) {
-                val patchedApkFile = apkFileList.first()
-                root.findFile(patchedApkFile.name)?.delete()
-                val finalApk = root.createFile("application/vnd.android.package-archive", patchedApkFile.name)
-                    ?: throw IOException("Unable to create output file: ${patchedApkFile.name}")
-                lspApp.contentResolver.openOutputStream(finalApk.uri)?.use { output ->
-                    patchedApkFile.inputStream().use { input ->
-                        input.copyTo(output)
+            try {
+                if (apkFileList.size == 1) {
+                    val patchedApkFile = apkFileList.first()
+                    exportFile(
+                        root = root,
+                        source = patchedApkFile,
+                        mimeType = "application/vnd.android.package-archive",
+                        outputName = patchedApkFile.name,
+                    )
+                    logger.i("Patched apk is saved to ${root.uri.lastPathSegment}/${patchedApkFile.name}")
+                } else {
+                    val archiveName = buildArchiveName(options.newPackageName)
+                    val localArchive = installDir.resolve(archiveName + ".tmp")
+                    localArchive.outputStream().use { output ->
+                        createApksArchive(output, apkFileList)
                     }
-                } ?: throw IOException("Unable to open an output stream: ${finalApk.uri}")
-                logger.i("Patched apk is saved to ${root.uri.lastPathSegment}/${patchedApkFile.name}")
-            } else {
-                val archiveName = buildArchiveName(options.newPackageName)
-                root.findFile(archiveName)?.delete()
-                val finalArchive = root.createFile("application/octet-stream", archiveName)
-                    ?: throw IOException("Unable to create output file: $archiveName")
-                lspApp.contentResolver.openOutputStream(finalArchive.uri)?.use { output ->
-                    createApksArchive(output, apkFileList)
-                } ?: throw IOException("Unable to open an output stream: ${finalArchive.uri}")
-                logger.i("Patched archive is saved to ${root.uri.lastPathSegment}/$archiveName")
+                    exportFile(
+                        root = root,
+                        source = localArchive,
+                        mimeType = "application/octet-stream",
+                        outputName = archiveName,
+                    )
+                    localArchive.delete()
+                    logger.i("Patched archive is saved to ${root.uri.lastPathSegment}/$archiveName")
+                }
+                replaceInstallSet(apkFileList)
+            } catch (error: Throwable) {
+                installDir.deleteRecursively()
+                throw error
             }
+        }
+    }
+
+    private fun validateInputSet(inputApks: List<File>) {
+        if (inputApks.isEmpty()) throw IOException("No input APK files")
+        val missing = inputApks.filterNot(File::isFile)
+        if (missing.isNotEmpty()) {
+            throw IOException("Input APK does not exist: ${missing.joinToString { it.path }}")
+        }
+        val duplicateNames = inputApks
+            .groupBy { it.nameWithoutExtension.lowercase() }
+            .filterValues { it.size > 1 }
+            .keys
+        if (duplicateNames.isNotEmpty()) {
+            throw IOException("Input APK names are ambiguous: ${duplicateNames.joinToString()}")
+        }
+    }
+
+    private fun currentPatchOutputs(): Set<File> = lspApp.tmpApkDir
+        .listFiles()
+        .orEmpty()
+        .filter { it.isFile && it.name.endsWith(Constants.PATCH_FILE_SUFFIX) }
+        .map { it.absoluteFile }
+        .toSet()
+
+    private fun matchOutputsToInputs(inputApks: List<File>, producedOutputs: Set<File>): List<File> {
+        if (producedOutputs.size != inputApks.size) {
+            throw IOException(
+                "Patched APK count mismatch: expected ${inputApks.size}, got ${producedOutputs.size}",
+            )
+        }
+        val unmatched = producedOutputs.toMutableSet()
+        return inputApks.map { input ->
+            val outputPattern = Regex(
+                "^${Regex.escape(input.nameWithoutExtension)}-[0-9]+" +
+                    "${Regex.escape(Constants.PATCH_FILE_SUFFIX)}$",
+                RegexOption.IGNORE_CASE,
+            )
+            val matches = unmatched.filter { outputPattern.matches(it.name) }
+            if (matches.size != 1) {
+                throw IOException("Cannot match patched output for ${input.name}")
+            }
+            matches.single().also(unmatched::remove)
+        }.also {
+            if (unmatched.isNotEmpty()) {
+                throw IOException("Unexpected patched outputs: ${unmatched.joinToString { file -> file.name }}")
+            }
+        }
+    }
+
+    private fun createInstallSetDirectory(): File {
+        val cacheRoot = lspApp.externalCacheDir ?: lspApp.cacheDir
+        val installRoot = cacheRoot.resolve("npatch-install")
+        if (!installRoot.exists() && !installRoot.mkdirs()) {
+            throw IOException("Unable to create install cache: $installRoot")
+        }
+        return installRoot.resolve(UUID.randomUUID().toString()).also {
+            if (!it.mkdirs()) throw IOException("Unable to create install set: $it")
+        }
+    }
+
+    private fun moveToInstallSet(source: File, destination: File): File {
+        if (source.renameTo(destination)) return destination
+        source.copyTo(destination, overwrite = false)
+        if (!source.delete()) {
+            destination.delete()
+            throw IOException("Unable to remove temporary patched APK: $source")
+        }
+        return destination
+    }
+
+    private fun replaceInstallSet(apkFiles: List<File>) {
+        val previous = lspApp.targetApkFiles.orEmpty().toList()
+        val currentDirectory = apkFiles.first().parentFile?.absoluteFile
+        lspApp.targetApkFiles = ArrayList(apkFiles)
+        previous
+            .mapNotNull(File::getParentFile)
+            .map(File::getAbsoluteFile)
+            .filter { it != currentDirectory }
+            .distinct()
+            .forEach { directory ->
+                if (directory.parentFile?.name == "npatch-install") {
+                    directory.deleteRecursively()
+                }
+            }
+    }
+
+    private fun exportFile(
+        root: DocumentFile,
+        source: File,
+        mimeType: String,
+        outputName: String,
+    ) {
+        root.findFile(outputName)?.delete()
+        val destination = root.createFile(mimeType, outputName)
+            ?: throw IOException("Unable to create output file: $outputName")
+        try {
+            lspApp.contentResolver.openOutputStream(destination.uri, "w")?.use { output ->
+                source.inputStream().use { input -> input.copyTo(output) }
+            } ?: throw IOException("Unable to open an output stream: ${destination.uri}")
+        } catch (error: Throwable) {
+            destination.delete()
+            throw error
         }
     }
 
@@ -110,10 +217,14 @@ object Patcher {
     }
 
     private fun createApksArchive(output: OutputStream, apkFiles: List<File>) {
+        require(apkFiles.isNotEmpty()) { "APK set is empty" }
+        val duplicateNames = apkFiles.groupBy { it.name.lowercase() }.filterValues { it.size > 1 }
+        require(duplicateNames.isEmpty()) { "Duplicate APKS entries: ${duplicateNames.keys}" }
         ZipOutputStream(output.buffered()).use { zip ->
             zip.setLevel(Deflater.NO_COMPRESSION)
-            apkFiles.sortedBy { it.name }.forEach { apkFile ->
-                zip.putNextEntry(ZipEntry(apkFile.name))
+            apkFiles.forEach { apkFile ->
+                val entry = ZipEntry(apkFile.name).apply { time = 0L }
+                zip.putNextEntry(entry)
                 apkFile.inputStream().use { input ->
                     input.copyTo(zip)
                 }
