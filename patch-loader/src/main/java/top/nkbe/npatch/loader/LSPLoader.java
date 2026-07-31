@@ -6,6 +6,7 @@ import android.app.LoadedApk;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
 import android.os.Process;
@@ -32,9 +33,12 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import dalvik.system.PathClassLoader;
 import io.github.libxposed.api.XposedModule;
 import io.github.libxposed.api.XposedModuleInterface;
+import io.github.libxposed.api.XposedInterface.ExceptionMode;
 import org.lsposed.lspd.models.Module;
+import org.lsposed.lspd.service.ILSPInjectedModuleService;
 import org.lsposed.lspd.service.ILSPApplicationService;
 import org.lsposed.lspd.service.IHotReloadTarget;
+import org.lsposed.lspd.service.IRemotePreferenceCallback;
 import org.matrix.vector.impl.VectorContext;
 import org.matrix.vector.impl.VectorLifecycleManager;
 import org.matrix.vector.impl.core.VectorServiceClient;
@@ -61,7 +65,6 @@ public class LSPLoader {
         installNativeModuleServiceProxy();
         registerModuleRuntimeAppInfos();
         installModuleSelfPathCompatibility();
-        installNativeModuleServiceProxy();
         XposedInit.loadModules(ActivityThread.currentActivityThread());
         ApplicationInfo moduleCompatibleAppInfo =
                 SigBypass.createModuleCompatibleApplicationInfo(loadedApk.getApplicationInfo());
@@ -271,6 +274,28 @@ public class LSPLoader {
                 && !module.file.moduleLibraryNames.isEmpty();
     }
 
+    private static ClassLoader createEnhancedModuleClassLoader(
+            Module module,
+            String librarySearchPath,
+            ClassLoader parent
+    ) {
+        if (module.file.targetApiVersion < 102) {
+            return new PathClassLoader(module.apkPath, librarySearchPath, parent);
+        }
+        return new PathClassLoader(module.apkPath, librarySearchPath, parent) {
+            @Override
+            protected Class<?> loadClass(String name, boolean resolve)
+                    throws ClassNotFoundException {
+                if (name.startsWith("de.robv.android.xposed.")) {
+                    throw new ClassNotFoundException(
+                            name + " is unavailable to modules targeting Xposed API 102 or higher"
+                    );
+                }
+                return super.loadClass(name, resolve);
+            }
+        };
+    }
+
     private static boolean performEnhancedLoad(Module module, boolean isSystemServer, String processName) {
         try {
             ApplicationInfo moduleAppInfo = buildRuntimeApplicationInfo(module);
@@ -278,12 +303,16 @@ public class LSPLoader {
             String librarySearchPath = buildLibrarySearchPath(module, nativeDir);
 
             ClassLoader initLoader = XposedModule.class.getClassLoader();
-            PathClassLoader moduleClassLoader = new PathClassLoader(module.apkPath, librarySearchPath, initLoader);
+            ClassLoader moduleClassLoader =
+                    createEnhancedModuleClassLoader(module, librarySearchPath, initLoader);
 
             VectorContext vectorContext = new VectorContext(
                     module.packageName,
                     moduleAppInfo,
-                    module.service != null ? module.service : getEmptyService()
+                    module.service != null ? module.service : EMPTY_INJECTED_MODULE_SERVICE,
+                    module.file.exceptionPassthrough
+                            ? ExceptionMode.PASSTHROUGH
+                            : ExceptionMode.PROTECTIVE
             );
 
             for (String libName : discoverNativeLibraries(module)) {
@@ -304,7 +333,10 @@ public class LSPLoader {
                         ctor.setAccessible(true);
                         XposedModule instance = (XposedModule) ctor.newInstance();
 
-                        instance.attachFramework(vectorContext);
+                        instance.attachFramework(
+                                vectorContext,
+                                () -> VectorLifecycleManager.INSTANCE.detach(instance)
+                        );
 
                         VectorLifecycleManager.INSTANCE.getActiveModules().add(instance);
 
@@ -428,12 +460,31 @@ public class LSPLoader {
         } catch (Throwable ignored) { return null; }
     }
 
-    private static org.lsposed.lspd.service.ILSPInjectedModuleService getEmptyService() {
-        try {
-            Class<?> clazz = Class.forName("org.matrix.vector.impl.core.VectorModuleManager$EmptyInjectedModuleService");
-            return (org.lsposed.lspd.service.ILSPInjectedModuleService) XposedHelpers.getStaticObjectField(clazz, "INSTANCE");
-        } catch (Throwable ignored) { return null; }
-    }
+    private static final ILSPInjectedModuleService EMPTY_INJECTED_MODULE_SERVICE =
+            new ILSPInjectedModuleService.Stub() {
+                @Override
+                public long getFrameworkProperties() {
+                    return 0L;
+                }
+
+                @Override
+                public Bundle requestRemotePreferences(
+                        String group,
+                        IRemotePreferenceCallback callback
+                ) {
+                    return Bundle.EMPTY;
+                }
+
+                @Override
+                public ParcelFileDescriptor openRemoteFile(String path) {
+                    return null;
+                }
+
+                @Override
+                public String[] getRemoteFileList() {
+                    return new String[0];
+                }
+            };
 
     private static void dispatchModernLifecycle(LoadedApk loadedApk, ApplicationInfo moduleCompatibleAppInfo) {
         try {

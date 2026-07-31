@@ -27,7 +27,7 @@ public class ModuleLoader {
     private static final String MODERN_MODULE_PROP = "META-INF/xposed/module.prop";
     private static final String LEGACY_JAVA_INIT = "assets/xposed_init";
     private static final String LEGACY_NATIVE_INIT = "assets/native_init";
-    private static final int FRAMEWORK_API_VERSION = 101;
+    private static final int FRAMEWORK_API_VERSION = 102;
     private static final int MODERN_TARGET_API_VERSION = 101;
     private static final int LEGACY_MAX_API_VERSION = 94;
 
@@ -96,25 +96,56 @@ public class ModuleLoader {
     private static final class ApiVersions {
         final int minApiVersion;
         final int targetApiVersion;
+        final boolean autoHotReload;
+        final boolean exceptionPassthrough;
 
-        ApiVersions(int minApiVersion, int targetApiVersion) {
+        ApiVersions(
+                int minApiVersion,
+                int targetApiVersion,
+                boolean autoHotReload,
+                boolean exceptionPassthrough
+        ) {
             this.minApiVersion = minApiVersion;
             this.targetApiVersion = targetApiVersion;
+            this.autoHotReload = autoHotReload;
+            this.exceptionPassthrough = exceptionPassthrough;
         }
     }
 
     private static ApiVersions readApiVersions(ZipFile apkFile, int fallbackMinApiVersion) {
         var entry = apkFile.getEntry(MODERN_MODULE_PROP);
-        if (entry == null) return new ApiVersions(fallbackMinApiVersion, fallbackMinApiVersion);
+        if (entry == null) {
+            return new ApiVersions(
+                    fallbackMinApiVersion,
+                    fallbackMinApiVersion,
+                    false,
+                    false
+            );
+        }
         var properties = new Properties();
         try (var in = apkFile.getInputStream(entry)) {
             properties.load(new InputStreamReader(in, StandardCharsets.UTF_8));
             var minApiVersion = readInt(properties, "minApiVersion", fallbackMinApiVersion);
             var targetApiVersion = readInt(properties, "targetApiVersion", minApiVersion);
-            return new ApiVersions(minApiVersion, targetApiVersion);
+            var autoHotReload =
+                    Boolean.parseBoolean(properties.getProperty("autoHotReload", "").trim());
+            var exceptionPassthrough =
+                    "passthrough".equalsIgnoreCase(
+                            properties.getProperty("exceptionMode", "").trim());
+            return new ApiVersions(
+                    minApiVersion,
+                    targetApiVersion,
+                    autoHotReload,
+                    exceptionPassthrough
+            );
         } catch (IOException | NumberFormatException e) {
             Log.w(TAG, "Can not read " + MODERN_MODULE_PROP + " in " + apkFile, e);
-            return new ApiVersions(fallbackMinApiVersion, fallbackMinApiVersion);
+            return new ApiVersions(
+                    fallbackMinApiVersion,
+                    fallbackMinApiVersion,
+                    false,
+                    false
+            );
         }
     }
 
@@ -142,8 +173,7 @@ public class ModuleLoader {
         return Integer.parseInt(trimmed.substring(0, end));
     }
 
-    private static ModulePipeline determinePipeline(ZipFile apkFile, int fallbackMinApiVersion) {
-        var apiVersions = readApiVersions(apkFile, fallbackMinApiVersion);
+    private static ModulePipeline determinePipeline(ZipFile apkFile, ApiVersions apiVersions) {
         var hasModernEntry =
                 apkFile.getEntry(MODERN_JAVA_INIT) != null
                         || apkFile.getEntry(MODERN_NATIVE_INIT) != null;
@@ -173,8 +203,11 @@ public class ModuleLoader {
         var moduleClassNames = new ArrayList<String>(1);
         var moduleLibraryNames = new ArrayList<String>(1);
         boolean isLegacy = false;
+        ApiVersions apiVersions =
+                new ApiVersions(fallbackMinApiVersion, fallbackMinApiVersion, false, false);
         try (var apkFile = new ZipFile(path)) {
-            var pipeline = determinePipeline(apkFile, fallbackMinApiVersion);
+            apiVersions = readApiVersions(apkFile, fallbackMinApiVersion);
+            var pipeline = determinePipeline(apkFile, apiVersions);
             if (pipeline == ModulePipeline.UNSUPPORTED) {
                 Log.w(TAG, "Unsupported Xposed module API or missing init entries: " + path);
                 return null;
@@ -199,6 +232,10 @@ public class ModuleLoader {
         file.moduleClassNames = moduleClassNames;
         file.moduleLibraryNames = moduleLibraryNames;
         file.legacy = isLegacy;
+        file.minApiVersion = apiVersions.minApiVersion;
+        file.targetApiVersion = apiVersions.targetApiVersion;
+        file.autoHotReload = apiVersions.autoHotReload;
+        file.exceptionPassthrough = apiVersions.exceptionPassthrough;
         return file;
     }
 }

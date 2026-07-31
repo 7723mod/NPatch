@@ -49,7 +49,7 @@ object HotReloadRegistry {
     private val processes = ConcurrentHashMap<ProcessKey, ProcessRecord>()
     private val targets = ConcurrentHashMap<Long, TargetRecord>()
     private val nextTargetId = AtomicLong(1)
-    private val executor = Executors.newCachedThreadPool { runnable ->
+    private val executor = Executors.newFixedThreadPool(2) { runnable ->
         Thread(runnable, "NPatch-HotReload").apply { isDaemon = true }
     }
 
@@ -66,7 +66,7 @@ object HotReloadRegistry {
             }
         }!!
         modules.forEach { module ->
-            process.targetsByModule.computeIfAbsent(module.packageName) {
+            val targetId = process.targetsByModule.computeIfAbsent(module.packageName) {
                 val id = nextTargetId.getAndIncrement()
                 targets[id] =
                     TargetRecord(
@@ -75,11 +75,16 @@ object HotReloadRegistry {
                         modulePackageName = module.packageName,
                         loadedVersionCode = module.versionCode,
                         hotReloadable =
-                            module.file?.targetApiVersion ?: 0 >= IXposedService.API_102 &&
+                            (module.file?.targetApiVersion ?: 0) >= IXposedService.API_102 &&
                                 module.file?.moduleClassNames?.size == 1 &&
                                 module.file?.moduleLibraryNames?.isEmpty() == true,
                     )
                 id
+            }
+            targets[targetId]?.let { target ->
+                if (target.loadedVersionCode == 0L && module.versionCode != 0L) {
+                    target.loadedVersionCode = module.versionCode
+                }
             }
         }
     }
@@ -100,16 +105,21 @@ object HotReloadRegistry {
             process.binder?.asBinder()?.let { old ->
                 process.deathRecipient?.let { runCatching { old.unlinkToDeath(it, 0) } }
             }
-            binder.linkToDeath(recipient, 0)
-            process.binder = target
-            process.deathRecipient = recipient
+            try {
+                binder.linkToDeath(recipient, 0)
+                process.binder = target
+                process.deathRecipient = recipient
+            } catch (error: DeadObjectException) {
+                removeProcess(key)
+                throw error
+            }
         }
         Log.d(TAG, "Registered ${process.processName} (uid=$uid, pid=$pid)")
     }
 
     fun getRunningTargets(modulePackageName: String): List<HookedProcess> {
         val installedVersion =
-            runBlocking { ConfigManager.getModuleFile(modulePackageName)?.versionCode }
+            runBlocking { ConfigManager.getInstalledModuleVersion(modulePackageName) }
         return targets.values
             .asSequence()
             .filter { it.modulePackageName == modulePackageName }
@@ -128,6 +138,28 @@ object HotReloadRegistry {
             .toList()
     }
 
+    fun autoHotReload(module: Module) {
+        if (module.file?.autoHotReload != true || module.versionCode == 0L) return
+        targets.values
+            .asSequence()
+            .filter {
+                it.modulePackageName == module.packageName &&
+                    it.hotReloadable &&
+                    it.loadedVersionCode != 0L &&
+                    it.loadedVersionCode != module.versionCode
+            }
+            .forEach { target ->
+                runCatching { hotReload(module.packageName, target.id, null, null) }
+                    .onFailure {
+                        Log.w(
+                            TAG,
+                            "Cannot automatically reload ${module.packageName} in target ${target.id}",
+                            it,
+                        )
+                    }
+            }
+    }
+
     fun hotReload(
         modulePackageName: String,
         targetId: Long,
@@ -143,23 +175,11 @@ object HotReloadRegistry {
             report(
                 callback,
                 IXposedService.HOT_RELOAD_UNSUPPORTED,
-                "Module has no single Java entry class",
+                "Module must target API 102 with one Java entry and no native entrypoints",
             )
             return
         }
-        if (!target.state.compareAndSet(
-                HookedProcess.TARGET_STATE_UP_TO_DATE,
-                HookedProcess.TARGET_STATE_RELOADING,
-            ) &&
-            !target.state.compareAndSet(
-                HookedProcess.TARGET_STATE_STALE,
-                HookedProcess.TARGET_STATE_RELOADING,
-            ) &&
-            !target.state.compareAndSet(
-                HookedProcess.TARGET_STATE_FAILED,
-                HookedProcess.TARGET_STATE_RELOADING,
-            )
-        ) {
+        if (!beginHotReload(target)) {
             report(
                 callback,
                 IXposedService.HOT_RELOAD_IN_PROGRESS,
@@ -181,7 +201,12 @@ object HotReloadRegistry {
         try {
             val process = processes[target.process]
             val binder = process?.binder
-            if (binder == null || !binder.asBinder().isBinderAlive) {
+            if (binder == null) {
+                status = IXposedService.HOT_RELOAD_UNSUPPORTED
+                message = "Target process has no hot reload entry point"
+                return
+            }
+            if (!binder.asBinder().isBinderAlive) {
                 status = IXposedService.HOT_RELOAD_PROCESS_DIED
                 message = "Target process is gone"
                 return
@@ -213,16 +238,27 @@ object HotReloadRegistry {
             Log.e(TAG, "Hot reload of ${target.modulePackageName} failed", throwable)
         } finally {
             loadedVersion?.let { target.loadedVersionCode = it }
-            target.state.set(
-                if (status == IXposedService.HOT_RELOAD_FAILED) {
-                    HookedProcess.TARGET_STATE_FAILED
-                } else {
-                    HookedProcess.TARGET_STATE_UP_TO_DATE
-                }
-            )
+            target.state.set(stateFor(status))
             report(callback, status, message)
         }
     }
+
+    private fun beginHotReload(target: TargetRecord): Boolean {
+        while (true) {
+            val current = target.state.get()
+            if (current == HookedProcess.TARGET_STATE_RELOADING) return false
+            if (target.state.compareAndSet(current, HookedProcess.TARGET_STATE_RELOADING)) {
+                return true
+            }
+        }
+    }
+
+    private fun stateFor(status: Int): Int =
+        when (status) {
+            IXposedService.HOT_RELOAD_SUCCEEDED -> HookedProcess.TARGET_STATE_UP_TO_DATE
+            IXposedService.HOT_RELOAD_FAILED -> HookedProcess.TARGET_STATE_FAILED
+            else -> HookedProcess.TARGET_STATE_UP_TO_DATE
+        }
 
     private fun reportedState(target: TargetRecord, installedVersion: Long?): Int {
         val state = target.state.get()

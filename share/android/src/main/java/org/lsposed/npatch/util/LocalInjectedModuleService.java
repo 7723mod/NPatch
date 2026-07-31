@@ -26,10 +26,16 @@ public final class LocalInjectedModuleService extends ILSPInjectedModuleService.
 
     private static final class CallbackState {
         final IRemotePreferenceCallback callback;
+        final IBinder.DeathRecipient deathRecipient;
         Map<String, Object> lastSnapshot;
 
-        CallbackState(IRemotePreferenceCallback callback, Map<String, Object> lastSnapshot) {
+        CallbackState(
+                IRemotePreferenceCallback callback,
+                IBinder.DeathRecipient deathRecipient,
+                Map<String, Object> lastSnapshot
+        ) {
             this.callback = callback;
+            this.deathRecipient = deathRecipient;
             this.lastSnapshot = lastSnapshot;
         }
     }
@@ -67,9 +73,20 @@ public final class LocalInjectedModuleService extends ILSPInjectedModuleService.
                 preferenceGroups.computeIfAbsent(safeName(group), ignored -> new PreferenceGroupState(group));
         HashMap<String, Object> snapshot = snapshotPreferences(groupState.preferences);
         if (callback != null) {
-            groupState.callbacks.put(
-                    callback.asBinder(),
-                    new CallbackState(callback, new HashMap<>(snapshot)));
+            IBinder callbackBinder = callback.asBinder();
+            IBinder.DeathRecipient deathRecipient =
+                    () -> groupState.callbacks.remove(callbackBinder);
+            CallbackState callbackState =
+                    new CallbackState(callback, deathRecipient, new HashMap<>(snapshot));
+            CallbackState previous = groupState.callbacks.put(callbackBinder, callbackState);
+            if (previous != null) {
+                callbackBinder.unlinkToDeath(previous.deathRecipient, 0);
+            }
+            try {
+                callbackBinder.linkToDeath(deathRecipient, 0);
+            } catch (RemoteException e) {
+                groupState.callbacks.remove(callbackBinder, callbackState);
+            }
         }
         Bundle bundle = new Bundle();
         bundle.putSerializable("map", snapshot);
@@ -113,7 +130,9 @@ public final class LocalInjectedModuleService extends ILSPInjectedModuleService.
             try {
                 callbackState.callback.onUpdate(diff);
             } catch (RemoteException e) {
-                groupState.callbacks.remove(callbackEntry.getKey());
+                if (groupState.callbacks.remove(callbackEntry.getKey(), callbackState)) {
+                    callbackEntry.getKey().unlinkToDeath(callbackState.deathRecipient, 0);
+                }
             }
         }
     }

@@ -82,13 +82,17 @@ class XposedServiceBinder(private val packageName: String) : IXposedService.Stub
     override fun updateRemotePreferences(group: String, diff: Bundle) {
         val prefs = lspApp.getSharedPreferences(preferencesName(group), Context.MODE_PRIVATE)
         val editor = prefs.edit()
-        
+
+        if (diff.getBoolean("clear", false)) {
+            editor.clear()
+        }
+
         BundleCompat.getSerializable(diff, "delete", HashSet::class.java)?.let { deletes ->
             (deletes as? Set<*>)?.forEach { key ->
                 if (key is String) editor.remove(key)
             }
         }
-        
+
         BundleCompat.getSerializable(diff, "put", HashMap::class.java)?.let { puts ->
             (puts as? Map<*, *>)?.forEach { (k, v) ->
                 if (k is String) {

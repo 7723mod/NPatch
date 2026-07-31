@@ -68,7 +68,7 @@ object ModuleMetadataReader {
     private const val LEGACY_KEY_DESCRIPTION = "xposeddescription"
     private const val LEGACY_KEY_SCOPES = "xposedscope"
 
-    private const val FRAMEWORK_API_VERSION = 101
+    private const val FRAMEWORK_API_VERSION = 102
     private const val MODERN_TARGET_API_VERSION = 101
     private const val LEGACY_MAX_API_VERSION = 94
 

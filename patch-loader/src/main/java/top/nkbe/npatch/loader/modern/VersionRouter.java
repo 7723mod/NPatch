@@ -1,7 +1,7 @@
 package top.nkbe.npatch.loader.modern;
 
 public final class VersionRouter {
-    public static final int FRAMEWORK_API_VERSION = 101;
+    public static final int FRAMEWORK_API_VERSION = 102;
     public static final int MODERN_TARGET_API_VERSION = 101;
     public static final int LEGACY_MAX_API_VERSION = 94;
 

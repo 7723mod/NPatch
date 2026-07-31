@@ -7,7 +7,6 @@ import android.os.Binder
 import android.os.IBinder
 import android.os.Parcel
 import android.os.ParcelFileDescriptor
-import android.os.UserHandle
 import android.util.Log
 import java.util.concurrent.ConcurrentHashMap
 
@@ -74,9 +73,17 @@ class ModuleService : Service() {
                 }
             }
             // Isolated app ids have no PackageManager ownership mapping. Only allow the package
-            // captured by the system bind if it is actually scoped.
-            val appId = UserHandle.getAppId(uid)
-            if (appId in 99000..99999 && isScopedTarget(packageName)) return packageName
+            // captured by the system bind when ActivityManager also associates this PID with it.
+            val appId = uid % 100000
+            if (appId in 99000..99999 && isScopedTarget(packageName)) {
+                val process = callingProcessInfo()
+                val belongsToPackage =
+                    process != null &&
+                        (process.pkgList?.contains(packageName) == true ||
+                            process.processName == packageName ||
+                            process.processName.startsWith("$packageName:"))
+                if (belongsToPackage) return packageName
+            }
             return null
         }
 
@@ -93,12 +100,14 @@ class ModuleService : Service() {
         }
 
         private fun callingProcessName(fallbackPackage: String): String {
+            return callingProcessInfo()?.processName ?: fallbackPackage
+        }
+
+        private fun callingProcessInfo(): ActivityManager.RunningAppProcessInfo? {
             val pid = Binder.getCallingPid()
-            val activityManager = getSystemService(ActivityManager::class.java)
-            return activityManager.runningAppProcesses
+            return getSystemService(ActivityManager::class.java)
+                .runningAppProcesses
                 ?.firstOrNull { it.pid == pid }
-                ?.processName
-                ?: fallbackPackage
         }
 
         override fun isLogMuted(): Boolean = false
