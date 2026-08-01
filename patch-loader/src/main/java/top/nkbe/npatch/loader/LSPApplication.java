@@ -394,12 +394,14 @@ public class LSPApplication {
             CacheCleaner.sweepLegacyNpatchCache(appInfo);
 
             String loadedApkSourceDir = patchedApkPath;
+            boolean loadedApkUsesOriginCache = false;
             if (config.lspConfig.sigBypassLevel >= Constants.SIGBYPASS_BASIC) {
                 Path cacheApkPath = OriginApkHelper.prepareOriginApk(appInfo, baseClassLoader);
                 Path nativeLibraryDir = OriginApkHelper.prepareNativeLibraryDir(appInfo, cacheApkPath, patchedApkPath);
                 SigBypass.setPaths(cacheApkPath.toString(), patchedApkPath);
                 SigBypass.setOriginalSignature(config.newPackage, config.originalSignature);
                 loadedApkSourceDir = cacheApkPath.toString();
+                loadedApkUsesOriginCache = true;
                 XLog.i(TAG, "LoadedApk source mode=cache"
                         + ", patchedApkPath=" + patchedApkPath
                         + ", cacheApkPath=" + cacheApkPath
@@ -446,7 +448,13 @@ public class LSPApplication {
             appInfo.publicSourceDir = loadedApkSourceDir;
             appLoadedApk = activityThread.getPackageInfoNoCheck(appInfo, compatInfo);
             appLoadedApk.getClassLoader();
-            restoreVisibleLoadedApkResources(appLoadedApk, patchedApkPath);
+            // LoadedApk resources must remain paired with the APK used to create it.  In
+            // signature-bypass mode that APK is the cached original APK; replacing mResDir
+            // with the patched APK mixes its resource table with the original app's IDs and
+            // causes Resources$NotFoundException while inflating layouts.
+            if (!loadedApkUsesOriginCache) {
+                restoreVisibleLoadedApkResources(appLoadedApk, patchedApkPath);
+            }
 
             if (config.injectProvider && providerPath != null) {
                 try {
