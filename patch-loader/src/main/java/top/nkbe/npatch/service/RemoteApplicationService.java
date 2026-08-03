@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
@@ -19,11 +20,14 @@ import android.util.Log;
 import top.nkbe.npatch.share.Constants;
 import org.lsposed.lspd.models.Module;
 import org.lsposed.lspd.service.IHotReloadTarget;
+import org.lsposed.lspd.service.ILSPInjectedModuleService;
 import org.lsposed.lspd.service.ILSPApplicationService;
+import org.lsposed.lspd.service.IRemotePreferenceCallback;
 
 import java.io.File;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -48,6 +52,9 @@ public class RemoteApplicationService implements ILSPApplicationService {
             });
 
     private final Context context;
+    private final AtomicBoolean managerAvailable = new AtomicBoolean(true);
+    private volatile List<Module> cachedLegacyModuleScope = Collections.emptyList();
+    private volatile List<Module> cachedModuleScope = Collections.emptyList();
     private volatile ILSPApplicationService service;
     private volatile ServiceConnection connection;
 
@@ -110,6 +117,7 @@ public class RemoteApplicationService implements ILSPApplicationService {
                     if (connected == null || !binder.isBinderAlive()) {
                         throw new RemoteException("Manager returned a dead binder");
                     }
+                    managerAvailable.set(true);
                     result.set(connected);
                     Log.i(TAG, "Manager binder received and caller identity registered");
                 } catch (Throwable error) {
@@ -122,6 +130,7 @@ public class RemoteApplicationService implements ILSPApplicationService {
             @Override
             public void onServiceDisconnected(ComponentName name) {
                 disconnected.set(true);
+                managerAvailable.set(false);
                 if (connection == this) {
                     Log.e(TAG, "Manager service disconnected");
                     service = null;
@@ -131,6 +140,7 @@ public class RemoteApplicationService implements ILSPApplicationService {
 
             @Override
             public void onBindingDied(ComponentName name) {
+                managerAvailable.set(false);
                 failure.compareAndSet(null, new RemoteException("Manager binding died"));
                 onServiceDisconnected(name);
                 latch.countDown();
@@ -139,6 +149,7 @@ public class RemoteApplicationService implements ILSPApplicationService {
             @Override
             public void onNullBinding(ComponentName name) {
                 disconnected.set(true);
+                managerAvailable.set(false);
                 failure.compareAndSet(null, new RemoteException("Manager returned a null binding"));
                 latch.countDown();
             }
@@ -239,24 +250,75 @@ public class RemoteApplicationService implements ILSPApplicationService {
 
     @Override
     public List<Module> getLegacyModulesList() throws RemoteException {
-        return service == null ? new ArrayList<>() : service.getLegacyModulesList();
+        ILSPApplicationService current = service;
+        if (current == null || !managerAvailable.get()) {
+            return getCachedModuleScope(true);
+        }
+        try {
+            return cacheModuleScope(true, current.getLegacyModulesList());
+        } catch (RemoteException error) {
+            onManagerFailure("get legacy modules", error);
+            return getCachedModuleScope(true);
+        }
     }
 
     @Override
     public List<Module> getModulesList() throws RemoteException {
-        return service == null ? new ArrayList<>() : service.getModulesList();
+        ILSPApplicationService current = service;
+        if (current == null || !managerAvailable.get()) {
+            return getCachedModuleScope(false);
+        }
+        try {
+            return cacheModuleScope(false, current.getModulesList());
+        } catch (RemoteException error) {
+            onManagerFailure("get modules", error);
+            return getCachedModuleScope(false);
+        }
+    }
+
+    private List<Module> cacheModuleScope(boolean legacy, List<Module> modules) {
+        List<Module> protectedModules = protectModules(modules);
+        List<Module> snapshot = protectedModules == null || protectedModules.isEmpty()
+                ? Collections.emptyList()
+                : new ArrayList<>(protectedModules);
+        if (legacy) {
+            cachedLegacyModuleScope = snapshot;
+        } else {
+            cachedModuleScope = snapshot;
+        }
+        return new ArrayList<>(snapshot);
+    }
+
+    private List<Module> getCachedModuleScope(boolean legacy) {
+        return new ArrayList<>(legacy ? cachedLegacyModuleScope : cachedModuleScope);
+    }
+
+    private List<Module> protectModules(List<Module> modules) {
+        if (modules == null || modules.isEmpty()) {
+            return modules;
+        }
+        for (Module module : modules) {
+            if (module == null || module.service == null
+                    || module.service instanceof DisconnectSafeInjectedModuleService) {
+                continue;
+            }
+            module.service = new DisconnectSafeInjectedModuleService(
+                    module.service, module.packageName, managerAvailable);
+        }
+        return modules;
     }
 
     @Override
     public String getPrefsPath(String packageName) {
-        if (service == null) {
+        ILSPApplicationService current = service;
+        if (current == null || !managerAvailable.get()) {
             return new File(Environment.getDataDirectory(), "data/" + packageName + "/shared_prefs/")
                     .getAbsolutePath();
         }
         try {
-            return service.getPrefsPath(packageName);
+            return current.getPrefsPath(packageName);
         } catch (RemoteException e) {
-            Log.e(TAG, "Failed to get prefs path from manager", e);
+            onManagerFailure("get preferences path", e);
             return new File(Environment.getDataDirectory(), "data/" + packageName + "/shared_prefs/")
                     .getAbsolutePath();
         }
@@ -269,13 +331,14 @@ public class RemoteApplicationService implements ILSPApplicationService {
 
     @Override
     public ParcelFileDescriptor requestInjectedManagerBinder(List<IBinder> binder) {
-        if (service == null) {
+        ILSPApplicationService current = service;
+        if (current == null || !managerAvailable.get()) {
             return null;
         }
         try {
-            return service.requestInjectedManagerBinder(binder);
+            return current.requestInjectedManagerBinder(binder);
         } catch (RemoteException e) {
-            Log.e(TAG, "Failed to request injected manager binder", e);
+            onManagerFailure("request injected manager binder", e);
             return null;
         }
     }
@@ -287,8 +350,106 @@ public class RemoteApplicationService implements ILSPApplicationService {
 
     @Override
     public void registerHotReloadTarget(IHotReloadTarget target) throws RemoteException {
-        if (service != null) {
-            service.registerHotReloadTarget(target);
+        ILSPApplicationService current = service;
+        if (current != null && managerAvailable.get()) {
+            try {
+                current.registerHotReloadTarget(target);
+            } catch (RemoteException error) {
+                onManagerFailure("register hot reload target", error);
+            }
+        }
+    }
+
+    private void onManagerFailure(String operation, RemoteException error) {
+        managerAvailable.set(false);
+        Log.w(TAG, "Manager unavailable while attempting to " + operation
+                + "; using local fallback", error);
+    }
+
+    /**
+     * Module metadata crosses the manager boundary together with a remote preference/file
+     * service. That Binder belongs to the manager process, so keeping it after the manager dies
+     * makes a later module callback throw DeadObjectException in the target process. The module
+     * remains in its locally cached scope; only remote data calls degrade to empty read-only
+     * results instead of allowing manager lifecycle to terminate the host app.
+     */
+    private static final class DisconnectSafeInjectedModuleService
+            extends ILSPInjectedModuleService.Stub {
+        private final ILSPInjectedModuleService delegate;
+        private final String modulePackageName;
+        private final AtomicBoolean managerAvailable;
+
+        DisconnectSafeInjectedModuleService(
+                ILSPInjectedModuleService delegate,
+                String modulePackageName,
+                AtomicBoolean managerAvailable
+        ) {
+            this.delegate = delegate;
+            this.modulePackageName = modulePackageName;
+            this.managerAvailable = managerAvailable;
+        }
+
+        @Override
+        public long getFrameworkProperties() {
+            if (!managerAvailable.get()) {
+                return 0L;
+            }
+            try {
+                return delegate.getFrameworkProperties();
+            } catch (RemoteException error) {
+                onManagerFailure(error);
+                return 0L;
+            }
+        }
+
+        @Override
+        public Bundle requestRemotePreferences(
+                String group,
+                IRemotePreferenceCallback callback
+        ) {
+            if (!managerAvailable.get()) {
+                return Bundle.EMPTY;
+            }
+            try {
+                Bundle result = delegate.requestRemotePreferences(group, callback);
+                return result == null ? Bundle.EMPTY : result;
+            } catch (RemoteException error) {
+                onManagerFailure(error);
+                return Bundle.EMPTY;
+            }
+        }
+
+        @Override
+        public ParcelFileDescriptor openRemoteFile(String path) {
+            if (!managerAvailable.get()) {
+                return null;
+            }
+            try {
+                return delegate.openRemoteFile(path);
+            } catch (RemoteException error) {
+                onManagerFailure(error);
+                return null;
+            }
+        }
+
+        @Override
+        public String[] getRemoteFileList() {
+            if (!managerAvailable.get()) {
+                return new String[0];
+            }
+            try {
+                String[] result = delegate.getRemoteFileList();
+                return result == null ? new String[0] : result;
+            } catch (RemoteException error) {
+                onManagerFailure(error);
+                return new String[0];
+            }
+        }
+
+        private void onManagerFailure(RemoteException error) {
+            managerAvailable.set(false);
+            Log.w(TAG, "Manager-backed service unavailable for " + modulePackageName
+                    + "; using empty read-only service", error);
         }
     }
 }
