@@ -356,7 +356,7 @@ public class NPatch {
                 }
             }
 
-            // Manager mode controls module discovery, not bootstrap ownership. Keep every patched
+            // Manager mode controls LoadedModule discovery, not bootstrap ownership. Keep every patched
             // APK independently bootable so its process never needs to read another package's APK.
             logger.i("Adding loader dex...");
             try (var is = getClass().getClassLoader().getResourceAsStream(LOADER_DEX_ASSET_PATH)) {
@@ -479,13 +479,13 @@ public class NPatch {
     }
 
     private void embedModules(ZFile zFile) {
-        for (var module : modules) {
-            File file = new File(module);
-            try (var apk = ZFile.openReadOnly(new File(module));
+        for (var LoadedModule : modules) {
+            File file = new File(LoadedModule);
+            try (var apk = ZFile.openReadOnly(new File(LoadedModule));
                  var fileIs = new FileInputStream(file)) {
 
                 var manifestEntry = apk.get(ANDROID_MANIFEST_XML);
-                if (manifestEntry == null) throw new IOException("Manifest not found in module");
+                if (manifestEntry == null) throw new IOException("Manifest not found in LoadedModule");
 
                 try (var xmlIs = manifestEntry.open()) {
                     var manifest = Objects.requireNonNull(ManifestParser.parseManifestFile(xmlIs));
@@ -494,7 +494,7 @@ public class NPatch {
                     zFile.add(EMBEDDED_MODULES_ASSET_PATH + packageName + ".apk", fileIs);
                 }
             } catch (Exception e) {
-                logger.e(module + " does not exist or is not a valid apk file. error:" + e);
+                logger.e(LoadedModule + " does not exist or is not a valid apk file. error:" + e);
             }
         }
     }
@@ -561,7 +561,7 @@ public class NPatch {
 
         if (!modules.isEmpty()) {
             addOrReplaceMetaData(property, "xposedmodule", "true");
-            addOrReplaceMetaData(property, "xposeddescription", "NPatch Embed Module");
+            addOrReplaceMetaData(property, "xposeddescription", "NPatch Embed LoadedModule");
             addOrReplaceMetaData(property, "xposedminversion", "93");
         }
 

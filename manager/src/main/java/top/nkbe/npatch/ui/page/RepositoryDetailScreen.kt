@@ -143,7 +143,7 @@ fun RepositoryDetailScreen(
         viewModel.loadModule(packageName)
     }
 
-    val module by viewModel.module.collectAsStateWithLifecycle()
+    val LoadedModule by viewModel.LoadedModule.collectAsStateWithLifecycle()
     val releases by viewModel.releases.collectAsStateWithLifecycle()
     val installedModule by viewModel.installedState.collectAsStateWithLifecycle()
 
@@ -155,10 +155,10 @@ fun RepositoryDetailScreen(
     val msgReleases = stringResource(R.string.module_releases)
     val msgInfo = stringResource(R.string.module_information)
 
-    val tabs = remember(module, msgReadme, msgReleases, msgInfo) {
+    val tabs = remember(LoadedModule, msgReadme, msgReleases, msgInfo) {
         val list = mutableListOf(msgReadme, msgReleases)
-        val hasLinks = !module?.homepageUrl.isNullOrEmpty() || !module?.sourceUrl.isNullOrEmpty()
-        if (hasLinks || !module?.collaborators.isNullOrEmpty()) {
+        val hasLinks = !LoadedModule?.homepageUrl.isNullOrEmpty() || !LoadedModule?.sourceUrl.isNullOrEmpty()
+        if (hasLinks || !LoadedModule?.collaborators.isNullOrEmpty()) {
             list.add(msgInfo)
         }
         list
@@ -169,9 +169,9 @@ fun RepositoryDetailScreen(
     val hazeState = rememberHazeState()
 
     val msgUnknownAuthor = stringResource(R.string.unknown_author)
-    val displayAuthorName = remember(module, msgUnknownAuthor) {
-        module?.collaborators?.firstOrNull()?.name
-            ?: module?.collaborators?.firstOrNull()?.login
+    val displayAuthorName = remember(LoadedModule, msgUnknownAuthor) {
+        LoadedModule?.collaborators?.firstOrNull()?.name
+            ?: LoadedModule?.collaborators?.firstOrNull()?.login
             ?: msgUnknownAuthor
     }
 
@@ -191,9 +191,9 @@ fun RepositoryDetailScreen(
                     }
                 },
                 actions = {
-                    if (!module?.name.isNullOrEmpty()) {
+                    if (!LoadedModule?.name.isNullOrEmpty()) {
                         IconButton(onClick = {
-                            module?.name?.let {
+                            LoadedModule?.name?.let {
                                 uriHandler.openUri(repoLoader.getModulePageUrl(it))
                             }
                         }) {
@@ -223,7 +223,7 @@ fun RepositoryDetailScreen(
         Box(
             modifier = Modifier.fillMaxSize()
         ) {
-            if (module == null) {
+            if (LoadedModule == null) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     InfiniteProgressIndicator()
                 }
@@ -247,7 +247,7 @@ fun RepositoryDetailScreen(
 
                 when (currentTab) {
                     msgReadme -> ReadmeTab(
-                        onlineModule = module,
+                        onlineModule = LoadedModule,
                         scrollBehavior = scrollBehavior,
                         contentPadding = pageInnerPadding,
                         hazeState = hazeState
@@ -262,7 +262,7 @@ fun RepositoryDetailScreen(
                     )
 
                     msgInfo -> InfoTab(
-                        module = module,
+                        LoadedModule = LoadedModule,
                         context = context,
                         headerAuthorName = displayAuthorName,
                         scrollBehavior = scrollBehavior,
@@ -301,7 +301,7 @@ fun RepositoryDetailScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = module?.description ?: module?.name ?: "",
+                                    text = LoadedModule?.description ?: LoadedModule?.name ?: "",
                                     fontSize = 17.sp,
                                     fontWeight = FontWeight(550),
                                     color = colorScheme.onSurface,
@@ -310,7 +310,7 @@ fun RepositoryDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "${stringResource(R.string.sort_by_package_name)}: ${module?.name}",
+                                    text = "${stringResource(R.string.sort_by_package_name)}: ${LoadedModule?.name}",
                                     fontSize = 12.sp,
                                     color = colorScheme.onSurfaceVariantSummary,
                                 )
@@ -644,14 +644,14 @@ fun ReleaseCard(release: Release, context: Context) {
 
 @Composable
 fun InfoTab(
-    module: OnlineModule?,
+    LoadedModule: OnlineModule?,
     context: Context,
     headerAuthorName: String,
     scrollBehavior: ScrollBehavior,
     contentPadding: PaddingValues,
     hazeState: HazeState
 ) {
-    if (module == null) return
+    if (LoadedModule == null) return
     val uriHandler = LocalUriHandler.current
     LazyColumn(
         modifier = Modifier
@@ -664,7 +664,7 @@ fun InfoTab(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
 
-        if (!module.homepageUrl.isNullOrEmpty() || !module.sourceUrl.isNullOrEmpty()) {
+        if (!LoadedModule.homepageUrl.isNullOrEmpty() || !LoadedModule.sourceUrl.isNullOrEmpty()) {
             item {
                 Card(
                     modifier = Modifier
@@ -674,25 +674,25 @@ fun InfoTab(
                         color = colorScheme.surfaceContainer
                     ),
                 ) {
-                    if (!module.homepageUrl.isNullOrEmpty()) {
+                    if (!LoadedModule.homepageUrl.isNullOrEmpty()) {
                         InfoRowItem(
                             icon = COUIIcons.Regular.Link,
                             title = stringResource(R.string.module_information_homepage),
-                            summary = module.homepageUrl,
+                            summary = LoadedModule.homepageUrl,
                             onClick = {
-                                module.homepageUrl?.let { url ->
+                                LoadedModule.homepageUrl?.let { url ->
                                     uriHandler.openUri(url)
                                 }
                             }
                         )
                     }
-                    if (!module.sourceUrl.isNullOrEmpty()) {
+                    if (!LoadedModule.sourceUrl.isNullOrEmpty()) {
                         InfoRowItem(
                             icon = COUIIcons.Regular.File,
                             title = stringResource(R.string.module_information_source_url),
-                            summary = module.sourceUrl,
+                            summary = LoadedModule.sourceUrl,
                             onClick = {
-                                module.sourceUrl?.let { url ->
+                                LoadedModule.sourceUrl?.let { url ->
                                     uriHandler.openUri(url)
                                 }
                             }
@@ -702,7 +702,7 @@ fun InfoTab(
             }
         }
 
-        val collaborators = module.collaborators
+        val collaborators = LoadedModule.collaborators
         if (collaborators.isNotEmpty()) {
             val shouldShowContributors = if (collaborators.size == 1) {
                 val singleName = collaborators[0].name ?: collaborators[0].login ?: ""

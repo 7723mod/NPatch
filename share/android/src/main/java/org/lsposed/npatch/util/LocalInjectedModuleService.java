@@ -6,17 +6,17 @@ import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
 
-import org.lsposed.lspd.service.ILSPInjectedModuleService;
-import org.lsposed.lspd.service.IRemotePreferenceCallback;
+import org.matrix.vector.ipc.IModuleService;
+import org.matrix.vector.ipc.IRemotePreferenceCallback;
 
 /**
- * Read-only injected-module view of an {@link NPatchRemoteStore}.
+ * Read-only injected-LoadedModule view of an {@link NPatchRemoteStore}.
  *
- * <p>Vector API 101/102 deliberately keeps injected remote data read-only. Module applications
+ * <p>Vector API 101/102 deliberately keeps injected remote data read-only. LoadedModule applications
  * perform writes through {@code IXposedService}; this service only delivers snapshots, change
  * callbacks and read-only files to code running inside hooked targets.</p>
  */
-public final class LocalInjectedModuleService extends ILSPInjectedModuleService.Stub {
+public final class LocalInjectedModuleService extends IModuleService.Stub {
     private final NPatchRemoteStore store;
     private final int allowedUid;
 
@@ -51,7 +51,7 @@ public final class LocalInjectedModuleService extends ILSPInjectedModuleService.
     }
 
     @Override
-    public String[] getRemoteFileList() {
+    public String[] getRemoteFileNames() {
         enforceCaller();
         return store.listFiles();
     }

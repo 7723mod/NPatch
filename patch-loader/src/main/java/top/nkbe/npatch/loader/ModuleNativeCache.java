@@ -5,7 +5,7 @@ import android.os.Build;
 import android.os.Process;
 import android.util.Log;
 
-import org.lsposed.lspd.models.Module;
+import org.matrix.vector.ipc.LoadedModule;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -35,18 +35,18 @@ final class ModuleNativeCache {
         return apk.lastModified() + "-" + apk.length();
     }
 
-    static synchronized File prepare(Application app, Module module) {
-        if (app == null || module == null || module.packageName == null || module.apkPath == null) {
+    static synchronized File prepare(Application app, LoadedModule LoadedModule) {
+        if (app == null || LoadedModule == null || LoadedModule.packageName == null || LoadedModule.apkPath == null) {
             return null;
         }
 
-        File apk = new File(module.apkPath);
+        File apk = new File(LoadedModule.apkPath);
         if (!apk.isFile()) {
-            Log.e(TAG, "Module APK is unavailable: " + module.apkPath);
+            Log.e(TAG, "LoadedModule APK is unavailable: " + LoadedModule.apkPath);
             return null;
         }
 
-        File moduleRoot = new File(root(app.getCacheDir()), moduleDirectoryName(module.packageName));
+        File moduleRoot = new File(root(app.getCacheDir()), moduleDirectoryName(LoadedModule.packageName));
         String stamp = stamp(apk);
         File target = new File(moduleRoot, stamp);
         if (isReady(target)) {
@@ -74,10 +74,10 @@ final class ModuleNativeCache {
             if (!staging.renameTo(target)) {
                 throw new IOException("Unable to publish native cache: " + target);
             }
-            Log.i(TAG, "Prepared module native cache: " + target);
+            Log.i(TAG, "Prepared LoadedModule native cache: " + target);
             return target;
         } catch (Throwable e) {
-            Log.e(TAG, "Failed to prepare native cache for " + module.packageName, e);
+            Log.e(TAG, "Failed to prepare native cache for " + LoadedModule.packageName, e);
             deleteRecursive(staging);
             return null;
         }

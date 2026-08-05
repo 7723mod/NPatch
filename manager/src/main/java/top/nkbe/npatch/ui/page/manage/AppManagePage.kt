@@ -47,7 +47,7 @@ import top.nkbe.npatch.R
 import top.nkbe.npatch.BuildConfig
 import top.nkbe.npatch.config.ConfigManager
 import top.nkbe.npatch.config.Configs
-import top.nkbe.npatch.database.entity.Module
+import top.nkbe.npatch.database.entity.LoadedModule
 import top.nkbe.npatch.manager.ModuleScopeSyncStore
 import top.nkbe.npatch.manager.DiagnosticLogExporter
 import top.nkbe.npatch.share.Constants
@@ -364,7 +364,7 @@ fun AppManageBody(
                                                 }
                                                 result.selected.forEach {
                                                     Log.d(TAG, "Activate ${it.app.packageName} for $targetAppPkg")
-                                                    ConfigManager.activateModule(targetAppPkg, Module(it.app.packageName, it.app.sourceDir))
+                                                    ConfigManager.activateModule(targetAppPkg, LoadedModule(it.app.packageName, it.app.sourceDir))
                                                 }
                                                 if (ShizukuApi.isReady) {
                                                     // Notify both removed and newly added modules so they do not

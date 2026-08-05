@@ -4,7 +4,8 @@ plugins {
     alias(libs.plugins.agp.app)
 }
 
-android {
+extensions.configure<com.android.build.api.dsl.ApplicationExtension> {
+    ndkVersion = "29.0.13846066"
     defaultConfig {
         multiDexEnabled = false
 

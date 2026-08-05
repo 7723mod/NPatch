@@ -12,10 +12,10 @@ import top.nkbe.npatch.config.ConfigManager
 import top.nkbe.npatch.util.LocalInjectedModuleService
 
 /**
- * Authenticated bridge for module applications and manager-backed injected targets.
+ * Authenticated bridge for LoadedModule applications and manager-backed injected targets.
  *
- * Module UIDs receive the standard writable IXposedService. Scoped target UIDs can only request
- * Vector's read-only ILSPInjectedModuleService, preserving the API 101/102 privilege boundary.
+ * LoadedModule UIDs receive the standard writable IXposedService. Scoped target UIDs can only request
+ * Vector's read-only IModuleService, preserving the API 101/102 privilege boundary.
  */
 class RemoteApiProvider : ContentProvider() {
     companion object {
@@ -42,7 +42,7 @@ class RemoteApiProvider : ContentProvider() {
                 runBlocking { ConfigManager.getModuleFile(modulePackageName) != null }
             }.getOrDefault(false)
         if (!isKnownModule) {
-            Log.w(TAG, "Rejected unknown module $modulePackageName from uid=$callingUid")
+            Log.w(TAG, "Rejected unknown LoadedModule $modulePackageName from uid=$callingUid")
             return null
         }
 

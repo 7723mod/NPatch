@@ -1,10 +1,10 @@
-val apiCode: Int by rootProject.extra
-val verCode: Int by rootProject.extra
-val verName: String by rootProject.extra
-val coreVerCode: Int by rootProject.extra
-val coreVerName: String by rootProject.extra
-val androidSourceCompatibility: JavaVersion by rootProject.extra
-val androidTargetCompatibility: JavaVersion by rootProject.extra
+val apiCode = rootProject.extra["apiCode"] as Int
+val verCode = rootProject.extra["verCode"] as Int
+val verName = rootProject.extra["verName"] as String
+val coreVerCode = rootProject.extra["coreVerCode"] as Int
+val coreVerName = rootProject.extra["coreVerName"] as String
+val androidSourceCompatibility = rootProject.extra["androidSourceCompatibility"] as JavaVersion
+val androidTargetCompatibility = rootProject.extra["androidTargetCompatibility"] as JavaVersion
 
 plugins {
     id("java-library")

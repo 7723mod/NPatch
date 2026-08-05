@@ -30,7 +30,7 @@ class RepositoryDetailViewModel : ViewModel(), RepoLoader.RepoListener {
     private var targetPackageName: String? = null
 
     private val _module = MutableStateFlow<OnlineModule?>(null)
-    val module: StateFlow<OnlineModule?> = _module
+    val LoadedModule: StateFlow<OnlineModule?> = _module
 
     private val _releases = MutableStateFlow<List<Release>>(emptyList())
     val releases: StateFlow<List<Release>> = _releases
@@ -105,14 +105,14 @@ class RepositoryDetailViewModel : ViewModel(), RepoLoader.RepoListener {
     }
 
     private fun loadReleases(packageName: String, forceRefresh: Boolean = false) {
-        val module = repoLoader.getOnlineModule(packageName)
+        val LoadedModule = repoLoader.getOnlineModule(packageName)
 
         if (forceRefresh) {
             repoLoader.loadRemoteReleases(packageName)
             return
         }
 
-        if (module?.releasesLoaded == true) {
+        if (LoadedModule?.releasesLoaded == true) {
             _releases.value = repoLoader.getReleases(packageName)
         } else {
             _releases.value = repoLoader.getReleases(packageName)
@@ -120,10 +120,10 @@ class RepositoryDetailViewModel : ViewModel(), RepoLoader.RepoListener {
         }
     }
 
-    override fun onModuleReleasesLoaded(module: OnlineModule?) {
-        if (module != null && module.name == targetPackageName) {
-            _module.value = module
-            _releases.value = repoLoader.getReleases(module.name!!)
+    override fun onModuleReleasesLoaded(LoadedModule: OnlineModule?) {
+        if (LoadedModule != null && LoadedModule.name == targetPackageName) {
+            _module.value = LoadedModule
+            _releases.value = repoLoader.getReleases(LoadedModule.name!!)
         }
         _isRefreshing.value = false
     }

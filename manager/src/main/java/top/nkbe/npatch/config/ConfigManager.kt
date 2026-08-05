@@ -8,7 +8,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import top.nkbe.npatch.database.LSPDatabase
-import top.nkbe.npatch.database.entity.Module
+import top.nkbe.npatch.database.entity.LoadedModule
 import top.nkbe.npatch.database.entity.Scope
 import top.nkbe.npatch.lspApp
 import top.nkbe.npatch.manager.HotReloadRegistry
@@ -37,29 +37,29 @@ object ConfigManager {
     private val scopeDao get() = db.scopeDao()
 
     private val loadedModules =
-        ConcurrentHashMap<String, org.lsposed.lspd.models.Module>()
+        ConcurrentHashMap<String, org.matrix.vector.ipc.LoadedModule>()
     private val moduleLoadLocks = ConcurrentHashMap<String, Mutex>()
 
     suspend fun updateModules(newModules: Map<String, String>) {
         val changedModules =
             withContext(writeDispatcher) {
                 val changed = linkedSetOf<String>()
-                for (module in moduleDao.getAll()) {
-                    val apkPath = newModules[module.pkgName]
+                for (LoadedModule in moduleDao.getAll()) {
+                    val apkPath = newModules[LoadedModule.pkgName]
                     if (apkPath == null) {
-                        moduleDao.delete(module)
-                        removeCachedModule(module.pkgName)
-                        moduleLoadLocks.remove(module.pkgName)
-                        ModuleScopeSyncStore.deleteSnapshot(module.pkgName)
-                    } else if (module.apkPath != apkPath) {
-                        module.apkPath = apkPath
-                        moduleDao.update(module)
-                        removeCachedModule(module.pkgName)
-                        changed += module.pkgName
+                        moduleDao.delete(LoadedModule)
+                        removeCachedModule(LoadedModule.pkgName)
+                        moduleLoadLocks.remove(LoadedModule.pkgName)
+                        ModuleScopeSyncStore.deleteSnapshot(LoadedModule.pkgName)
+                    } else if (LoadedModule.apkPath != apkPath) {
+                        LoadedModule.apkPath = apkPath
+                        moduleDao.update(LoadedModule)
+                        removeCachedModule(LoadedModule.pkgName)
+                        changed += LoadedModule.pkgName
                     }
                 }
                 for ((pkgName, apkPath) in newModules) {
-                    moduleDao.insert(Module(pkgName, apkPath))
+                    moduleDao.insert(LoadedModule(pkgName, apkPath))
                 }
                 changed
             }
@@ -69,20 +69,20 @@ object ConfigManager {
         }
     }
 
-    suspend fun activateModule(pkgName: String, module: Module) =
+    suspend fun activateModule(pkgName: String, LoadedModule: LoadedModule) =
         withContext(writeDispatcher) {
-            moduleDao.insert(module)
-            scopeDao.insert(Scope(appPkgName = pkgName, modulePkgName = module.pkgName))
-            ModuleScopeSyncStore.saveSnapshot(module.pkgName, scopeDao.getAppsForModule(module.pkgName))
+            moduleDao.insert(LoadedModule)
+            scopeDao.insert(Scope(appPkgName = pkgName, modulePkgName = LoadedModule.pkgName))
+            ModuleScopeSyncStore.saveSnapshot(LoadedModule.pkgName, scopeDao.getAppsForModule(LoadedModule.pkgName))
         }
 
-    suspend fun deactivateModule(pkgName: String, module: Module) =
+    suspend fun deactivateModule(pkgName: String, LoadedModule: LoadedModule) =
         withContext(writeDispatcher) {
-            scopeDao.delete(Scope(appPkgName = pkgName, modulePkgName = module.pkgName))
-            ModuleScopeSyncStore.saveSnapshot(module.pkgName, scopeDao.getAppsForModule(module.pkgName))
+            scopeDao.delete(Scope(appPkgName = pkgName, modulePkgName = LoadedModule.pkgName))
+            ModuleScopeSyncStore.saveSnapshot(LoadedModule.pkgName, scopeDao.getAppsForModule(LoadedModule.pkgName))
         }
 
-    suspend fun getModulesForApp(pkgName: String): List<Module> =
+    suspend fun getModulesForApp(pkgName: String): List<LoadedModule> =
         withContext(readDispatcher) {
             return@withContext scopeDao.getModulesForApp(pkgName)
         }
@@ -102,20 +102,20 @@ object ConfigManager {
             loadedModules.keys.toList().forEach(::removeCachedModule)
         }
 
-    suspend fun getModuleFilesForApp(pkgName: String): List<org.lsposed.lspd.models.Module> =
+    suspend fun getModuleFilesForApp(pkgName: String): List<org.matrix.vector.ipc.LoadedModule> =
         withContext(readDispatcher) {
             val modules = scopeDao.getModulesForApp(pkgName)
-            val result = ArrayList<org.lsposed.lspd.models.Module>(modules.size)
-            for (module in modules) {
-                loadModule(module, useCache = true)?.let(result::add)
+            val result = ArrayList<org.matrix.vector.ipc.LoadedModule>(modules.size)
+            for (LoadedModule in modules) {
+                loadModule(LoadedModule, useCache = true)?.let(result::add)
             }
             return@withContext result
         }
 
-    suspend fun getModuleFile(pkgName: String): org.lsposed.lspd.models.Module? =
+    suspend fun getModuleFile(pkgName: String): org.matrix.vector.ipc.LoadedModule? =
         withContext(readDispatcher) {
-            val module = moduleDao.getModule(pkgName) ?: return@withContext null
-            loadModule(module, useCache = false)
+            val LoadedModule = moduleDao.getModule(pkgName) ?: return@withContext null
+            loadModule(LoadedModule, useCache = false)
         }
 
     suspend fun getInstalledModuleVersion(pkgName: String): Long? =
@@ -126,58 +126,58 @@ object ConfigManager {
         }
 
     private suspend fun loadModule(
-        module: Module,
+        LoadedModule: LoadedModule,
         useCache: Boolean,
-    ): org.lsposed.lspd.models.Module? {
-        val mutex = moduleLoadLocks.computeIfAbsent(module.pkgName) { Mutex() }
+    ): org.matrix.vector.ipc.LoadedModule? {
+        val mutex = moduleLoadLocks.computeIfAbsent(LoadedModule.pkgName) { Mutex() }
         mutex.lock()
         try {
-            if (!File(module.apkPath).exists()) {
-                removeCachedModule(module.pkgName)
+            if (!File(LoadedModule.apkPath).exists()) {
+                removeCachedModule(LoadedModule.pkgName)
                 try {
-                    module.apkPath =
-                        lspApp.packageManager.getApplicationInfo(module.pkgName, 0).sourceDir
-                    moduleDao.update(module)
+                    LoadedModule.apkPath =
+                        lspApp.packageManager.getApplicationInfo(LoadedModule.pkgName, 0).sourceDir
+                    moduleDao.update(LoadedModule)
                 } catch (e: PackageManager.NameNotFoundException) {
-                    moduleDao.delete(module)
-                    Log.w(TAG, "Module may be uninstalled: ${module.pkgName}")
+                    moduleDao.delete(LoadedModule)
+                    Log.w(TAG, "LoadedModule may be uninstalled: ${LoadedModule.pkgName}")
                     return null
                 }
-                Log.i(TAG, "Module apk path updated: ${module.pkgName}")
+                Log.i(TAG, "LoadedModule apk path updated: ${LoadedModule.pkgName}")
             }
             if (useCache) {
-                loadedModules[module.pkgName]?.let { return it }
+                loadedModules[LoadedModule.pkgName]?.let { return it }
             }
 
             val appInfo =
                 runCatching {
                         lspApp.packageManager.getApplicationInfo(
-                            module.pkgName,
+                            LoadedModule.pkgName,
                             PackageManager.GET_META_DATA,
                         )
                     }
                     .getOrNull()
-            val preLoadedApk =
+            val moduleCode =
                 ModuleLoader.loadModule(
-                    module.apkPath,
+                    LoadedModule.apkPath,
                     readLegacyMinApiVersion(appInfo),
                 ) ?: return null
             val versionCode =
                 runCatching {
-                        lspApp.packageManager.getPackageInfo(module.pkgName, 0).longVersionCode
+                        lspApp.packageManager.getPackageInfo(LoadedModule.pkgName, 0).longVersionCode
                     }
                     .getOrDefault(0L)
             val loaded =
-                org.lsposed.lspd.models.Module().apply {
-                    packageName = module.pkgName
-                    apkPath = module.apkPath
-                    file = preLoadedApk
+                org.matrix.vector.ipc.LoadedModule().apply {
+                    packageName = LoadedModule.pkgName
+                    apkPath = LoadedModule.apkPath
+                    code = moduleCode.code
                     applicationInfo = appInfo
                     appId = appInfo?.uid ?: -1
                     this.versionCode = versionCode
-                    service = LocalInjectedModuleService(lspApp, module.pkgName)
+                    service = LocalInjectedModuleService(lspApp, LoadedModule.pkgName)
                 }
-            loadedModules[module.pkgName] = loaded
+            loadedModules[LoadedModule.pkgName] = loaded
             return loaded
         } finally {
             mutex.unlock()

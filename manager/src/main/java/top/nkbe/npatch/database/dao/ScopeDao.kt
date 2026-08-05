@@ -6,15 +6,15 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.RewriteQueriesToDropUnusedColumns
-import top.nkbe.npatch.database.entity.Module
+import top.nkbe.npatch.database.entity.LoadedModule
 import top.nkbe.npatch.database.entity.Scope
 
 @Dao
 interface ScopeDao {
 
     @RewriteQueriesToDropUnusedColumns
-    @Query("SELECT * FROM module INNER JOIN scope ON module.pkgName = scope.modulePkgName WHERE scope.appPkgName = :appPkgName")
-    suspend fun getModulesForApp(appPkgName: String): List<Module>
+    @Query("SELECT * FROM LoadedModule INNER JOIN scope ON LoadedModule.pkgName = scope.modulePkgName WHERE scope.appPkgName = :appPkgName")
+    suspend fun getModulesForApp(appPkgName: String): List<LoadedModule>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(scope: Scope)

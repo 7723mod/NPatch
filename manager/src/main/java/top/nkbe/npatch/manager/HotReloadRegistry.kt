@@ -12,15 +12,15 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.runBlocking
-import org.lsposed.lspd.models.Module
-import org.lsposed.lspd.service.IHotReloadTarget
+import org.matrix.vector.ipc.LoadedModule
+import org.matrix.vector.ipc.IProcessChannel
 import top.nkbe.npatch.config.ConfigManager
 
 /**
  * Process registry shared by NPatch's provider and bound-service IPC paths.
  *
  * Target ids are opaque and never reused. A target is always checked against the requesting
- * module package before its process binder can be reached.
+ * LoadedModule package before its process binder can be reached.
  */
 object HotReloadRegistry {
     private const val TAG = "HotReloadRegistry"
@@ -32,7 +32,7 @@ object HotReloadRegistry {
         @Volatile var processName: String,
     ) {
         val targetsByModule = ConcurrentHashMap<String, Long>()
-        @Volatile var binder: IHotReloadTarget? = null
+        @Volatile var binder: IProcessChannel? = null
         @Volatile var deathRecipient: IBinder.DeathRecipient? = null
     }
 
@@ -57,7 +57,7 @@ object HotReloadRegistry {
         uid: Int,
         pid: Int,
         processName: String,
-        modules: List<Module>,
+        modules: List<LoadedModule>,
     ) {
         val key = ProcessKey(uid, pid)
         val process = processes.compute(key) { _, current ->
@@ -75,9 +75,9 @@ object HotReloadRegistry {
                         modulePackageName = module.packageName,
                         loadedVersionCode = module.versionCode,
                         hotReloadable =
-                            (module.file?.targetApiVersion ?: 0) >= IXposedService.API_102 &&
-                                module.file?.moduleClassNames?.size == 1 &&
-                                module.file?.moduleLibraryNames?.isEmpty() == true,
+                            (module.code?.targetApiVersion ?: 0) >= IXposedService.API_102 &&
+                                module.code?.moduleClassNames?.size == 1 &&
+                                module.code?.moduleLibraryNames?.isEmpty() == true,
                     )
                 id
             }
@@ -93,7 +93,7 @@ object HotReloadRegistry {
         uid: Int,
         pid: Int,
         processName: String,
-        target: IHotReloadTarget,
+        target: IProcessChannel,
     ) {
         val key = ProcessKey(uid, pid)
         val process = processes.computeIfAbsent(key) { ProcessRecord(key, processName) }
@@ -138,8 +138,8 @@ object HotReloadRegistry {
             .toList()
     }
 
-    fun autoHotReload(module: Module) {
-        if (module.file?.autoHotReload != true || module.versionCode == 0L) return
+    fun autoHotReload(module: LoadedModule) {
+        if (module.code?.autoHotReload != true || module.versionCode == 0L) return
         targets.values
             .asSequence()
             .filter {
@@ -175,7 +175,7 @@ object HotReloadRegistry {
             report(
                 callback,
                 IXposedService.HOT_RELOAD_UNSUPPORTED,
-                "Module must target API 102 with one Java entry and no native entrypoints",
+                "LoadedModule must target API 102 with one Java entry and no native entrypoints",
             )
             return
         }
@@ -211,24 +211,42 @@ object HotReloadRegistry {
                 message = "Target process is gone"
                 return
             }
-            val module = runBlocking { ConfigManager.getModuleFile(target.modulePackageName) }
-            if (module == null) {
+            val loadedModule = runBlocking { ConfigManager.getModuleFile(target.modulePackageName) }
+            if (loadedModule == null) {
                 status = IXposedService.HOT_RELOAD_UNSUPPORTED
                 message = "No installed generation of ${target.modulePackageName} to load"
                 return
             }
-            val outcome = binder.hotReload(target.modulePackageName, extras, module)
-            status = outcome.status
-            if (status == IXposedService.HOT_RELOAD_SUCCEEDED) {
-                loadedVersion = module.versionCode
+            
+            val latch = java.util.concurrent.CountDownLatch(1)
+            var finalOutcome: org.matrix.vector.ipc.HotReloadOutcome? = null
+            
+            binder.hotReload(target.modulePackageName, extras, loadedModule, object : org.matrix.vector.ipc.IHotReloadOutcomeReceiver.Stub() {
+                override fun onOutcome(outcome: org.matrix.vector.ipc.HotReloadOutcome) {
+                    finalOutcome = outcome
+                    latch.countDown()
+                }
+            })
+            
+            latch.await(30, java.util.concurrent.TimeUnit.SECONDS)
+            val outcome = finalOutcome
+            
+            if (outcome != null) {
+                status = outcome.status
+                if (status == IXposedService.HOT_RELOAD_SUCCEEDED) {
+                    loadedVersion = loadedModule.versionCode
+                }
+                message =
+                    outcome.message
+                        ?: if (status == IXposedService.HOT_RELOAD_FAILED && !outcome.refused) {
+                            "Hot reload failed without a diagnostic message"
+                        } else {
+                            null
+                        }
+            } else {
+                status = IXposedService.HOT_RELOAD_FAILED
+                message = "Hot reload timed out"
             }
-            message =
-                outcome.message
-                    ?: if (status == IXposedService.HOT_RELOAD_FAILED && !outcome.refused) {
-                        "Hot reload failed without a diagnostic message"
-                    } else {
-                        null
-                    }
         } catch (_: DeadObjectException) {
             status = IXposedService.HOT_RELOAD_PROCESS_DIED
             message = "Target process died during hot reload"

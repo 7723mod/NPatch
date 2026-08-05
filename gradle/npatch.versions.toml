@@ -62,3 +62,4 @@ haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
 hazeBlur = { module = "dev.chrisbanes.haze:haze-blur", version.ref = "haze" }
 backdrop = { module = "io.github.kyant0:backdrop", version.ref = "backdrop" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
+hiddenapibypass = { module = "org.lsposed.hiddenapibypass:hiddenapibypass", version = "4.3" }

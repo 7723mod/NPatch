@@ -46,7 +46,7 @@ data class ModuleMetadataSnapshot(
 }
 
 object ModuleMetadataReader {
-    private const val MODERN_MODULE_PROP = "META-INF/xposed/module.prop"
+    private const val MODERN_MODULE_PROP = "META-INF/xposed/LoadedModule.prop"
     private const val MODERN_SCOPE_LIST = "META-INF/xposed/scope.list"
     private const val MODERN_JAVA_INIT_LIST = "META-INF/xposed/java_init.list"
     private const val MODERN_NATIVE_INIT_LIST = "META-INF/xposed/native_init.list"
@@ -79,7 +79,7 @@ object ModuleMetadataReader {
         if (!apkFile.exists()) return null
 
         // For installed apps, we already have the metadata if it was passed in.
-        // We only need to check npatch metadata to exclude patched apps from the module list.
+        // We only need to check npatch metadata to exclude patched apps from the LoadedModule list.
         if (appInfo.metaData?.containsKey("npatch") == true) {
             return null
         }

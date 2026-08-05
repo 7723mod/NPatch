@@ -18,11 +18,11 @@ import android.os.UserHandle;
 import android.util.Log;
 
 import top.nkbe.npatch.share.Constants;
-import org.lsposed.lspd.models.Module;
-import org.lsposed.lspd.service.IHotReloadTarget;
-import org.lsposed.lspd.service.ILSPInjectedModuleService;
-import org.lsposed.lspd.service.ILSPApplicationService;
-import org.lsposed.lspd.service.IRemotePreferenceCallback;
+import org.matrix.vector.ipc.LoadedModule;
+import org.matrix.vector.ipc.IProcessChannel;
+import org.matrix.vector.ipc.IModuleService;
+import org.matrix.vector.ipc.IFrameworkService;
+import org.matrix.vector.ipc.IRemotePreferenceCallback;
 
 import java.io.File;
 import java.lang.reflect.Method;
@@ -37,7 +37,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class RemoteApplicationService implements ILSPApplicationService {
+public class RemoteApplicationService implements IFrameworkService {
 
     private static final String TAG = "NPatch";
     private static final String MODULE_SERVICE = "top.nkbe.npatch.manager.ModuleService";
@@ -53,9 +53,9 @@ public class RemoteApplicationService implements ILSPApplicationService {
 
     private final Context context;
     private final AtomicBoolean managerAvailable = new AtomicBoolean(true);
-    private volatile List<Module> cachedLegacyModuleScope = Collections.emptyList();
-    private volatile List<Module> cachedModuleScope = Collections.emptyList();
-    private volatile ILSPApplicationService service;
+    private volatile List<LoadedModule> cachedLegacyModuleScope = Collections.emptyList();
+    private volatile List<LoadedModule> cachedModuleScope = Collections.emptyList();
+    private volatile IFrameworkService service;
     private volatile ServiceConnection connection;
 
     @SuppressLint("DiscouragedPrivateApi")
@@ -97,11 +97,11 @@ public class RemoteApplicationService implements ILSPApplicationService {
         }
     }
 
-    private ILSPApplicationService bindOnce(Intent intent) throws Exception {
+    private IFrameworkService bindOnce(Intent intent) throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
         AtomicBoolean cancelled = new AtomicBoolean(false);
         AtomicBoolean disconnected = new AtomicBoolean(false);
-        AtomicReference<ILSPApplicationService> result = new AtomicReference<>();
+        AtomicReference<IFrameworkService> result = new AtomicReference<>();
         AtomicReference<Throwable> failure = new AtomicReference<>();
 
         ServiceConnection candidate = new ServiceConnection() {
@@ -113,7 +113,7 @@ public class RemoteApplicationService implements ILSPApplicationService {
                 }
                 try {
                     registerClientPackage(binder, context.getPackageName());
-                    ILSPApplicationService connected = Stub.asInterface(binder);
+                    IFrameworkService connected = Stub.asInterface(binder);
                     if (connected == null || !binder.isBinderAlive()) {
                         throw new RemoteException("Manager returned a dead binder");
                     }
@@ -167,7 +167,7 @@ public class RemoteApplicationService implements ILSPApplicationService {
         }
 
         Throwable error = failure.get();
-        ILSPApplicationService connected = result.get();
+        IFrameworkService connected = result.get();
         if (error != null
                 || disconnected.get()
                 || connected == null
@@ -236,7 +236,7 @@ public class RemoteApplicationService implements ILSPApplicationService {
         Parcel data = Parcel.obtain();
         Parcel reply = Parcel.obtain();
         try {
-            data.writeInterfaceToken("org.lsposed.lspd.service.ILSPApplicationService");
+            data.writeInterfaceToken("org.matrix.vector.ipc.IFrameworkService");
             data.writeString(packageName);
             if (!binder.transact(REGISTER_CLIENT_PACKAGE, data, reply, 0)) {
                 throw new RemoteException("Manager does not support caller registration");
@@ -249,13 +249,13 @@ public class RemoteApplicationService implements ILSPApplicationService {
     }
 
     @Override
-    public List<Module> getLegacyModulesList() throws RemoteException {
-        ILSPApplicationService current = service;
+    public List<LoadedModule> getLegacyModules() throws RemoteException {
+        IFrameworkService current = service;
         if (current == null || !managerAvailable.get()) {
             return getCachedModuleScope(true);
         }
         try {
-            return cacheModuleScope(true, current.getLegacyModulesList());
+            return cacheModuleScope(true, current.getLegacyModules());
         } catch (RemoteException error) {
             onManagerFailure("get legacy modules", error);
             return getCachedModuleScope(true);
@@ -263,22 +263,22 @@ public class RemoteApplicationService implements ILSPApplicationService {
     }
 
     @Override
-    public List<Module> getModulesList() throws RemoteException {
-        ILSPApplicationService current = service;
+    public List<LoadedModule> getModules() throws RemoteException {
+        IFrameworkService current = service;
         if (current == null || !managerAvailable.get()) {
             return getCachedModuleScope(false);
         }
         try {
-            return cacheModuleScope(false, current.getModulesList());
+            return cacheModuleScope(false, current.getModules());
         } catch (RemoteException error) {
             onManagerFailure("get modules", error);
             return getCachedModuleScope(false);
         }
     }
 
-    private List<Module> cacheModuleScope(boolean legacy, List<Module> modules) {
-        List<Module> protectedModules = protectModules(modules);
-        List<Module> snapshot = protectedModules == null || protectedModules.isEmpty()
+    private List<LoadedModule> cacheModuleScope(boolean legacy, List<LoadedModule> modules) {
+        List<LoadedModule> protectedModules = protectModules(modules);
+        List<LoadedModule> snapshot = protectedModules == null || protectedModules.isEmpty()
                 ? Collections.emptyList()
                 : new ArrayList<>(protectedModules);
         if (legacy) {
@@ -289,28 +289,28 @@ public class RemoteApplicationService implements ILSPApplicationService {
         return new ArrayList<>(snapshot);
     }
 
-    private List<Module> getCachedModuleScope(boolean legacy) {
+    private List<LoadedModule> getCachedModuleScope(boolean legacy) {
         return new ArrayList<>(legacy ? cachedLegacyModuleScope : cachedModuleScope);
     }
 
-    private List<Module> protectModules(List<Module> modules) {
+    private List<LoadedModule> protectModules(List<LoadedModule> modules) {
         if (modules == null || modules.isEmpty()) {
             return modules;
         }
-        for (Module module : modules) {
-            if (module == null || module.service == null
-                    || module.service instanceof DisconnectSafeInjectedModuleService) {
+        for (LoadedModule LoadedModule : modules) {
+            if (LoadedModule == null || LoadedModule.service == null
+                    || LoadedModule.service instanceof DisconnectSafeInjectedModuleService) {
                 continue;
             }
-            module.service = new DisconnectSafeInjectedModuleService(
-                    module.service, module.packageName, managerAvailable);
+            LoadedModule.service = new DisconnectSafeInjectedModuleService(
+                    LoadedModule.service, LoadedModule.packageName, managerAvailable);
         }
         return modules;
     }
 
     @Override
     public String getPrefsPath(String packageName) {
-        ILSPApplicationService current = service;
+        IFrameworkService current = service;
         if (current == null || !managerAvailable.get()) {
             return new File(Environment.getDataDirectory(), "data/" + packageName + "/shared_prefs/")
                     .getAbsolutePath();
@@ -330,13 +330,27 @@ public class RemoteApplicationService implements ILSPApplicationService {
     }
 
     @Override
-    public ParcelFileDescriptor requestInjectedManagerBinder(List<IBinder> binder) {
-        ILSPApplicationService current = service;
+    public ParcelFileDescriptor openManagerApk() {
+        IFrameworkService current = service;
         if (current == null || !managerAvailable.get()) {
             return null;
         }
         try {
-            return current.requestInjectedManagerBinder(binder);
+            return current.openManagerApk();
+        } catch (RemoteException e) {
+            onManagerFailure("open manager apk", e);
+            return null;
+        }
+    }
+
+    @Override
+    public IBinder requestManagerService() {
+        IFrameworkService current = service;
+        if (current == null || !managerAvailable.get()) {
+            return null;
+        }
+        try {
+            return current.requestManagerService();
         } catch (RemoteException e) {
             onManagerFailure("request injected manager binder", e);
             return null;
@@ -349,11 +363,11 @@ public class RemoteApplicationService implements ILSPApplicationService {
     }
 
     @Override
-    public void registerHotReloadTarget(IHotReloadTarget target) throws RemoteException {
-        ILSPApplicationService current = service;
+    public void attachProcessChannel(IProcessChannel target) throws RemoteException {
+        IFrameworkService current = service;
         if (current != null && managerAvailable.get()) {
             try {
-                current.registerHotReloadTarget(target);
+                current.attachProcessChannel(target);
             } catch (RemoteException error) {
                 onManagerFailure("register hot reload target", error);
             }
@@ -367,20 +381,20 @@ public class RemoteApplicationService implements ILSPApplicationService {
     }
 
     /**
-     * Module metadata crosses the manager boundary together with a remote preference/file
+     * LoadedModule metadata crosses the manager boundary together with a remote preference/file
      * service. That Binder belongs to the manager process, so keeping it after the manager dies
-     * makes a later module callback throw DeadObjectException in the target process. The module
+     * makes a later LoadedModule callback throw DeadObjectException in the target process. The LoadedModule
      * remains in its locally cached scope; only remote data calls degrade to empty read-only
      * results instead of allowing manager lifecycle to terminate the host app.
      */
     private static final class DisconnectSafeInjectedModuleService
-            extends ILSPInjectedModuleService.Stub {
-        private final ILSPInjectedModuleService delegate;
+            extends IModuleService.Stub {
+        private final IModuleService delegate;
         private final String modulePackageName;
         private final AtomicBoolean managerAvailable;
 
         DisconnectSafeInjectedModuleService(
-                ILSPInjectedModuleService delegate,
+                IModuleService delegate,
                 String modulePackageName,
                 AtomicBoolean managerAvailable
         ) {
@@ -433,12 +447,12 @@ public class RemoteApplicationService implements ILSPApplicationService {
         }
 
         @Override
-        public String[] getRemoteFileList() {
+        public String[] getRemoteFileNames() {
             if (!managerAvailable.get()) {
                 return new String[0];
             }
             try {
-                String[] result = delegate.getRemoteFileList();
+                String[] result = delegate.getRemoteFileNames();
                 return result == null ? new String[0] : result;
             } catch (RemoteException error) {
                 onManagerFailure(error);

@@ -12,9 +12,9 @@ import java.util.concurrent.ConcurrentHashMap
 
 import kotlinx.coroutines.runBlocking
 import top.nkbe.npatch.config.ConfigManager
-import org.lsposed.lspd.models.Module
-import org.lsposed.lspd.service.IHotReloadTarget
-import org.lsposed.lspd.service.ILSPApplicationService
+import org.matrix.vector.ipc.LoadedModule
+import org.matrix.vector.ipc.IProcessChannel
+import org.matrix.vector.ipc.IFrameworkService
 
 class ModuleService : Service() {
 
@@ -40,13 +40,13 @@ class ModuleService : Service() {
     }
 
     private inner class ScopedApplicationService(private val packageName: String) :
-        ILSPApplicationService.Stub() {
+        IFrameworkService.Stub() {
 
         private val clientPackages = ConcurrentHashMap<Int, String>()
 
         override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
             if (code == REGISTER_CLIENT_PACKAGE) {
-                data.enforceInterface("org.lsposed.lspd.service.ILSPApplicationService")
+                data.enforceInterface("org.matrix.vector.ipc.IFrameworkService")
                 val requested = data.readString()
                 val uid = Binder.getCallingUid()
                 val ownedPackages = packageManager.getPackagesForUid(uid).orEmpty()
@@ -87,7 +87,7 @@ class ModuleService : Service() {
             return null
         }
 
-        private fun modules(): List<Module> {
+        private fun modules(): List<LoadedModule> {
             val targetPackage = targetPackageName() ?: return emptyList()
             val modules = runBlocking { ConfigManager.getModuleFilesForApp(targetPackage) }
             HotReloadRegistry.recordModules(
@@ -112,15 +112,15 @@ class ModuleService : Service() {
 
         override fun isLogMuted(): Boolean = false
 
-        override fun getLegacyModulesList(): List<Module> {
-            val list = modules().filter { it.file?.legacy == true }
-            Log.d(TAG, "$packageName calls getLegacyModulesList: $list")
+        override fun getLegacyModules(): List<LoadedModule> {
+            val list = modules().filter { it.code?.legacy == true }
+            Log.d(TAG, "$packageName calls getLegacyModules: $list")
             return list
         }
 
-        override fun getModulesList(): List<Module> {
-            val list = modules().filter { it.file?.legacy == false }
-            Log.d(TAG, "$packageName calls getModulesList: $list")
+        override fun getModules(): List<LoadedModule> {
+            val list = modules().filter { it.code?.legacy == false }
+            Log.d(TAG, "$packageName calls getModules: $list")
             return list
         }
 
@@ -135,17 +135,18 @@ class ModuleService : Service() {
             }
         }
 
-        override fun requestInjectedManagerBinder(
-            binder: MutableList<IBinder>
-        ): ParcelFileDescriptor? {
-            val targetPackage = targetPackageName()
-                ?: throw SecurityException("Unregistered ModuleService caller")
-            Log.i(TAG, "$targetPackage requests injected manager binder")
-            binder.add(XposedServiceBinder(targetPackage))
+        override fun openManagerApk(): ParcelFileDescriptor? {
             return null
         }
 
-        override fun registerHotReloadTarget(target: IHotReloadTarget) {
+        override fun requestManagerService(): IBinder? {
+            val targetPackage = targetPackageName()
+                ?: throw SecurityException("Unregistered ModuleService caller")
+            Log.i(TAG, "$targetPackage requests injected manager binder")
+            return XposedServiceBinder(targetPackage)
+        }
+
+        override fun attachProcessChannel(target: IProcessChannel) {
             val targetPackage = targetPackageName()
                 ?: throw SecurityException("Unregistered ModuleService caller")
             HotReloadRegistry.register(

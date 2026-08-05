@@ -32,8 +32,10 @@ public class CacheCleaner {
             return false;
         }
 
-        if (previousStamp != null) {
-            Log.i(TAG, "Patched APK changed, wiping NPatch cache");
+        // Wipe the entire cache directory. For simplicity we don't selectively delete,
+        // we wipe everything inside it, including the stamp file.
+        // In Android, getCacheDir() returns the cache directory of the app.
+        if (cacheRoot.exists() && cacheRoot.isDirectory()) {
             wipeAll(cacheRoot);
         }
 

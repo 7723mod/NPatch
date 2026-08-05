@@ -22,7 +22,7 @@ import kotlin.collections.filter
 import kotlin.collections.map
 
 data class RepoUiModel(
-    val module: OnlineModule,
+    val LoadedModule: OnlineModule,
     val isInstalled: Boolean,
     val isUpgradable: Boolean,
     val updatableVersion: String?,
@@ -124,8 +124,8 @@ class RepositoryViewModel : ViewModel(), RepoLoader.RepoListener {
         val filteredByScope = if (state.scopeFilter.isNullOrEmpty()) {
             state.modules
         } else {
-            state.modules.filter { module ->
-                module.scope.contains(state.scopeFilter)
+            state.modules.filter { LoadedModule ->
+                LoadedModule.scope.contains(state.scopeFilter)
             }
         }
 
@@ -140,8 +140,8 @@ class RepositoryViewModel : ViewModel(), RepoLoader.RepoListener {
             }
         }
 
-        val uiList = filtered.map { module ->
-            val pkgName = module.name ?: ""
+        val uiList = filtered.map { LoadedModule ->
+            val pkgName = LoadedModule.name ?: ""
 
             // 使用 pre-indexed Map 提高搜尋效率 (O(1))
             val installedAppInfo = appMap[pkgName]
@@ -159,7 +159,7 @@ class RepositoryViewModel : ViewModel(), RepoLoader.RepoListener {
             )
 
             RepoUiModel(
-                module = module,
+                LoadedModule = LoadedModule,
                 isInstalled = isInstalled,
                 isUpgradable = isUpgradable,
                 updatableVersion = latestVersion?.versionName,
@@ -172,9 +172,9 @@ class RepositoryViewModel : ViewModel(), RepoLoader.RepoListener {
             }
 
             when (state.sort) {
-                RepoSort.UPDATED -> compareValues(b.module.latestReleaseTime, a.module.latestReleaseTime)
-                RepoSort.CREATED -> compareValues(b.module.createdAt, a.module.createdAt)
-                RepoSort.NAME -> compareValues(a.module.name, b.module.name)
+                RepoSort.UPDATED -> compareValues(b.LoadedModule.latestReleaseTime, a.LoadedModule.latestReleaseTime)
+                RepoSort.CREATED -> compareValues(b.LoadedModule.createdAt, a.LoadedModule.createdAt)
+                RepoSort.NAME -> compareValues(a.LoadedModule.name, b.LoadedModule.name)
             }
         })
 

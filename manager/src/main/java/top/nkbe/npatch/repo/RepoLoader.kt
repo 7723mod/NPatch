@@ -120,9 +120,9 @@ class RepoLoader private constructor() {
                     }
 
                     val modules = ConcurrentHashMap<String, OnlineModule>()
-                    repoModules.forEach { module ->
-                        module.name?.let { name ->
-                            modules[name] = module
+                    repoModules.forEach { LoadedModule ->
+                        LoadedModule.name?.let { name ->
+                            modules[name] = LoadedModule
                         }
                     }
 
@@ -159,48 +159,48 @@ class RepoLoader private constructor() {
     }
 
     private fun mapFpaModuleSummary(json: JsonObject): OnlineModule {
-        val module = OnlineModule()
+        val LoadedModule = OnlineModule()
         val packageName = json.optString("pkg")
         val versionCode = json.optLong("new_version_code")
         val versionName = json.optString("new_version")
         val latestReleaseTime = epochMillisToIso(json.optLong("new_update_time"))
 
-        module.name = packageName
-        module.description = json.optString("desc")
-        module.summary = json.optString("summary")
-        module.readmeHTML = json.optString("readme_html")
-        module.readme = json.optString("readme_text")
-        module.createdAt = epochMillisToIso(json.optLong("createTime"))
-        module.updatedAt = latestReleaseTime
-        module.latestReleaseTime = latestReleaseTime
-        module.homepageUrl = packageName?.let(::getModulePageUrl)
-        module.collaborators = listOf(parseAuthor(json.optString("author")))
-        module.scope =
+        LoadedModule.name = packageName
+        LoadedModule.description = json.optString("desc")
+        LoadedModule.summary = json.optString("summary")
+        LoadedModule.readmeHTML = json.optString("readme_html")
+        LoadedModule.readme = json.optString("readme_text")
+        LoadedModule.createdAt = epochMillisToIso(json.optLong("createTime"))
+        LoadedModule.updatedAt = latestReleaseTime
+        LoadedModule.latestReleaseTime = latestReleaseTime
+        LoadedModule.homepageUrl = packageName?.let(::getModulePageUrl)
+        LoadedModule.collaborators = listOf(parseAuthor(json.optString("author")))
+        LoadedModule.scope =
             buildList {
                 addAll(json.optStringList("xp89scope"))
                 addAll(json.optStringList("xp100scope"))
             }.distinct()
 
         if (versionCode > 0L && !versionName.isNullOrEmpty()) {
-            module.latestRelease = "$versionCode-$versionName"
+            LoadedModule.latestRelease = "$versionCode-$versionName"
         }
 
-        return module
+        return LoadedModule
     }
 
     @Synchronized
     private fun updateLatestVersion(modules: Array<OnlineModule>, channel: String) {
         isRepoLoaded = false
         val versions = ConcurrentHashMap<String, ModuleVersion>()
-        for (module in modules) {
-            var release = module.latestRelease
-            if (channel == channels[1] && !module.latestBetaRelease.isNullOrEmpty()) {
-                release = module.latestBetaRelease
+        for (LoadedModule in modules) {
+            var release = LoadedModule.latestRelease
+            if (channel == channels[1] && !LoadedModule.latestBetaRelease.isNullOrEmpty()) {
+                release = LoadedModule.latestBetaRelease
             } else if (channel == channels[2]) {
-                if (!module.latestSnapshotRelease.isNullOrEmpty()) {
-                    release = module.latestSnapshotRelease
-                } else if (!module.latestBetaRelease.isNullOrEmpty()) {
-                    release = module.latestBetaRelease
+                if (!LoadedModule.latestSnapshotRelease.isNullOrEmpty()) {
+                    release = LoadedModule.latestSnapshotRelease
+                } else if (!LoadedModule.latestBetaRelease.isNullOrEmpty()) {
+                    release = LoadedModule.latestBetaRelease
                 }
             }
 
@@ -212,7 +212,7 @@ class RepoLoader private constructor() {
             try {
                 val verCode = splits[0].toLong()
                 val verName = splits[1]
-                module.name?.let { name ->
+                LoadedModule.name?.let { name ->
                     versions[name] = ModuleVersion(verCode, verName)
                 }
             } catch (_: NumberFormatException) {
@@ -240,17 +240,17 @@ class RepoLoader private constructor() {
         var releases: List<Release> = ArrayList()
 
         if (isRepoLoaded) {
-            val module = onlineModules[packageName]
-            if (module != null) {
-                releases = module.releases
-                if (!module.releasesLoaded) {
-                    if (channel == channels[1] && module.betaReleases.isNotEmpty()) {
-                        releases = module.betaReleases
+            val LoadedModule = onlineModules[packageName]
+            if (LoadedModule != null) {
+                releases = LoadedModule.releases
+                if (!LoadedModule.releasesLoaded) {
+                    if (channel == channels[1] && LoadedModule.betaReleases.isNotEmpty()) {
+                        releases = LoadedModule.betaReleases
                     } else if (channel == channels[2]) {
-                        if (module.snapshotReleases.isNotEmpty()) {
-                            releases = module.snapshotReleases
-                        } else if (module.betaReleases.isNotEmpty()) {
-                            releases = module.betaReleases
+                        if (LoadedModule.snapshotReleases.isNotEmpty()) {
+                            releases = LoadedModule.snapshotReleases
+                        } else if (LoadedModule.betaReleases.isNotEmpty()) {
+                            releases = LoadedModule.betaReleases
                         }
                     }
                 }
@@ -262,16 +262,16 @@ class RepoLoader private constructor() {
     fun getLatestReleaseTime(packageName: String, channel: String): String? {
         var releaseTime: String? = null
         if (isRepoLoaded) {
-            val module = onlineModules[packageName]
-            if (module != null) {
-                releaseTime = module.latestReleaseTime
-                if (channel == channels[1] && module.latestBetaReleaseTime != null) {
-                    releaseTime = module.latestBetaReleaseTime
+            val LoadedModule = onlineModules[packageName]
+            if (LoadedModule != null) {
+                releaseTime = LoadedModule.latestReleaseTime
+                if (channel == channels[1] && LoadedModule.latestBetaReleaseTime != null) {
+                    releaseTime = LoadedModule.latestBetaReleaseTime
                 } else if (channel == channels[2]) {
-                    if (module.latestSnapshotReleaseTime != null) {
-                        releaseTime = module.latestSnapshotReleaseTime
-                    } else if (module.latestBetaReleaseTime != null) {
-                        releaseTime = module.latestBetaReleaseTime
+                    if (LoadedModule.latestSnapshotReleaseTime != null) {
+                        releaseTime = LoadedModule.latestSnapshotReleaseTime
+                    } else if (LoadedModule.latestBetaReleaseTime != null) {
+                        releaseTime = LoadedModule.latestBetaReleaseTime
                     }
                 }
             }
@@ -295,16 +295,16 @@ class RepoLoader private constructor() {
 
                 response.body.string().let { bodyString ->
                     try {
-                        val module = (onlineModules[packageName] ?: OnlineModule().apply {
+                        val LoadedModule = (onlineModules[packageName] ?: OnlineModule().apply {
                             name = packageName
                         })
                         val root = JsonParser.parseString(bodyString).asJsonObject
                         val versions = root.getAsJsonArray("modules")
                         val releases = versions?.map { mapFpaRelease(packageName, it.asJsonObject) } ?: emptyList()
-                        module.releases = releases
-                        module.releasesLoaded = true
-                        (onlineModules as MutableMap)[packageName] = module
-                        listeners.forEach { it.onModuleReleasesLoaded(module) }
+                        LoadedModule.releases = releases
+                        LoadedModule.releasesLoaded = true
+                        (onlineModules as MutableMap)[packageName] = LoadedModule
+                        listeners.forEach { it.onModuleReleasesLoaded(LoadedModule) }
                     } catch (t: Throwable) {
                         Log.e(TAG, Log.getStackTraceString(t))
                         listeners.forEach { it.onThrowable(t) }
@@ -406,7 +406,7 @@ class RepoLoader private constructor() {
 
     interface RepoListener {
         fun onRepoLoaded() {}
-        fun onModuleReleasesLoaded(module: OnlineModule?) {}
+        fun onModuleReleasesLoaded(LoadedModule: OnlineModule?) {}
         fun onThrowable(t: Throwable?) {
             Log.e(TAG, "load repo failed", t)
         }

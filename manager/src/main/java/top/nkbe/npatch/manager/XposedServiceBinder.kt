@@ -56,7 +56,7 @@ class XposedServiceBinder(
             packages.forEach { appPkg ->
                 ConfigManager.activateModule(
                     appPkg,
-                    top.nkbe.npatch.database.entity.Module(packageName, ""),
+                    top.nkbe.npatch.database.entity.LoadedModule(packageName, ""),
                 )
             }
             callback.onScopeRequestApproved(packages)
@@ -69,7 +69,7 @@ class XposedServiceBinder(
             packages.forEach { appPkg ->
                 ConfigManager.deactivateModule(
                     appPkg,
-                    top.nkbe.npatch.database.entity.Module(packageName, ""),
+                    top.nkbe.npatch.database.entity.LoadedModule(packageName, ""),
                 )
             }
         }

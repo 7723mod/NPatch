@@ -8,11 +8,11 @@ import android.util.Log
 import kotlinx.coroutines.runBlocking
 import top.nkbe.npatch.config.ConfigManager
 import top.nkbe.npatch.lspApp
-import org.lsposed.lspd.models.Module
-import org.lsposed.lspd.service.IHotReloadTarget
-import org.lsposed.lspd.service.ILSPApplicationService
+import org.matrix.vector.ipc.LoadedModule
+import org.matrix.vector.ipc.IProcessChannel
+import org.matrix.vector.ipc.IFrameworkService
 
-object ManagerService : ILSPApplicationService.Stub() {
+object ManagerService : IFrameworkService.Stub() {
 
     private const val TAG = "ManagerService"
 
@@ -30,7 +30,7 @@ object ManagerService : ILSPApplicationService.Stub() {
             ?: "pid:$pid"
     }
 
-    private fun recordModules(modules: List<Module>): List<Module> {
+    private fun recordModules(modules: List<LoadedModule>): List<LoadedModule> {
         HotReloadRegistry.recordModules(
             Binder.getCallingUid(),
             Binder.getCallingPid(),
@@ -44,21 +44,21 @@ object ManagerService : ILSPApplicationService.Stub() {
         return false
     }
 
-    override fun getLegacyModulesList(): List<Module> {
+    override fun getLegacyModules(): List<LoadedModule> {
         val app = getCallingPackageName()
         val list = app?.let {
             runBlocking { ConfigManager.getModuleFilesForApp(it) }
-        }.orEmpty().filter { it.file?.legacy == true }
-        Log.d(TAG, "$app calls getLegacyModulesList: $list")
+        }.orEmpty().filter { it.code?.legacy == true }
+        Log.d(TAG, "$app calls getLegacyModules: $list")
         return recordModules(list)
     }
 
-    override fun getModulesList(): List<Module> {
+    override fun getModules(): List<LoadedModule> {
         val app = getCallingPackageName()
         val list = app?.let {
             runBlocking { ConfigManager.getModuleFilesForApp(it) }
-        }.orEmpty().filter { it.file?.legacy == false }
-        Log.d(TAG, "$app calls getModulesList: $list")
+        }.orEmpty().filter { it.code?.legacy == false }
+        Log.d(TAG, "$app calls getModules: $list")
         return recordModules(list)
     }
 
@@ -71,15 +71,19 @@ object ManagerService : ILSPApplicationService.Stub() {
         }
     }
 
-    override fun requestInjectedManagerBinder(binder: MutableList<IBinder>): ParcelFileDescriptor? {
+    override fun openManagerApk(): ParcelFileDescriptor? {
+        return null
+    }
+
+    override fun requestManagerService(): IBinder? {
         getCallingPackageName()?.let {
             Log.i(TAG, "$it requests injected manager binder from ManagerService")
-            binder.add(XposedServiceBinder(it))
+            return XposedServiceBinder(it)
         }
         return null
     }
 
-    override fun registerHotReloadTarget(target: IHotReloadTarget) {
+    override fun attachProcessChannel(target: IProcessChannel) {
         HotReloadRegistry.register(
             Binder.getCallingUid(),
             Binder.getCallingPid(),

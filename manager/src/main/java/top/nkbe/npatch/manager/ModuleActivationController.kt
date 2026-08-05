@@ -22,7 +22,7 @@ object ModuleActivationController {
             check(ShizukuApi.isReady) { "Shizuku is not connected" }
 
             val authority = packageName + IXposedService.AUTHORITY_SUFFIX
-            Log.i(TAG, "Activating module display for $packageName via $authority")
+            Log.i(TAG, "Activating LoadedModule display for $packageName via $authority")
             val activityManager = IActivityManager.Stub.asInterface(ShizukuApi.getSystemService("activity"))
             val providerToken = Binder()
             val providerHolder = activityManager.getContentProviderExternalCompat(authority, providerToken)
@@ -36,7 +36,7 @@ object ModuleActivationController {
             }
             Unit
         }.onFailure {
-            Log.w(TAG, "Failed to activate module display for $packageName", it)
+            Log.w(TAG, "Failed to activate LoadedModule display for $packageName", it)
         }
     }
 

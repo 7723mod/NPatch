@@ -296,11 +296,11 @@ fun RepoListContent(
         ) {
             items(
                 items = uiModels,
-                key = { it.module.name ?: it.hashCode() }
+                key = { it.LoadedModule.name ?: it.hashCode() }
             ) { item ->
                 Box(modifier = Modifier.animateItem(placementSpec = spring(stiffness = Spring.StiffnessLow))) {
                     RepositoryItem(item = item, onClick = {
-                        item.module.name?.let(onRepoClick)
+                        item.LoadedModule.name?.let(onRepoClick)
                     })
                 }
             }
@@ -312,12 +312,12 @@ fun RepoListContent(
 fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
     val context = LocalContext.current
     val repoLoader = remember { RepoLoader.getInstance() }
-    val module = item.module
-    val appName = module.description ?: module.name ?: "Unknown"
-    val packageName = module.name ?: ""
+    val LoadedModule = item.LoadedModule
+    val appName = LoadedModule.description ?: LoadedModule.name ?: "Unknown"
+    val packageName = LoadedModule.name ?: ""
 
-    val updatedTime = remember(item.module.latestReleaseTime) {
-        getRelativeTime(context, item.module.latestReleaseTime)
+    val updatedTime = remember(item.LoadedModule.latestReleaseTime) {
+        getRelativeTime(context, item.LoadedModule.latestReleaseTime)
     }
 
     val showMenu = remember { mutableStateOf(false) }
@@ -380,8 +380,8 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
                         color = colorScheme.onSurfaceVariantSummary,
                     )
 
-                    val author = module.collaborators.firstOrNull()?.name
-                        ?: module.collaborators.firstOrNull()?.login
+                    val author = LoadedModule.collaborators.firstOrNull()?.name
+                        ?: LoadedModule.collaborators.firstOrNull()?.login
                     if (author != null) {
                         Spacer(modifier = Modifier.width(2.dp))
                         Text(
@@ -396,10 +396,10 @@ fun RepositoryItem(item: RepoUiModel, onClick: () -> Unit) {
                 }
             }
 
-            if (!module.summary.isNullOrEmpty()) {
+            if (!LoadedModule.summary.isNullOrEmpty()) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = module.summary!!,
+                    text = LoadedModule.summary!!,
                     fontSize = 14.sp,
                     color = colorScheme.onSurfaceVariantSummary,
                     modifier = Modifier.padding(top = 2.dp),

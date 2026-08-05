@@ -24,7 +24,7 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:largeHeap="true"
-        android:theme="@style/Theme.Material3.DayNight.NoActionBar">
+        android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
         
         <!-- 专门为小米手机桌面卸载添加了提示，提升用户体验 -->
         <meta-data

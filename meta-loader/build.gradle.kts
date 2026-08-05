@@ -4,7 +4,7 @@ plugins {
     alias(libs.plugins.agp.app)
 }
 
-android {
+extensions.configure<com.android.build.api.dsl.ApplicationExtension> {
     defaultConfig {
         multiDexEnabled = false
     }
@@ -47,5 +47,5 @@ androidComponents.onVariants { variant ->
 dependencies {
     compileOnly("vector:stubs")
     implementation(projects.share.java)
-    implementation(libs.hiddenapibypass)
+    implementation(npatch.hiddenapibypass)
 }

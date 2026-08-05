@@ -6,23 +6,23 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import top.nkbe.npatch.database.entity.Module
+import top.nkbe.npatch.database.entity.LoadedModule
 
 @Dao
 interface ModuleDao {
 
-    @Query("SELECT * FROM module WHERE pkgName = :pkgName")
-    suspend fun getModule(pkgName: String): Module?
+    @Query("SELECT * FROM LoadedModule WHERE pkgName = :pkgName")
+    suspend fun getModule(pkgName: String): LoadedModule?
 
-    @Query("SELECT * FROM module")
-    suspend fun getAll(): List<Module>
+    @Query("SELECT * FROM LoadedModule")
+    suspend fun getAll(): List<LoadedModule>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insert(module: Module)
+    suspend fun insert(LoadedModule: LoadedModule)
 
     @Update
-    suspend fun update(module: Module)
+    suspend fun update(LoadedModule: LoadedModule)
 
     @Delete
-    suspend fun delete(module: Module)
+    suspend fun delete(LoadedModule: LoadedModule)
 }

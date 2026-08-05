@@ -7,7 +7,7 @@ import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
 
-import org.lsposed.lspd.service.IRemotePreferenceCallback;
+import org.matrix.vector.ipc.IRemotePreferenceCallback;
 
 import java.io.File;
 import java.io.Serializable;
@@ -24,8 +24,8 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Canonical storage and validation backend for NPatch remote preferences and files.
  *
- * <p>The injected read-only service and the module-app {@code IXposedService} adapter delegate to
- * this class. Instances are scoped to the hosting application's data directory and module package,
+ * <p>The injected read-only service and the LoadedModule-app {@code IXposedService} adapter delegate to
+ * this class. Instances are scoped to the hosting application's data directory and LoadedModule package,
  * so manager-backed services share one store while standalone local mode remains self-contained.</p>
  */
 public final class NPatchRemoteStore {
@@ -230,7 +230,7 @@ public final class NPatchRemoteStore {
                 continue;
             }
             try {
-                callbackState.callback.onUpdate(diff);
+                callbackState.callback.onRemotePreferencesChanged(diff);
             } catch (RemoteException exception) {
                 removeCallback(state, entry.getKey(), callbackState);
             }
@@ -252,7 +252,7 @@ public final class NPatchRemoteStore {
 
     private static String requireModulePackage(String value) {
         if (value == null || !value.matches("[A-Za-z0-9_]+(?:\\.[A-Za-z0-9_]+)+")) {
-            throw new IllegalArgumentException("Invalid module package name");
+            throw new IllegalArgumentException("Invalid LoadedModule package name");
         }
         return value;
     }
