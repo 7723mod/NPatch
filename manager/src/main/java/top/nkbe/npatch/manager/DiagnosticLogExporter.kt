@@ -87,7 +87,7 @@ object DiagnosticLogExporter {
             appendLine("Patched application: $targetPackageName")
             appendLine("Application version: ${packageInfo.versionName} (${PackageInfoCompat.getLongVersionCode(packageInfo)})")
             appendLine()
-            appendLine("Contents may include module output, stack traces and app-provided log messages.")
+            appendLine("Contents may include LoadedModule output, stack traces and app-provided log messages.")
             appendLine("Review the archive before sharing it publicly.")
         }
     }
