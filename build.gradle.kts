@@ -29,23 +29,21 @@ val commitCount = runCatching {
     if (refId != null) Git(repo).log().add(refId).call().count() else 0
 }.getOrElse {0}
 
-val (coreCommitCount, coreLatestTag) = runCatching {
+val coreCommitCount = runCatching {
     FileRepositoryBuilder().setGitDir(rootProject.file("core/.git"))
         .setWorkTree(rootProject.file("core"))
         .build().use { repo ->
             val git = Git(repo)
-            val count = git.log().add(repo.resolve("HEAD")).call().count()
-            val ver = git.describe().setTags(true).setAbbrev(0).call()?.removePrefix("v") ?: "2.0"
-            count to ver
+            git.log().add(repo.resolve("HEAD")).call().count()
         }
-}.getOrNull() ?: (3068 to "2.1")
+}.getOrDefault(3068)
 
 val defaultManagerPackageName by extra("top.nkbe.npatch")
 val apiCode by extra(102)
 val verCode by extra(commitCount)
 val verName by extra("1.0.7")
 val coreVerCode by extra(coreCommitCount)
-val coreVerName by extra(coreLatestTag)
+val coreVerName by extra("v2.2-core")
 val androidMinSdkVersion by extra(28)
 val androidTargetSdkVersion by extra(37)
 val androidCompileSdkVersion by extra(37)

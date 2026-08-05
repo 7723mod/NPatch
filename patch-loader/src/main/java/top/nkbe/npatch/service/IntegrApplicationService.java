@@ -13,9 +13,9 @@ import top.nkbe.npatch.loader.util.FileUtils;
 import top.nkbe.npatch.share.Constants;
 import top.nkbe.npatch.util.LocalInjectedModuleService;
 import top.nkbe.npatch.util.ModuleLoader;
-import org.lsposed.lspd.models.Module;
-import org.lsposed.lspd.service.ILSPApplicationService;
-import org.lsposed.lspd.service.IHotReloadTarget;
+import org.matrix.vector.ipc.LoadedModule;
+import org.matrix.vector.ipc.IFrameworkService;
+import org.matrix.vector.ipc.IProcessChannel;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -25,12 +25,12 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-public class IntegrApplicationService extends ILSPApplicationService.Stub {
+public class IntegrApplicationService extends IFrameworkService.Stub {
 
     private static final String TAG = "NPatch";
 
-    private final List<Module> legacyModules = new ArrayList<>();
-    private final List<Module> modernModules = new ArrayList<>();
+    private final List<LoadedModule> legacyModules = new ArrayList<>();
+    private final List<LoadedModule> modernModules = new ArrayList<>();
 
     public IntegrApplicationService(Context context) {
         try {
@@ -48,14 +48,14 @@ public class IntegrApplicationService extends ILSPApplicationService.Stub {
                 try (ZipFile sourceFile = new ZipFile(context.getPackageResourcePath())) {
                     ZipEntry entry = sourceFile.getEntry(Constants.EMBEDDED_MODULES_ASSET_PATH + name);
                     if (entry == null) {
-                        Log.w(TAG, "Skipping module (entry not found in APK): " + name);
+                        Log.w(TAG, "Skipping LoadedModule (entry not found in APK): " + name);
                         continue;
                     }
                     cacheApkPath = modulePath + entry.getCrc() + ".apk";
                 }
 
                 if (!Files.exists(Paths.get(cacheApkPath))) {
-                    Log.i(TAG, "Extracting embedded module: " + packageName);
+                    Log.i(TAG, "Extracting embedded LoadedModule: " + packageName);
                     FileUtils.deleteFolderIfExists(Paths.get(modulePath));
                     Files.createDirectories(Paths.get(modulePath));
                     try (var is = context.getAssets().open("npatch/modules/" + name)) {
@@ -63,21 +63,24 @@ public class IntegrApplicationService extends ILSPApplicationService.Stub {
                     }
                 }
 
-                var module = new Module();
-                module.apkPath = cacheApkPath;
-                module.packageName = packageName;
-                module.applicationInfo = readApplicationInfo(context, cacheApkPath, packageName);
-                module.file = ModuleLoader.loadModule(cacheApkPath, readLegacyMinApiVersion(module.applicationInfo));
-                if (module.file == null) {
-                    Log.w(TAG, "Skipping unsupported or unreadable embedded module: " + packageName);
+                var LoadedModule = new LoadedModule();
+                LoadedModule.apkPath = cacheApkPath;
+                LoadedModule.packageName = packageName;
+                LoadedModule.applicationInfo = readApplicationInfo(context, cacheApkPath, packageName);
+                var parsedModule = ModuleLoader.loadModule(
+                        cacheApkPath,
+                        readLegacyMinApiVersion(LoadedModule.applicationInfo));
+                LoadedModule.code = parsedModule == null ? null : parsedModule.code;
+                if (LoadedModule.code == null) {
+                    Log.w(TAG, "Skipping unsupported or unreadable embedded LoadedModule: " + packageName);
                     continue;
                 }
-                module.appId = module.applicationInfo == null ? -1 : module.applicationInfo.uid;
-                module.service = new LocalInjectedModuleService(context, module.packageName);
-                if (module.file != null && module.file.legacy) {
-                    legacyModules.add(module);
+                LoadedModule.appId = LoadedModule.applicationInfo == null ? -1 : LoadedModule.applicationInfo.uid;
+                LoadedModule.service = new LocalInjectedModuleService(context, LoadedModule.packageName);
+                if (LoadedModule.code != null && LoadedModule.code.legacy) {
+                    legacyModules.add(LoadedModule);
                 } else {
-                    modernModules.add(module);
+                    modernModules.add(LoadedModule);
                 }
             }
         } catch (IOException e) {
@@ -99,7 +102,7 @@ public class IntegrApplicationService extends ILSPApplicationService.Stub {
                 return applicationInfo;
             }
         } catch (Throwable e) {
-            Log.w(TAG, "Failed to read embedded module ApplicationInfo: " + fallbackPackageName, e);
+            Log.w(TAG, "Failed to read embedded LoadedModule ApplicationInfo: " + fallbackPackageName, e);
         }
         ApplicationInfo fallback = new ApplicationInfo();
         fallback.packageName = fallbackPackageName;
@@ -127,12 +130,12 @@ public class IntegrApplicationService extends ILSPApplicationService.Stub {
     }
 
     @Override
-    public List<Module> getLegacyModulesList() throws RemoteException {
+    public List<LoadedModule> getLegacyModules() throws RemoteException {
         return legacyModules;
     }
 
     @Override
-    public List<Module> getModulesList() throws RemoteException {
+    public List<LoadedModule> getModules() throws RemoteException {
         return modernModules;
     }
 
@@ -142,7 +145,12 @@ public class IntegrApplicationService extends ILSPApplicationService.Stub {
     }
 
     @Override
-    public ParcelFileDescriptor requestInjectedManagerBinder(List<IBinder> binder) throws RemoteException {
+    public ParcelFileDescriptor openManagerApk() throws RemoteException {
+        return null;
+    }
+
+    @Override
+    public IBinder requestManagerService() throws RemoteException {
         return null;
     }
 
@@ -157,7 +165,7 @@ public class IntegrApplicationService extends ILSPApplicationService.Stub {
     }
 
     @Override
-    public void registerHotReloadTarget(IHotReloadTarget target) {
+    public void attachProcessChannel(IProcessChannel target) {
         // Integrated configuration has no manager process that can issue a reload request.
     }
 
