@@ -238,16 +238,23 @@ object ShizukuApi {
     fun isPackageInstalledWithoutPatch(packageName: String): Boolean {
         ensureReady()
         val userId = Process.myUserHandle().hashCode()
-        val app = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            iPackageManager.getApplicationInfo(
-                packageName,
-                PackageManager.GET_META_DATA.toLong(),
-                userId,
-            )
+        val app = runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                iPackageManager.getApplicationInfo(
+                    packageName,
+                    PackageManager.GET_META_DATA.toLong(),
+                    userId,
+                )
+            } else {
+                iPackageManager.getApplicationInfo(packageName, PackageManager.GET_META_DATA, userId)
+            }
+        }.getOrNull()
+        
+        return if (app == null) {
+            false // Not installed
         } else {
-            iPackageManager.getApplicationInfo(packageName, PackageManager.GET_META_DATA, userId)
+            app.metaData?.containsKey("npatch") != true
         }
-        return (app != null) && (app.metaData?.containsKey("npatch") != true)
     }
 
     suspend fun installApks(installSet: ApkInstallSet): Bundle {

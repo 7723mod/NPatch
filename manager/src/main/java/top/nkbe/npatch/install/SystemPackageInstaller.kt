@@ -13,6 +13,9 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import top.nkbe.npatch.BuildConfig
 
 sealed interface SystemInstallResult {
@@ -59,7 +62,28 @@ object SystemPackageInstaller {
                     session.commit(createStatusIntent(appContext, sessionId, token).intentSender)
                     committed = true
                 }
-                completion.await()
+                
+                val pollJob = launch {
+                    while (isActive) {
+                        delay(1000)
+                        if (packageInstaller.getSessionInfo(sessionId) == null) {
+                            delay(500)
+                            if (!completion.isCompleted) {
+                                completion.complete(
+                                    SystemInstallResult.Completed(
+                                        PackageInstaller.STATUS_FAILURE,
+                                        "Install cancelled by user or failed silently"
+                                    )
+                                )
+                            }
+                            break
+                        }
+                    }
+                }
+                
+                completion.await().also {
+                    pollJob.cancel()
+                }
             } catch (error: Throwable) {
                 if (!committed) runCatching { packageInstaller.abandonSession(sessionId) }
                 throw error

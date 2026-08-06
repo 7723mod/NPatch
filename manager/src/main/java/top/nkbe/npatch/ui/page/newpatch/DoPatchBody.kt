@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import nkbe.util.NeoPackageManager
 import nkbe.util.NeoPackageManager.AppInfo
 import nkbe.util.ShizukuApi
@@ -385,16 +386,6 @@ fun InstallDialog(
     }
     var installing by remember { mutableStateOf(0) }
     var installStarted by remember { mutableStateOf(false) }
-    val uninstallLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult(),
-    ) {
-        if (checkIsApkFixedByLSP(context, patchApp.app.packageName)) {
-            onFinish(PackageInstaller.STATUS_FAILURE, "Original application was not uninstalled")
-        } else {
-            uninstallFirst = false
-        }
-    }
-
     suspend fun doInstall() {
         Log.i(TAG, "Installing ${patchApp.app.packageName} with $method")
         installStarted = true
@@ -416,7 +407,34 @@ fun InstallDialog(
         }
     }
 
-    LaunchedEffect(uninstallFirst, method) {
+    val uninstallLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) {
+        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            var checkCount = 0
+            var stillInstalled = true
+            while (checkCount < 10) {
+                if (!checkIsApkFixedByLSP(context, patchApp.app.packageName)) {
+                    stillInstalled = false
+                    break
+                }
+                kotlinx.coroutines.delay(300)
+                checkCount++
+            }
+            withContext(kotlinx.coroutines.Dispatchers.Main) {
+                if (stillInstalled) {
+                    onFinish(PackageInstaller.STATUS_FAILURE, "Original application was not uninstalled")
+                } else {
+                    uninstallFirst = false
+                    if (!installStarted) {
+                        doInstall()
+                    }
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
         if (!uninstallFirst && !installStarted) {
             doInstall()
         }
@@ -435,8 +453,15 @@ fun InstallDialog(
                         Log.i(TAG, "Uninstallation end: $status, $message")
                         if (status == PackageInstaller.STATUS_SUCCESS) {
                             uninstallFirst = false
+                            if (!installStarted) {
+                                doInstall()
+                            }
                         } else {
-                            onFinish(status, message)
+                            uninstallLauncher.launch(
+                                Intent(Intent.ACTION_DELETE).apply {
+                                    data = "package:${patchApp.app.packageName}".toUri()
+                                },
+                            )
                         }
                     }
                 } else {

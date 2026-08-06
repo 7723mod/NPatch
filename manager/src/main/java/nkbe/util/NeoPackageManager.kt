@@ -198,6 +198,9 @@ object NeoPackageManager {
     }
 
     suspend fun uninstall(packageName: String): Pair<Int, String?> {
+        if (!ShizukuApi.isReady) {
+            return Pair(PackageInstaller.STATUS_FAILURE, "Shizuku not ready")
+        }
         var status = PackageInstaller.STATUS_FAILURE
         var message: String? = null
         withContext(Dispatchers.IO) {
