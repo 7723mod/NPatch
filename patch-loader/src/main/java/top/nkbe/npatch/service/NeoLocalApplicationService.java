@@ -79,6 +79,7 @@ public class NeoLocalApplicationService extends IFrameworkService.Stub {
             PackageManager pm = context.getPackageManager();
 
             Log.i(TAG, "NeoLocal: Loading from cache: " + jsonStr);
+            Log.w(TAG, "NeoLocal: WARNING: Running in offline fallback mode. Module remote preferences and scope configurations are NOT synced and will be empty!");
 
             for (int i = 0; i < jsonArray.length(); i++) {
                 JSONObject obj = jsonArray.getJSONObject(i);
@@ -146,7 +147,12 @@ public class NeoLocalApplicationService extends IFrameworkService.Stub {
             Thread.currentThread().interrupt();
             Log.w(TAG, "NeoLocal: Manager Provider query interrupted");
         } catch (ExecutionException exception) {
-            Log.e(TAG, "NeoLocal: Manager Provider query failed", exception.getCause());
+            Throwable cause = exception.getCause();
+            if (cause instanceof SecurityException) {
+                Log.e(TAG, "NeoLocal: Manager Provider query blocked by system permission or ROM autostart/association launch policy", cause);
+            } else {
+                Log.e(TAG, "NeoLocal: Manager Provider query failed", cause);
+            }
         }
         return null;
     }
@@ -246,7 +252,8 @@ public class NeoLocalApplicationService extends IFrameworkService.Stub {
             String modulePackageName
     ) {
         try {
-            return ManagerRemoteServiceBridge.connect(context, modulePackageName);
+            org.matrix.vector.ipc.IModuleService remoteService = ManagerRemoteServiceBridge.connect(context, modulePackageName);
+            return new FallbackModuleServiceWrapper(context, modulePackageName, remoteService);
         } catch (Throwable throwable) {
             Log.w(
                     TAG,
@@ -254,7 +261,7 @@ public class NeoLocalApplicationService extends IFrameworkService.Stub {
                             + ", using target-local fallback",
                     throwable
             );
-            return new LocalInjectedModuleService(context, modulePackageName);
+            return new top.nkbe.npatch.util.LocalInjectedModuleService(context, modulePackageName);
         }
     }
 

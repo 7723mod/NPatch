@@ -46,7 +46,7 @@ data class ModuleMetadataSnapshot(
 }
 
 object ModuleMetadataReader {
-    private const val MODERN_MODULE_PROP = "META-INF/xposed/LoadedModule.prop"
+    private const val MODERN_MODULE_PROP = "META-INF/xposed/module.prop"
     private const val MODERN_SCOPE_LIST = "META-INF/xposed/scope.list"
     private const val MODERN_JAVA_INIT_LIST = "META-INF/xposed/java_init.list"
     private const val MODERN_NATIVE_INIT_LIST = "META-INF/xposed/native_init.list"
