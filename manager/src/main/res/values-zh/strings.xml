@@ -119,7 +119,7 @@
     <string name="patch_use_microg">强制启用 MicroG 支持</string>
     <string name="patch_use_microg_desc">重新导向 GMS 请求至社区版 MicroG。适用于 YouTube 等 Google 应用程序，需自行安装对应的 MicroG 服务。</string>
     <string name="patch_output_log_to_media">输出日志到 Media 目录</string>
-    <string name="patch_output_log_to_media_desc">将 Xposed 日志和框架启动日志输出到 Media 目录</string>
+    <string name="patch_output_log_to_media_desc">记录 Xposed API 日志、框架事件及 Java/Kotlin 崩溃</string>
     <string name="patch_hide_libs">豁免环境校验</string>
     <string name="patch_hide_libs_desc">为执行基础运行环境校验的应用收敛 ART 与敏感系统库的可见性。</string>
     <string name="patch_start">开始打包</string>

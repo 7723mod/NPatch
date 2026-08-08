@@ -243,7 +243,7 @@ fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
                 val maxSigBypassLevel = if (viewModel.useManager) {
                     Constants.SIGBYPASS_SECCOMP
                 } else {
-                    Constants.SIGBYPASS_HIGH
+                    Constants.SIGBYPASS_EXTREME
                 }
                 val sigBypassEntries = listOf(
                     DropdownEntry(

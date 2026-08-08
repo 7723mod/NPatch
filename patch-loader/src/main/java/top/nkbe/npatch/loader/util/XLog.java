@@ -1,8 +1,7 @@
 package top.nkbe.npatch.loader.util;
 
 import top.nkbe.npatch.loader.BuildConfig;
-
-import de.robv.android.xposed.XposedBridge;
+import top.nkbe.npatch.loader.XposedLogPrinter;
 
 public class XLog {
 
@@ -23,45 +22,45 @@ public class XLog {
         if (enableLog) {
             android.util.Log.d(tag, msg);
         }
-        mirror("D", tag, msg, null);
+        mirror(android.util.Log.DEBUG, tag, msg, null);
     }
 
     public static void v(String tag, String msg) {
         if (enableLog) {
             android.util.Log.v(tag, msg);
         }
-        mirror("V", tag, msg, null);
+        mirror(android.util.Log.VERBOSE, tag, msg, null);
     }
 
     public static void w(String tag, String msg) {
         if (enableLog) {
             android.util.Log.w(tag, msg);
         }
-        mirror("W", tag, msg, null);
+        mirror(android.util.Log.WARN, tag, msg, null);
     }
 
     public static void i(String tag, String msg) {
         if (enableLog) {
             android.util.Log.i(tag, msg);
         }
-        mirror("I", tag, msg, null);
+        mirror(android.util.Log.INFO, tag, msg, null);
     }
 
     public static void e(String tag, String msg) {
         if (enableLog) {
             android.util.Log.e(tag, msg);
         }
-        mirror("E", tag, msg, null);
+        mirror(android.util.Log.ERROR, tag, msg, null);
     }
 
     public static void e(String tag, String msg, Throwable tr) {
         if (enableLog) {
             android.util.Log.e(tag, msg, tr);
         }
-        mirror("E", tag, msg, tr);
+        mirror(android.util.Log.ERROR, tag, msg, tr);
     }
 
-    private static void mirror(String level, String tag, String msg, Throwable tr) {
+    private static void mirror(int priority, String tag, String msg, Throwable tr) {
         if (!mirrorToMedia || !isTargetProcess) {
             return;
         }
@@ -74,13 +73,6 @@ public class XLog {
             return;
         }
 
-        StringBuilder builder = new StringBuilder();
-        builder.append('[').append(level).append("] ")
-                .append(tag).append(": ")
-                .append(msg);
-        if (tr != null) {
-            builder.append('\n').append(android.util.Log.getStackTraceString(tr));
-        }
-        XposedBridge.log(builder.toString());
+        XposedLogPrinter.log(priority, tag, msg, tr);
     }
 }

@@ -352,8 +352,8 @@ public class LSPApplication {
             return;
         }
         outputLoggingConfigured = true;
-        // XposedLogPrinter printer = new XposedLogPrinter(0, "NPatch");
-        // XposedBridge.setLogPrinter(printer);
+        XposedLogPrinter printer = new XposedLogPrinter(Log.INFO, XposedBridge.TAG);
+        XposedBridge.setLogPrinter(printer);
         VectorLogBridge.setSink((priority, tag, message, throwable) -> {
             if ("NPatchCrash".equals(tag) && throwable != null) {
                 lastCoreCapturedCrash = throwable;

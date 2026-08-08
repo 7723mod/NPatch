@@ -1,4 +1,4 @@
-package top.nkbe.npatch.ui.viewmodel
+﻿package top.nkbe.npatch.ui.viewmodel
 
 import android.util.Log
 import androidx.compose.runtime.getValue
@@ -110,8 +110,8 @@ class NewPatchViewModel : ViewModel() {
 
     fun setUseManager(value: Boolean) {
         useManager = value
-        if (!value && sigBypassLevel > Constants.SIGBYPASS_HIGH) {
-            sigBypassLevel = Constants.SIGBYPASS_HIGH
+        if (!value && sigBypassLevel > Constants.SIGBYPASS_EXTREME) {
+            sigBypassLevel = Constants.SIGBYPASS_EXTREME
         }
     }
 

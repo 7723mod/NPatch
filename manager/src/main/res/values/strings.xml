@@ -122,7 +122,7 @@
     <string name="patch_use_microg">Force enable MicroG support</string>
     <string name="patch_use_microg_desc">Redirect GMS requests to the community version of MicroG (such as ReVanced GmsCore). Applicable to Google apps like YouTube, requires manually installing the corresponding MicroG service.</string>
     <string name="patch_output_log_to_media">Output Log to Media Directory</string>
-    <string name="patch_output_log_to_media_desc">Output the Xposed logs and framework startup logs of the module running to the Media directory.</string>
+    <string name="patch_output_log_to_media_desc">Captures Xposed API logs, framework events, and Java/Kotlin crashes.</string>
     <string name="patch_hide_libs">Exempt environment checks</string>
     <string name="patch_hide_libs_desc">Sanitize ART and sensitive system library visibility for apps that perform basic runtime environment checks.</string>
     <string name="patch_start">Start Patch</string>
