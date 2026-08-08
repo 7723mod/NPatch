@@ -26,7 +26,6 @@ import org.json.JSONObject;
 import org.matrix.vector.ipc.LoadedModule;
 import org.matrix.vector.ipc.IFrameworkService;
 import org.matrix.vector.Startup;
-import org.matrix.vector.impl.VectorLogBridge;
 import top.nkbe.npatch.loader.util.XLog;
 import top.nkbe.npatch.service.IntegrApplicationService;
 import top.nkbe.npatch.service.NeoLocalApplicationService;
@@ -352,14 +351,6 @@ public class LSPApplication {
             return;
         }
         outputLoggingConfigured = true;
-        XposedLogPrinter printer = new XposedLogPrinter(Log.INFO, XposedBridge.TAG);
-        XposedBridge.setLogPrinter(printer);
-        VectorLogBridge.setSink((priority, tag, message, throwable) -> {
-            if ("NPatchCrash".equals(tag) && throwable != null) {
-                lastCoreCapturedCrash = throwable;
-            }
-            XposedLogPrinter.log(priority, tag, message, throwable);
-        });
         installCrashInterceptor(context);
     }
 

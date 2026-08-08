@@ -26,6 +26,7 @@
 -keep class io.github.libxposed.service.** { *; }
 -keep class org.lsposed.lspd.models.** { *; }
 -keep class org.lsposed.lspd.service.** { *; }
+-keep class org.matrix.vector.ipc.** { *; }
 -keep class xposed.dummy.** { *; }
 
 # Legacy resource initialization rewrites the classloader parent at runtime so
