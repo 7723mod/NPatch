@@ -3,12 +3,13 @@ package nkbe.util
 import android.app.IActivityManager
 import android.content.ComponentName
 import android.content.ServiceConnection
+import android.content.Intent
 import android.content.pm.*
+import android.content.pm.PackageInstallerHidden.SessionParamsHidden
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.os.IInterface
-import android.os.ParcelFileDescriptor
 import android.os.Process
 import android.os.SystemProperties
 import androidx.compose.runtime.getValue
@@ -18,6 +19,8 @@ import dev.rikka.tools.refine.Refine
 import java.util.LinkedHashSet
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeout
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 import top.nkbe.npatch.INPatchShizukuService
 import top.nkbe.npatch.ShizukuService
 import top.nkbe.npatch.install.ApkInstallSet
@@ -258,24 +261,58 @@ object ShizukuApi {
     }
 
     suspend fun installApks(installSet: ApkInstallSet): Bundle {
-        val descriptors = installSet.entries.map { entry ->
-            ParcelFileDescriptor.open(entry.file, ParcelFileDescriptor.MODE_READ_ONLY)
-        }
-        return try {
-            getUserService().installApks(
-                descriptors.toTypedArray(),
-                installSet.entries.map { it.sessionName }.toTypedArray(),
-                installSet.packageName,
-                installSet.totalSize,
-                Process.myUserHandle().hashCode(),
-            )
-        } finally {
-            descriptors.forEach { runCatching { it.close() } }
-        }
+        ensureReady()
+        return runCatching {
+            val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
+                setAppPackageName(installSet.packageName)
+                setSize(installSet.totalSize)
+            }
+            var flags = Refine.unsafeCast<SessionParamsHidden>(params).installFlags
+            flags = flags or PackageManagerHidden.INSTALL_ALLOW_TEST or PackageManagerHidden.INSTALL_REPLACE_EXISTING
+            Refine.unsafeCast<SessionParamsHidden>(params).installFlags = flags
+
+            createPackageInstallerSession(params).use { session ->
+                installSet.entries.forEach { entry ->
+                    entry.file.inputStream().use { input ->
+                        session.openWrite(entry.sessionName, 0L, entry.file.length()).use { output ->
+                            input.copyTo(output)
+                            session.fsync(output)
+                        }
+                    }
+                }
+                awaitPackageInstallerResult { intentSender -> session.commit(intentSender) }
+            }
+        }.fold(
+            onSuccess = ::resultBundle,
+            onFailure = ShizukuService::failureBundle,
+        )
     }
 
     suspend fun uninstallPackage(packageName: String): Bundle {
-        return getUserService().uninstallPackage(packageName, Process.myUserHandle().hashCode())
+        ensureReady()
+        return runCatching {
+            awaitPackageInstallerResult { intentSender -> packageInstaller.uninstall(packageName, intentSender) }
+        }.fold(
+            onSuccess = ::resultBundle,
+            onFailure = ShizukuService::failureBundle,
+        )
+    }
+
+    private suspend fun awaitPackageInstallerResult(
+        action: (android.content.IntentSender) -> Unit,
+    ): Intent = suspendCoroutine { continuation ->
+        val adapter = IntentSenderHelper.IIntentSenderAdaptor { intent ->
+            continuation.resume(intent)
+        }
+        action(IntentSenderHelper.newIntentSender(adapter))
+    }
+
+    private fun resultBundle(intent: Intent): Bundle = Bundle().apply {
+        putInt(
+            ShizukuService.KEY_STATUS,
+            intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE),
+        )
+        putString(ShizukuService.KEY_MESSAGE, intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE))
     }
 
     fun performDexOptMode(packageName: String): Boolean {
