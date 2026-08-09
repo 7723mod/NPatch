@@ -25,7 +25,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 public final class ModuleMetadataParser {
-    private static final String MODERN_MODULE_PROP = "META-INF/xposed/LoadedModule.prop";
+    private static final String MODERN_MODULE_PROP = "META-INF/xposed/module.prop";
     private static final String MODERN_SCOPE_LIST = "META-INF/xposed/scope.list";
     private static final String MODERN_JAVA_INIT_LIST = "META-INF/xposed/java_init.list";
     private static final String MODERN_NATIVE_INIT_LIST = "META-INF/xposed/native_init.list";

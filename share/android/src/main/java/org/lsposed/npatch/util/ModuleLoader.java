@@ -24,7 +24,7 @@ public class ModuleLoader {
     private static final String TAG = "NPatch";
     private static final String MODERN_JAVA_INIT = "META-INF/xposed/java_init.list";
     private static final String MODERN_NATIVE_INIT = "META-INF/xposed/native_init.list";
-    private static final String MODERN_MODULE_PROP = "META-INF/xposed/LoadedModule.prop";
+    private static final String MODERN_MODULE_PROP = "META-INF/xposed/module.prop";
     private static final String LEGACY_JAVA_INIT = "assets/xposed_init";
     private static final String LEGACY_NATIVE_INIT = "assets/native_init";
     private static final int FRAMEWORK_API_VERSION = 102;
@@ -139,7 +139,7 @@ public class ModuleLoader {
                     exceptionPassthrough
             );
         } catch (IOException | NumberFormatException e) {
-            Log.w(TAG, "Can not read " + MODERN_MODULE_PROP + " in " + apkFile, e);
+            Log.w(TAG, "Can not read modern module metadata in " + apkFile, e);
             return new ApiVersions(
                     fallbackMinApiVersion,
                     fallbackMinApiVersion,
