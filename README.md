@@ -6,6 +6,13 @@
 
 Rootless implementation of LSPosed framework, integrating Xposed API by inserting dex and so into the target APK.
 
+Recent hook-stack stability improvements:
+
+- **LSPlt:** avoids a transient unmapped GOT/PLT region while installing hooks. This prevents
+  dex2oat/zygote crashes on affected 32-bit Android 10 devices.
+- **LSPlant:** initializes `CloseGuard` for synthetic `DexFile` objects on Android Nougat and
+  below, and aligns hook trampolines correctly for improved ART hook compatibility.
+
 We sincerely invite you to join our [Telegram](https://t.me/NPatch) group to get more information and updates about NPatch.
 
 ## Supported Versions

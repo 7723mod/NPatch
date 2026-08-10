@@ -1,4 +1,4 @@
-package top.nkbe.npatch.share;
+﻿package top.nkbe.npatch.share;
 
 public class Constants {
 
@@ -14,7 +14,7 @@ public class Constants {
     final static public String PROXY_APP_COMPONENT_FACTORY = "top.nkbe.npatch.metaloader.LSPAppComponentFactoryStub";
     final static public String MANAGER_PACKAGE_NAME = "top.nkbe.npatch";
     final static public String REAL_GMS_PACKAGE_NAME = "com.google.android.gms";
-    final static public int MIN_ROLLING_VERSION_CODE = 687;
+    final static public int MIN_ROLLING_VERSION_CODE = 725;
 
     public static final int SIGBYPASS_NONE = 0;
     public static final int SIGBYPASS_BASIC = 1;
