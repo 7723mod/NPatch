@@ -81,14 +81,7 @@ namespace lspd {
     static void *lstat64_target = nullptr;
     static void *statfs_target = nullptr;
     static void *statx_target = nullptr;
-    static void *close_target = nullptr;
     static void *fopen_target = nullptr;
-    static void *read_target = nullptr;
-    static void *pread64_target = nullptr;
-    static void *lseek_target = nullptr;
-    static void *fstat_target = nullptr;
-    static void *fstat64_target = nullptr;
-    static void *mmap_target = nullptr;
     static void *dl_iterate_phdr_target = nullptr;
     static OpenAtFn openat_backup = nullptr;
     static OpenAtFn openat64_backup = nullptr;
@@ -105,7 +98,6 @@ namespace lspd {
     static Stat64Fn lstat64_backup = nullptr;
     static StatFsFn statfs_backup = nullptr;
     static StatxFn statx_backup = nullptr;
-    static CloseFn close_backup = nullptr;
     static FopenFn fopen_backup = nullptr;
     static DlIteratePhdrFn dl_iterate_phdr_backup = nullptr;
     static bool openat_hook_installed = false;
@@ -123,7 +115,6 @@ namespace lspd {
     static bool lstat64_hook_installed = false;
     static bool statfs_hook_installed = false;
     static bool statx_hook_installed = false;
-    static bool close_hook_installed = false;
     static bool fopen_hook_installed = false;
     static bool dl_iterate_phdr_hook_installed = false;
     static bool minimal_file_hook_mode = false;
@@ -332,15 +323,6 @@ namespace lspd {
         return -1;
     }
 
-    static bool fd_is_lib_snapshot(int fd) {
-        if (fd < 0) {
-            return false;
-        }
-        if (find_lib_snapshot_index_by_fd(fd) >= 0) {
-            return true;
-        }
-        return false;
-    }
 
     static const char* neutral_runtime_lib_path() {
         return sizeof(void*) == 8
@@ -433,14 +415,6 @@ namespace lspd {
         return rc == 0;
     }
 
-    static bool query_visible_statx(const char* visible_path, struct statx* stx) {
-        if (visible_path == nullptr || stx == nullptr) {
-            return false;
-        }
-        memset(stx, 0, sizeof(*stx));
-        long rc = syscall(__NR_statx, AT_FDCWD, visible_path, 0, STATX_BASIC_STATS, stx);
-        return rc == 0;
-    }
 
     template <typename StatLike>
     static bool rewrite_stat_like_result(const char* visible_path, StatLike* st) {
