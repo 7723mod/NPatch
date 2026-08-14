@@ -52,21 +52,28 @@ class XposedServiceBinder(
 
     override fun requestScope(packages: List<String>, callback: IXposedScopeCallback) {
         enforceCaller()
+        val requested = packages.distinct().sorted()
+        if (requested.isEmpty()) {
+            callback.onScopeRequestApproved(emptyList())
+            return
+        }
         runBlocking {
-            packages.forEach { appPkg ->
+            requested.forEach { appPkg ->
                 ConfigManager.activateModule(
                     appPkg,
                     top.nkbe.npatch.database.entity.LoadedModule(packageName, ""),
                 )
             }
-            callback.onScopeRequestApproved(packages)
+            callback.onScopeRequestApproved(requested)
         }
     }
 
     override fun removeScope(packages: List<String>) {
         enforceCaller()
+        val requested = packages.distinct()
+        if (requested.isEmpty()) return
         runBlocking {
-            packages.forEach { appPkg ->
+            requested.forEach { appPkg ->
                 ConfigManager.deactivateModule(
                     appPkg,
                     top.nkbe.npatch.database.entity.LoadedModule(packageName, ""),
