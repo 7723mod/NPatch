@@ -140,7 +140,7 @@ object Patcher {
         val unmatched = producedOutputs.toMutableSet()
         return inputApks.map { input ->
             val outputPattern = Regex(
-                "^${Regex.escape(input.nameWithoutExtension)}-[0-9]+" +
+                "^${Regex.escape(input.nameWithoutExtension)}-[0-9\\p{Nd}]+" +
                     "${Regex.escape(Constants.PATCH_FILE_SUFFIX)}$",
                 RegexOption.IGNORE_CASE,
             )
