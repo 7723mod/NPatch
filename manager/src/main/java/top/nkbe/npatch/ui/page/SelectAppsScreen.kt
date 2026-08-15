@@ -113,10 +113,12 @@ fun SelectAppsScreen(
 
     NPatchScaffold(
         topBar = {
-            searchStatus.TopAppBarAnim(hazeState = hazeState, hazeStyle = hazeStyle) {
+            searchStatus.TopAppBarAnim {
                 NPatchTopAppBar(
                     title = title,
                     scrollBehavior = scrollBehavior,
+                    hazeState = hazeState,
+                    hazeStyle = hazeStyle,
                     navigationIcon = {
                         IconButton(
                             onClick = { navigator.pop() }
@@ -168,7 +170,12 @@ fun SelectAppsScreen(
             hazeState = hazeState,
             hazeStyle = hazeStyle,
             collapseBar = { status, topPadding, innerPad ->
-                SearchBarFake(status.label, topPadding, innerPad)
+                SearchBarFake(
+                    label = status.label,
+                    searchBarTopPadding = topPadding,
+                    innerPadding = innerPad,
+                    onClick = { status.current = SearchStatus.Status.EXPANDING }
+                )
             }
         ) { boxHeight ->
             val contentPadding = PaddingValues(

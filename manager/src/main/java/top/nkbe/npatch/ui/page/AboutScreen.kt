@@ -48,14 +48,17 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import top.nkbe.npatch.R
 import top.nkbe.npatch.ui.component.NPatchScaffold
+import top.nkbe.npatch.ui.component.NPatchTopAppBar
 import top.nkbe.npatch.ui.util.backgroundAwareCardColors
 import top.nkbe.npatch.ui.util.backgroundAwareColor
+import top.nkbe.npatch.ui.util.backgroundAwareHazeStyle
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.basic.IconButton
 import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
 import io.github.suqi8.coui.kmp.basic.Text
-import io.github.suqi8.coui.kmp.basic.TopAppBar
 import io.github.suqi8.coui.kmp.icon.COUIIcons
 import io.github.suqi8.coui.kmp.icon.extended.Back
 import io.github.suqi8.coui.kmp.preference.ArrowPreference
@@ -77,14 +80,15 @@ private data class AboutLink(
 fun AboutScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val scrollBehavior = COUIScrollBehavior()
+    val hazeState = rememberHazeState()
+    val hazeStyle = backgroundAwareHazeStyle()
     val showTopBarContent by remember {
         derivedStateOf { scrollBehavior.state.collapsedFraction == 0f }
     }
 
     NPatchScaffold(
         topBar = {
-            TopAppBar(
-                color = Color.Transparent,
+            NPatchTopAppBar(
                 title = if (showTopBarContent) stringResource(R.string.home_about) else "",
                 navigationIcon = {
                     if (showTopBarContent) {
@@ -97,13 +101,16 @@ fun AboutScreen(onBack: () -> Unit) {
                         }
                     }
                 },
-                scrollBehavior = scrollBehavior
+                scrollBehavior = scrollBehavior,
+                hazeState = hazeState,
+                hazeStyle = hazeStyle,
             )
         }
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .hazeSource(state = hazeState)
                 .scrollEndHaptic()
                 .overScrollVertical()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),

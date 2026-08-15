@@ -87,7 +87,10 @@ import io.github.suqi8.coui.kmp.basic.SmallTitle
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.basic.TextField
-import io.github.suqi8.coui.kmp.basic.TopAppBar
+import top.nkbe.npatch.ui.component.NPatchTopAppBar
+import top.nkbe.npatch.ui.util.backgroundAwareHazeStyle
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import io.github.suqi8.coui.kmp.preference.ArrowPreference
 import io.github.suqi8.coui.kmp.preference.OverlayDropdownPreference
 import io.github.suqi8.coui.kmp.preference.SwitchPreference
@@ -107,6 +110,8 @@ private const val TAG = "SettingsScreen"
 @Composable
 fun SettingsScreen() {
     val scrollBehavior = COUIScrollBehavior()
+    val hazeState = rememberHazeState()
+    val hazeStyle = backgroundAwareHazeStyle()
     val useFloatingGlassBottomBar = LocalFloatingGlassBottomBar.current
     val bottomContentPadding = if (useFloatingGlassBottomBar) {
         68.dp + 12.dp + 8.dp + 28.dp +
@@ -116,10 +121,11 @@ fun SettingsScreen() {
     }
     NPatchScaffold(
         topBar = {
-            TopAppBar(
-                color = Color.Transparent,
+            NPatchTopAppBar(
                 title = stringResource(R.string.screen_settings),
-                scrollBehavior = scrollBehavior
+                scrollBehavior = scrollBehavior,
+                hazeState = hazeState,
+                hazeStyle = hazeStyle,
             )
         }
     ) { innerPadding ->
@@ -127,6 +133,7 @@ fun SettingsScreen() {
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
+                .hazeSource(state = hazeState)
                 .scrollEndHaptic()
                 .overScrollVertical()
                 .nestedScroll(scrollBehavior.nestedScrollConnection)

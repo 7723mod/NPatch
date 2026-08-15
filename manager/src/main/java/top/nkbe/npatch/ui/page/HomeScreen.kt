@@ -36,15 +36,18 @@ import nkbe.util.ShizukuApi
 import top.nkbe.npatch.R
 import top.nkbe.npatch.share.LSPConfig
 import top.nkbe.npatch.ui.component.NPatchScaffold
+import top.nkbe.npatch.ui.component.NPatchTopAppBar
 import top.nkbe.npatch.ui.util.LocalSnackbarHost
 import top.nkbe.npatch.ui.util.backgroundAwareCardColors
+import top.nkbe.npatch.ui.util.backgroundAwareHazeStyle
 import top.nkbe.npatch.ui.viewmodel.manage.AppManageViewModel
 import top.nkbe.npatch.ui.viewmodel.manage.ModuleManageViewModel
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
 import io.github.suqi8.coui.kmp.basic.Text
-import io.github.suqi8.coui.kmp.basic.TopAppBar
 import io.github.suqi8.coui.kmp.icon.COUIIcons
 import io.github.suqi8.coui.kmp.icon.extended.Back
 import io.github.suqi8.coui.kmp.preference.ArrowPreference
@@ -60,6 +63,8 @@ fun HomeScreen(
     onManageShortcut: (Int) -> Unit = {},
 ) {
     val scrollBehavior = COUIScrollBehavior()
+    val hazeState = rememberHazeState()
+    val hazeStyle = backgroundAwareHazeStyle()
     var isIntentLaunched by rememberSaveable { mutableStateOf(false) }
     val activity = LocalContext.current as Activity
     val intent = activity.intent
@@ -81,16 +86,18 @@ fun HomeScreen(
 
     NPatchScaffold(
         topBar = {
-            TopAppBar(
-                color = Color.Transparent,
+            NPatchTopAppBar(
                 title = stringResource(R.string.app_name),
-                scrollBehavior = scrollBehavior
+                scrollBehavior = scrollBehavior,
+                hazeState = hazeState,
+                hazeStyle = hazeStyle,
             )
         }
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .hazeSource(state = hazeState)
                 .scrollEndHaptic()
                 .overScrollVertical()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),

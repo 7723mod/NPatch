@@ -103,10 +103,12 @@ fun ManageScreen(
 
     NPatchScaffold(
         topBar = {
-            searchStatus.TopAppBarAnim(hazeState = hazeState, hazeStyle = hazeStyle) {
+            searchStatus.TopAppBarAnim {
                 NPatchTopAppBar(
                     title = stringResource(R.string.screen_manage),
                     scrollBehavior = scrollBehavior,
+                    hazeState = hazeState,
+                    hazeStyle = hazeStyle,
                 )
             }
         },
@@ -126,19 +128,19 @@ fun ManageScreen(
             searchStatus.SearchPager(
                 searchBarTopPadding = dynamicTopPadding,
                 expandBar = { status, padding ->
-                    Column {
-                        SearchBar(status, padding)
-                        TabRow(
-                            tabs = tabTitles,
-                            selectedTabIndex = settledPage,
-                            onTabSelected = {
-                                onSelectedPageChange(it)
-                                scope.launch { pagerState.animateScrollToPage(it) }
-                            },
-                            modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 6.dp),
-                            colors = TabRowDefaults.tabRowColors(backgroundColor = Color.Transparent)
-                        )
-                    }
+                    SearchBar(status, padding)
+                },
+                belowExpandBar = {
+                    TabRow(
+                        tabs = tabTitles,
+                        selectedTabIndex = settledPage,
+                        onTabSelected = {
+                            onSelectedPageChange(it)
+                            scope.launch { pagerState.animateScrollToPage(it) }
+                        },
+                        modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 6.dp),
+                        colors = TabRowDefaults.tabRowColors(backgroundColor = Color.Transparent)
+                    )
                 },
                 defaultResult = {
                     HorizontalPager(
@@ -147,7 +149,7 @@ fun ManageScreen(
                     ) { page ->
                         val contentPadding = PaddingValues(top = dynamicTopPadding + 8.dp, bottom = 0.dp)
                         when (page) {
-                            0 -> AppManageBody(navigator, searchStatus.searchText, contentPadding, scrollBehavior,hazeState)
+                            0 -> AppManageBody(navigator, searchStatus.searchText, contentPadding, scrollBehavior, hazeState)
                             1 -> ModuleManageBody(
                                 searchStatus.searchText,
                                 contentPadding,
@@ -168,7 +170,12 @@ fun ManageScreen(
             hazeStyle = hazeStyle,
             collapseBar = { status, topPadding, innerPad ->
                 Column(modifier = Modifier.padding(bottom = 6.dp)) {
-                    SearchBarFake(status.label, topPadding, innerPad)
+                    SearchBarFake(
+                        label = status.label,
+                        searchBarTopPadding = topPadding,
+                        innerPadding = innerPad,
+                        onClick = { status.current = SearchStatus.Status.EXPANDING }
+                    )
                     TabRow(
                         tabs = tabTitles,
                         selectedTabIndex = settledPage,

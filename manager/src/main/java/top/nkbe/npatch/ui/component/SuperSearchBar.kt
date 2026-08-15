@@ -123,14 +123,14 @@ class SearchStatus(val label: String) {
     fun TopAppBarAnim(
         modifier: Modifier = Modifier,
         visible: Boolean = shouldCollapsed(),
-        blurVisible: Boolean = false,
+        blurVisible: Boolean = true,
         hazeState: HazeState? = null,
         hazeStyle: HazeBlurStyle? = null,
         content: @Composable () -> Unit
     ) {
-        val topAppBarAlpha = animateFloatAsState(
+        val topAppBarAlpha by animateFloatAsState(
             if (visible) 1f else 0f,
-            animationSpec = tween(if (visible) 550 else 0, easing = FastOutSlowInEasing),
+            animationSpec = tween(if (visible) 300 else 0, easing = FastOutSlowInEasing),
         )
         val hazeModifier = if (blurVisible && hazeState != null && hazeStyle != null) {
             Modifier.hazeEffect(hazeState) {
@@ -145,12 +145,10 @@ class SearchStatus(val label: String) {
         }
         Box(
             modifier = modifier
-                .alpha(topAppBarAlpha.value)
+                .alpha(topAppBarAlpha)
                 .then(hazeModifier)
         ) {
-            Box(
-                modifier = Modifier
-            ) { content() }
+            content()
         }
     }
 
@@ -162,7 +160,12 @@ class SearchStatus(val label: String) {
 @Composable
 fun SearchStatus.SearchBox(
     collapseBar: @Composable (SearchStatus, Dp, PaddingValues) -> Unit = { searchStatus, topPadding, innerPadding ->
-        SearchBarFake(searchStatus.label, topPadding, innerPadding)
+        SearchBarFake(
+            label = searchStatus.label,
+            searchBarTopPadding = topPadding,
+            innerPadding = innerPadding,
+            onClick = { searchStatus.current = SearchStatus.Status.EXPANDING }
+        )
     },
     searchBarTopPadding: Dp = 12.dp,
     contentPadding: PaddingValues = PaddingValues(0.dp),
@@ -192,9 +195,6 @@ fun SearchStatus.SearchBox(
                         boxHeight.value = it.size.height.toDp()
                     }
                 }
-            }
-            .pointerInput(Unit) {
-                detectTapGestures { searchStatus.current = SearchStatus.Status.EXPANDING }
             }
             .hazeEffect(hazeState) {
                 blurEffect {
@@ -234,6 +234,7 @@ fun SearchStatus.SearchPager(
     expandBar: @Composable (SearchStatus, Dp) -> Unit = { searchStatus, padding ->
         SearchBar(searchStatus, padding)
     },
+    belowExpandBar: @Composable () -> Unit = {},
     searchBarTopPadding: Dp = 12.dp,
     result: LazyListScope.() -> Unit
 ) {
@@ -297,22 +298,28 @@ fun SearchStatus.SearchPager(
                 enter = expandHorizontally() + slideInHorizontally(initialOffsetX = { it }),
                 exit = shrinkHorizontally() + slideOutHorizontally(targetOffsetX = { it })
             ) {
-                Text(
-                    text = stringResource(R.string.cancel),
-                    fontWeight = FontWeight.Bold,
-                    color = colorScheme.primary,
+                Box(
                     modifier = Modifier
-                        .padding(start = 4.dp, end = 16.dp, top = searchBarTopPadding)
-                        .semantics { role = Role.Button }
-                        .clickable(
-                            interactionSource = null,
-                            enabled = searchStatus.isExpand(),
-                            indication = null
-                        ) {
-                            searchStatus.searchText = ""
-                            searchStatus.current = SearchStatus.Status.COLLAPSING
-                        }
-                )
+                        .padding(top = searchBarTopPadding, bottom = 6.dp)
+                        .padding(start = 4.dp, end = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.cancel),
+                        fontWeight = FontWeight.Bold,
+                        color = colorScheme.primary,
+                        modifier = Modifier
+                            .semantics { role = Role.Button }
+                            .clickable(
+                                interactionSource = null,
+                                enabled = searchStatus.isExpand(),
+                                indication = null
+                            ) {
+                                searchStatus.searchText = ""
+                                searchStatus.current = SearchStatus.Status.COLLAPSING
+                            }
+                    )
+                }
                 run {
                     val navEventState = rememberNavigationEventState(NavigationEventInfo.None)
                     NavigationBackHandler(
@@ -325,6 +332,9 @@ fun SearchStatus.SearchPager(
                     )
                 }
             }
+        }
+        if (!searchStatus.isCollapsed()) {
+            belowExpandBar()
         }
         AnimatedVisibility(
             visible = searchStatus.isExpand(),
@@ -428,36 +438,53 @@ fun SearchBar(
 fun SearchBarFake(
     label: String,
     searchBarTopPadding: Dp = 12.dp,
-    innerPadding: PaddingValues = PaddingValues(0.dp)
+    innerPadding: PaddingValues = PaddingValues(0.dp),
+    onClick: (() -> Unit)? = null,
 ) {
     val layoutDirection = LocalLayoutDirection.current
-    InputField(
-        query = "",
-        onQueryChange = { },
-        label = label,
-        leadingIcon = {
-            Icon(
-                imageVector = COUIIcons.Basic.Search,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(44.dp)
-                    .padding(start = 16.dp, end = 8.dp),
-                tint = colorScheme.onSurfaceContainerHigh,
-            )
-        },
+
+    Box(
         modifier = Modifier
+            .fillMaxWidth()
             .padding(horizontal = 12.dp)
             .padding(
                 start = innerPadding.calculateStartPadding(layoutDirection),
                 end = innerPadding.calculateEndPadding(layoutDirection)
             )
             .padding(top = searchBarTopPadding, bottom = 6.dp)
-            .clearAndSetSemantics {
-                contentDescription = label
+    ) {
+        InputField(
+            query = "",
+            onQueryChange = { },
+            label = label,
+            leadingIcon = {
+                Icon(
+                    imageVector = COUIIcons.Basic.Search,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(44.dp)
+                        .padding(start = 16.dp, end = 8.dp),
+                    tint = colorScheme.onSurfaceContainerHigh,
+                )
             },
-        onSearch = { },
-        enabled = false,
-        expanded = false,
-        onExpandedChange = { }
-    )
+            modifier = Modifier
+                .fillMaxWidth()
+                .clearAndSetSemantics {
+                    contentDescription = label
+                },
+            onSearch = { },
+            enabled = false,
+            expanded = false,
+            onExpandedChange = { }
+        )
+        if (onClick != null) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .pointerInput(onClick) {
+                        detectTapGestures { onClick() }
+                    }
+            )
+        }
+    }
 }
