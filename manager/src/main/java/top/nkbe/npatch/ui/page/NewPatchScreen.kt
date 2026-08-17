@@ -5,7 +5,9 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -29,10 +31,12 @@ import top.nkbe.npatch.ui.viewmodel.NewPatchViewModel.PatchState
 import top.nkbe.npatch.ui.viewmodel.NewPatchViewModel.ViewAction
 import top.nkbe.npatch.ui.page.SelectAppsResult
 import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
+import io.github.suqi8.coui.kmp.basic.InfiniteProgressIndicator
 import io.github.suqi8.coui.kmp.layout.DialogButtonBar
 import io.github.suqi8.coui.kmp.layout.DialogButtonBarAction
 import io.github.suqi8.coui.kmp.overlay.OverlayDialog
 import io.github.suqi8.coui.kmp.overlay.OverlayLoadingDialog
+import io.github.suqi8.coui.kmp.theme.COUITheme
 
 const val ACTION_STORAGE = 0
 const val ACTION_APPLIST = 1
@@ -54,6 +58,7 @@ fun NewPatchScreen(
     val showSelectModuleDialog = remember { mutableStateOf(false) }
     var pendingPatchedApp by remember { mutableStateOf<nkbe.util.NeoPackageManager.AppInfo?>(null) }
     var isExtracting by remember { mutableStateOf(false) }
+    var isAnalyzing by remember { mutableStateOf(false) }
     var missingOriginalDialog by remember { mutableStateOf<nkbe.util.NeoPackageManager.AppInfo?>(null) }
     var packageMismatchDialog by remember { mutableStateOf<Pair<nkbe.util.NeoPackageManager.AppInfo, nkbe.util.NeoPackageManager.ExtractResult.PackageMismatch>?>(null) }
 
@@ -84,12 +89,17 @@ fun NewPatchScreen(
             return@rememberLauncherForActivityResult
         }
         scope.launch {
+            isAnalyzing = true
             NeoPackageManager.getAppInfoFromApks(apks)
                 .onSuccess {
+                    isAnalyzing = false
                     handleAppSelected(it.first())
                 }
-                .onFailure {
-                    snackbarHost.showSnackbar(it.message ?: errorUnknown)
+                .onFailure { error ->
+                    isAnalyzing = false
+                    activityScope.launch {
+                        snackbarHost.showSnackbar(error.localizedMessage ?: error.message ?: errorUnknown)
+                    }
                     viewModel.reset()
                     navigator.pop()
                 }
@@ -122,10 +132,15 @@ fun NewPatchScreen(
                 data?.let { dataStr ->
                     val uri = dataStr.toUri()
                     scope.launch {
+                        isAnalyzing = true
                         NeoPackageManager.getAppInfoFromApks(listOf(uri)).onSuccess {
+                            isAnalyzing = false
                             handleAppSelected(it.first())
-                        }.onFailure {
-                            snackbarHost.showSnackbar(it.message ?: errorUnknown)
+                        }.onFailure { error ->
+                            isAnalyzing = false
+                            activityScope.launch {
+                                snackbarHost.showSnackbar(error.localizedMessage ?: error.message ?: errorUnknown)
+                            }
                             viewModel.reset()
                             navigator.pop()
                         }
@@ -168,8 +183,8 @@ fun NewPatchScreen(
         }
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-            when (viewModel.patchState) {
-                PatchState.CONFIGURING -> {
+            when {
+                viewModel.patchState == PatchState.CONFIGURING -> {
                     PatchOptionsBody(
                         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
                         onAddEmbed = {
@@ -177,10 +192,28 @@ fun NewPatchScreen(
                         }
                     )
                 }
-                PatchState.PATCHING,
-                PatchState.FINISHED,
-                PatchState.ERROR -> {
+                viewModel.patchState in listOf(PatchState.PATCHING, PatchState.FINISHED, PatchState.ERROR) -> {
                     DoPatchBody(modifier = Modifier, navigator = navigator)
+                }
+                isAnalyzing || viewModel.patchState == PatchState.SELECTING -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(24.dp)
+                        ) {
+                            InfiniteProgressIndicator()
+                            Spacer(Modifier.height(16.dp))
+                            Text(
+                                text = stringResource(R.string.manage_loading),
+                                style = COUITheme.textStyles.body2,
+                                color = COUITheme.colorScheme.onSurfaceVariantSummary,
+                            )
+                        }
+                    }
                 }
                 else -> {}
             }

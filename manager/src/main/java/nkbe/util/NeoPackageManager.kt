@@ -300,14 +300,18 @@ object NeoPackageManager {
                 val appInfo = pkgInfo.applicationInfo
                     ?: throw IOException("Base APK has no application info: ${baseFile.name}")
                 appInfo.sourceDir = baseFile.absolutePath
+                appInfo.publicSourceDir = baseFile.absolutePath
                 appInfo.splitSourceDirs = installSet.entries
                     .drop(1)
                     .map { it.file.absolutePath }
                     .toTypedArray()
+                val label = runCatching {
+                    lspApp.packageManager.getApplicationLabel(appInfo).toString()
+                }.getOrNull().takeUnless { it.isNullOrBlank() } ?: appInfo.packageName
                 listOf(
                     AppInfo(
                         app = appInfo,
-                        label = lspApp.packageManager.getApplicationLabel(appInfo).toString(),
+                        label = label,
                         versionName = pkgInfo.versionName ?: "",
                         versionCode = androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(pkgInfo),
                         moduleMetadata = ModuleMetadataReader.read(pkgInfo, lspApp.packageManager),
@@ -334,7 +338,7 @@ object NeoPackageManager {
 
     private fun isApksArchive(fileName: String): Boolean {
         val lower = fileName.lowercase(Locale.ROOT)
-        return lower.endsWith(".apks") || lower.endsWith(".xapk")
+        return lower.endsWith(".apks") || lower.endsWith(".xapk") || lower.endsWith(".apkm") || lower.endsWith(".zip")
     }
 
     private fun extractApkArchive(archiveFile: File, archiveName: String): List<File> {
