@@ -25,7 +25,8 @@ object Patcher {
         val newPackageName: String,
         private val config: PatchConfig,
         private val apkPaths: List<String>,
-        private val embeddedModules: List<String>?
+        private val embeddedModules: List<String>?,
+        private val injectDex: Boolean = false
     ) {
         internal val inputApks: List<File>
             get() = apkPaths.map { File(it).absoluteFile }
@@ -37,6 +38,7 @@ object Patcher {
                 if (config.debuggable) add("-d")
                 add("-l"); add(config.sigBypassLevel.toString())
                 if (config.useManager) add("--manager")
+                if (injectDex) add("--injectdex")
                 if (config.overrideVersionCode) {
                     add("-r")
                     add("--versioncode"); add(config.overrideVersionCodeValue.toString())

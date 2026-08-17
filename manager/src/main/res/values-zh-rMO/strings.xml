@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="add">收入爪下</string>
     <string name="install">塞进窝里</string>
@@ -90,6 +90,8 @@
     <string name="patch_integrated">合体模式</string>
     <string name="patch_integrated_desc">直接把挂件缝进App里。离了管理器也能跑，但没法随时调教配置喵。\n适合送去没有猫猫的陌生人家里住。</string>
     <string name="patch_embed_modules">缝入挂件</string>
+    <string name="patch_hide_libs">豁免環境校驗</string>
+    <string name="patch_hide_libs_desc">為執行基礎執行環境校驗的應用程式收斂 ART 與敏感系統函式庫的可見性。</string>
     <string name="patch_advanced">高阶喵技</string>
     <string name="patch_debuggable">开启猫眼（调试）</string>
     <string name="patch_sigbypass">伪装术</string>

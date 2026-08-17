@@ -25,6 +25,7 @@ public class ManifestParser {
         List<String> permissions = new ArrayList<>();
         List<String> use_permissions = new ArrayList<>();
         List<String> authorities = new ArrayList<>();
+        List<String> isolatedOrMultiProcessComponents = new ArrayList<>();
         try {
 
             while (true) {
@@ -33,12 +34,11 @@ public class ManifestParser {
                     break;
                 }
                 if (type == AxmlParser.START_TAG) {
+                    String name = parser.getName();
                     int attrCount = parser.getAttributeCount();
                     for (int i = 0; i < attrCount; i++) {
                         String attrName = parser.getAttrName(i);
                         int attrNameRes = parser.getAttrResId(i);
-
-                        String name = parser.getName();
                         
                         if ("manifest".equals(name)) {
                             if ("package".equals(attrName)) {
@@ -83,13 +83,35 @@ public class ManifestParser {
                         if ("appComponentFactory".equals(attrName) || attrNameRes == 0x0101057a) {
                             appComponentFactory = parser.getAttrValue(i).toString();
                         }
+                    }
 
-//                        if (packageName != null && packageName.length() > 0 &&
-//                                appComponentFactory != null && appComponentFactory.length() > 0 &&
-//                                minSdkVersion > 0
-//                        ) {
-//                            return new Pair(packageName, appComponentFactory, minSdkVersion);
-//                        }
+                    if ("service".equals(name) || "activity".equals(name) || "activity-alias".equals(name)
+                            || "provider".equals(name) || "receiver".equals(name)) {
+                        String compName = null;
+                        String processName = null;
+                        boolean isolated = false;
+
+                        for (int i = 0; i < attrCount; i++) {
+                            String attrName = parser.getAttrName(i);
+                            int attrNameRes = parser.getAttrResId(i);
+                            Object attrVal = parser.getAttrValue(i);
+                            String valStr = attrVal != null ? attrVal.toString() : "";
+
+                            if ("name".equals(attrName) || attrNameRes == 0x01010003) {
+                                compName = valStr;
+                            } else if ("process".equals(attrName) || attrNameRes == 0x01010011) {
+                                processName = valStr;
+                            } else if ("isolatedProcess".equals(attrName) || attrNameRes == 0x01010376) {
+                                isolated = "true".equalsIgnoreCase(valStr);
+                            }
+                        }
+
+                        if (isolated || (processName != null && processName.startsWith(":"))) {
+                            String desc = (compName != null ? compName : name)
+                                    + (processName != null ? " [process=" + processName + "]" : "")
+                                    + (isolated ? " [isolated=true]" : "");
+                            isolatedOrMultiProcessComponents.add(desc);
+                        }
                     }
                 } else if (type == AxmlParser.END_TAG) {
                     // ignored
@@ -103,6 +125,7 @@ public class ManifestParser {
         pair.setPermissions(permissions);
         pair.setUse_permissions(use_permissions);
         pair.setAuthorities(authorities);
+        pair.setIsolatedOrMultiProcessComponents(isolatedOrMultiProcessComponents);
         return pair;
     }
 
@@ -125,6 +148,25 @@ public class ManifestParser {
         public List<String> permissions;
         public List<String> use_permissions;
         public List<String> authorities;
+        public List<String> isolatedOrMultiProcessComponents = new ArrayList<>();
+
+        public boolean hasIsolatedOrMultiProcessComponents() {
+            return !isolatedOrMultiProcessComponents.isEmpty();
+        }
+
+        public int getIsolatedOrMultiProcessCount() {
+            return isolatedOrMultiProcessComponents.size();
+        }
+
+        public List<String> getIsolatedOrMultiProcessComponents() {
+            return isolatedOrMultiProcessComponents;
+        }
+
+        public void setIsolatedOrMultiProcessComponents(List<String> list) {
+            if (list != null) {
+                this.isolatedOrMultiProcessComponents = list;
+            }
+        }
 
         public Pair(String packageName, String appComponentFactory, int minSdkVersion) {
             this(packageName, null, appComponentFactory, minSdkVersion);

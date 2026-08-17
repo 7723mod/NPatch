@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import top.nkbe.npatch.Patcher
 import top.nkbe.npatch.share.PatchConfig
+import top.nkbe.npatch.patch.util.ManifestParser
 import nkbe.util.NeoPackageManager
 import nkbe.util.NeoPackageManager.AppInfo
 import top.nkbe.npatch.patch.util.Logger
@@ -52,6 +53,10 @@ class NewPatchViewModel : ViewModel() {
     var useMicroG by mutableStateOf(false)
     var outputLog by mutableStateOf(true)
     var hideLibs by mutableStateOf(false)
+    var injectDex by mutableStateOf(false)
+    var hasSubProcesses by mutableStateOf(false)
+    var subProcessCount by mutableStateOf(0)
+    var subProcesses by mutableStateOf<List<String>>(emptyList())
     var embeddedModules by mutableStateOf<List<AppInfo>>(emptyList())
     var hasExecutedIntent by mutableStateOf(false)
 
@@ -103,6 +108,10 @@ class NewPatchViewModel : ViewModel() {
         useMicroG = false
         outputLog = true
         hideLibs = false
+        injectDex = false
+        hasSubProcesses = false
+        subProcessCount = 0
+        subProcesses = emptyList()
         embeddedModules = emptyList()
         logs.clear()
         hasExecutedIntent = false
@@ -124,6 +133,23 @@ class NewPatchViewModel : ViewModel() {
         patchApp = app
         patchState = PatchState.CONFIGURING
         newPackageName = app.app.packageName
+        try {
+            val pair = ManifestParser.parseManifestFile(app.app.sourceDir)
+            if (pair != null) {
+                hasSubProcesses = pair.hasIsolatedOrMultiProcessComponents()
+                subProcessCount = pair.getIsolatedOrMultiProcessCount()
+                subProcesses = pair.getIsolatedOrMultiProcessComponents()
+            } else {
+                hasSubProcesses = false
+                subProcessCount = 0
+                subProcesses = emptyList()
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "Failed to inspect manifest for subprocess components", t)
+            hasSubProcesses = false
+            subProcessCount = 0
+            subProcesses = emptyList()
+        }
     }
 
     private fun submitPatch() {
@@ -140,7 +166,8 @@ class NewPatchViewModel : ViewModel() {
             newPackageName = newPackageName,
             config = config,
             apkPaths = listOf(patchApp.app.sourceDir) + (patchApp.app.splitSourceDirs ?: emptyArray()),
-            embeddedModules = embeddedModules.flatMap { listOf(it.app.sourceDir) + (it.app.splitSourceDirs ?: emptyArray()) }
+            embeddedModules = embeddedModules.flatMap { listOf(it.app.sourceDir) + (it.app.splitSourceDirs ?: emptyArray()) },
+            injectDex = injectDex
         )
         patchState = PatchState.PATCHING
     }

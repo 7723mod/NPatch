@@ -117,6 +117,9 @@ public class NPatch {
     @Parameter(names = {"--manager"}, description = "Use manager (Cannot work with embedding modules)")
     private boolean useManager = false;
 
+    @Parameter(names = {"--injectdex"}, description = "[Advanced/Opt-in] Physically inject the loader DEX into the main DEX sequence for isolated process and sub-process loading. Only enable this workaround if your modules explicitly need to hook sub-processes.")
+    private boolean injectDex = false;
+
     @Parameter(names = {"-r", "--allowdown"}, description = "Allow downgrade installation by overriding versionCode to 1 (In most cases, the app can still get the correct versionCode)")
     private boolean overrideVersionCode = false;
 
@@ -299,6 +302,21 @@ public class NPatch {
                 logger.i("permissions size: " + (pair.permissions == null ? 0 : pair.permissions.size()));
                 logger.i("use-permissions size: " + (pair.use_permissions == null ? 0 : pair.use_permissions.size()));
                 logger.i("authorities size: " + (pair.authorities == null ? 0 : pair.authorities.size()));
+
+                if (pair.hasIsolatedOrMultiProcessComponents()) {
+                    logger.i("--------------------------------------------------");
+                    logger.i("[Analysis Hint] Detected " + pair.getIsolatedOrMultiProcessCount() + " isolated/multi-process component(s):");
+                    for (String comp : pair.getIsolatedOrMultiProcessComponents()) {
+                        logger.i("  - " + comp);
+                    }
+                    if (!injectDex) {
+                        logger.i("If your modules need to hook these sub-processes (e.g. sandbox/isolated), you can enable --injectdex.");
+                        logger.i("(Default: disabled. Most UI and business modules only hook the main process)");
+                    } else {
+                        logger.i("--injectdex enabled: Loader DEX will be injected into the main DEX sequence for sub-process support.");
+                    }
+                    logger.i("--------------------------------------------------");
+                }
             }
 
             final boolean skipSplit = apkPaths.size() > 1 && pair.splitName != null && !pair.splitName.isEmpty();
@@ -427,16 +445,46 @@ public class NPatch {
                 if (embedOriginal) {
                     dstZFile.add("classes.dex", is);
                 } else {
-                    dstZFile.add("classes" + (maxDexIndex + 1) + ".dex", is);
+                    int nextIdx = getNextAvailableDexIndex(dstZFile, srcZFile, false);
+                    dstZFile.add("classes" + nextIdx + ".dex", is);
                 }
             } catch (Throwable e) {
-                throw new PatchError("Error when adding dex", e);
+                throw new PatchError("Error when adding metaloader dex", e);
+            }
+
+            if (injectDex) {
+                logger.i("Injecting loader dex into main dex chain (explicit opt-in)...");
+                int nextIndex = getNextAvailableDexIndex(dstZFile, srcZFile, embedOriginal);
+                try (var is = getClass().getClassLoader().getResourceAsStream(LOADER_DEX_ASSET_PATH)) {
+                    if (is == null) {
+                        throw new PatchError("Fatal: Could not find " + LOADER_DEX_ASSET_PATH + " in patcher resources");
+                    }
+                    dstZFile.add("classes" + nextIndex + ".dex", is);
+                    logger.i("Loader dex injected as classes" + nextIndex + ".dex");
+                } catch (Throwable e) {
+                    throw new PatchError("Error when injecting loader dex", e);
+                }
             }
 
             dstZFile.realign();
             logger.i("Writing apk...");
         }
         logger.i("Done. Output APK: " + outputFile.getAbsolutePath());
+    }
+
+    private static int getNextAvailableDexIndex(ZFile dstZFile, ZFile srcZFile, boolean embedOriginal) {
+        int maxIndex = 0;
+        if (dstZFile != null) {
+            for (StoredEntry entry : dstZFile.entries()) {
+                maxIndex = Math.max(maxIndex, getDexIndex(entry.getCentralDirectoryHeader().getName()));
+            }
+        }
+        if (!embedOriginal && srcZFile != null) {
+            for (StoredEntry entry : srcZFile.entries()) {
+                maxIndex = Math.max(maxIndex, getDexIndex(entry.getCentralDirectoryHeader().getName()));
+            }
+        }
+        return Math.max(1, maxIndex) + 1;
     }
 
     private static int getDexIndex(String name) {
