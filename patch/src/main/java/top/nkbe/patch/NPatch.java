@@ -412,7 +412,7 @@ public class NPatch {
             for (StoredEntry entry : srcZFile.entries()) {
                 String name = entry.getCentralDirectoryHeader().getName();
                 if (dstZFile.get(name) != null) continue;
-                if (embedOriginal && name.startsWith("classes") && name.endsWith(".dex")) continue;
+                if (embedOriginal && !injectDex && name.startsWith("classes") && name.endsWith(".dex")) continue;
                 if (name.equals("AndroidManifest.xml")) continue;
                 if (isApkSignatureEntry(name))
                     continue;
@@ -442,28 +442,15 @@ public class NPatch {
 
             logger.i("Adding metaloader dex...");
             try (var is = getClass().getClassLoader().getResourceAsStream(Constants.META_LOADER_DEX_ASSET_PATH)) {
-                if (embedOriginal) {
+                if (embedOriginal && !injectDex) {
                     dstZFile.add("classes.dex", is);
                 } else {
                     int nextIdx = getNextAvailableDexIndex(dstZFile, srcZFile, false);
                     dstZFile.add("classes" + nextIdx + ".dex", is);
+                    logger.i("Metaloader dex injected as classes" + nextIdx + ".dex");
                 }
             } catch (Throwable e) {
                 throw new PatchError("Error when adding metaloader dex", e);
-            }
-
-            if (injectDex) {
-                logger.i("Injecting loader dex into main dex chain (explicit opt-in)...");
-                int nextIndex = getNextAvailableDexIndex(dstZFile, srcZFile, embedOriginal);
-                try (var is = getClass().getClassLoader().getResourceAsStream(LOADER_DEX_ASSET_PATH)) {
-                    if (is == null) {
-                        throw new PatchError("Fatal: Could not find " + LOADER_DEX_ASSET_PATH + " in patcher resources");
-                    }
-                    dstZFile.add("classes" + nextIndex + ".dex", is);
-                    logger.i("Loader dex injected as classes" + nextIndex + ".dex");
-                } catch (Throwable e) {
-                    throw new PatchError("Error when injecting loader dex", e);
-                }
             }
 
             dstZFile.realign();

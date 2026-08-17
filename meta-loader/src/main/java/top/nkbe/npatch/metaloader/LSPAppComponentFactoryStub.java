@@ -197,6 +197,14 @@ public class LSPAppComponentFactoryStub extends AppComponentFactory {
     }
 
     private static void bootstrap() throws Throwable {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            try {
+                HiddenApiBypass.addHiddenApiExemptions("");
+            } catch (Throwable t) {
+                Log.w(TAG, "Failed to add hidden api exemptions in bootstrap", t);
+            }
+        }
+
         bootstrapStage = "resolve_meta_loader";
         ClassLoader loader = Objects.requireNonNull(
                 LSPAppComponentFactoryStub.class.getClassLoader(),

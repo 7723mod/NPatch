@@ -220,6 +220,14 @@ public class LSPApplication {
     }
 
     public static void onLoad() throws RemoteException, IOException {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            try {
+                org.lsposed.hiddenapibypass.HiddenApiBypass.addHiddenApiExemptions("");
+            } catch (Throwable t) {
+                Log.w(TAG, "Failed to exempt hidden API in onLoad", t);
+            }
+        }
+
         if (isIsolated()) {
             XLog.d(TAG, "Skip isolated process");
             return;
@@ -386,7 +394,11 @@ public class LSPApplication {
 
             stubLoadedApk = (LoadedApk) XposedHelpers.getObjectField(mBoundApplication, "info");
             var appInfo = (ApplicationInfo) XposedHelpers.getObjectField(mBoundApplication, "appInfo");
-            var compatInfo = (CompatibilityInfo) XposedHelpers.getObjectField(mBoundApplication, "compatInfo");
+            CompatibilityInfo compatInfo = null;
+            try {
+                compatInfo = (CompatibilityInfo) XposedHelpers.getObjectField(mBoundApplication, "compatInfo");
+            } catch (Throwable ignored) {
+            }
             var baseClassLoader = stubLoadedApk.getClassLoader();
             String patchedApkPath = appInfo.sourceDir;
 
@@ -529,6 +541,7 @@ public class LSPApplication {
             Log.i(TAG, "createLoadedApkWithContext cost: " + (System.currentTimeMillis() - timeStart) + "ms");
             return context;
         } catch (Throwable e) {
+            Log.e(TAG, "createLoadedApkWithContext failed", e);
             XLog.e(TAG, "createLoadedApk", e);
             return null;
         }
