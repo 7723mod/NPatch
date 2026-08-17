@@ -44,7 +44,8 @@ public class EmbeddedXposedService extends IXposedService.Stub {
 
     @Override
     public String getFrameworkVersion() {
-        return LSPConfig.instance.VERSION_NAME + " (" + LSPConfig.instance.VERSION_CODE + ")";
+        String ver = LSPConfig.instance.VERSION_NAME;
+        return ver.startsWith("v") ? ver : "v" + ver;
     }
 
     @Override

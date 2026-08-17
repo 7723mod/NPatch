@@ -32,7 +32,8 @@ class XposedServiceBinder(
 
     override fun getFrameworkVersion(): String {
         enforceCaller()
-        return BuildConfig.VERSION_NAME
+        val ver = BuildConfig.VERSION_NAME
+        return if (ver.startsWith("v")) ver else "v$ver"
     }
 
     override fun getFrameworkVersionCode(): Long {

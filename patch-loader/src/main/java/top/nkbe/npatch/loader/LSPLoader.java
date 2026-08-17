@@ -43,6 +43,7 @@ import org.matrix.vector.Startup;
 import org.matrix.vector.impl.VectorContext;
 import org.matrix.vector.impl.VectorLifecycleManager;
 import org.matrix.vector.impl.core.VectorServiceClient;
+import top.nkbe.npatch.share.LSPConfig;
 import org.matrix.vector.nativebridge.NativeAPI;
 
 public class LSPLoader {
@@ -63,6 +64,13 @@ public class LSPLoader {
     }
 
     public static void initModules(LoadedApk loadedApk) {
+        String ver = LSPConfig.instance.VERSION_NAME;
+        XposedBridge.FRAMEWORK_NAME = "NPatch";
+        XposedBridge.FRAMEWORK_VERSION = ver.startsWith("v") ? ver : "v" + ver;
+        XposedBridge.FRAMEWORK_VERSION_NAME = XposedBridge.FRAMEWORK_VERSION;
+        XposedBridge.FRAMEWORK_VERSION_CODE = LSPConfig.instance.VERSION_CODE;
+        XposedBridge.XPOSED_BRIDGE_VERSION = 93;
+
         installNativeModuleServiceProxy();
         registerModuleRuntimeAppInfos();
         installModuleSelfPathCompatibility();
