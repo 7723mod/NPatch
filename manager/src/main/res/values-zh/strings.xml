@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="add">添加</string>
     <string name="install">安装</string>
@@ -128,6 +128,15 @@
     <string name="patch_install_successfully">安装成功</string>
     <string name="patch_install_failed">安装失败</string>
     <string name="patch_no_xposed_module">未找到 Xposed 模块</string>
+    <string name="patch_target_already_patched">已修补</string>
+    <string name="patch_extract_original_title">检测到已修补应用 (%1$s)</string>
+    <string name="patch_extract_original_text">该应用此前已由 %1$s 修补。\n\n建议提取内置的原版 APK 重新修补，避免多层嵌套打包导致崩溃。</string>
+    <string name="patch_extract_original_confirm">提取原包修补</string>
+    <string name="patch_extract_original_direct">直接修补外壳</string>
+    <string name="patch_extract_original_extracting">正在提取原版 APK…</string>
+    <string name="patch_extract_original_missing">未在该包中找到内置原版 APK（可能使用了 Level 0 无原包模式）。\n\n是否直接对外壳 APK 进行修补？</string>
+    <string name="patch_extract_package_mismatch">包名不匹配：外壳包名为「%1$s」，但提取的原包包名为「%2$s」。\n\n是否仍继续使用提取出的 APK？</string>
+    <string name="patch_extract_error">提取原版 APK 失败：%1$s</string>
 
     <!-- Select Apps Screen -->
     <string name="screen_select_apps">选择应用程序</string>

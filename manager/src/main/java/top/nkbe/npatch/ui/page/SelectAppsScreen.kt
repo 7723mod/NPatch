@@ -26,6 +26,7 @@ import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.toLowerCase
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
@@ -270,6 +271,15 @@ private fun SelectAppsList(
                             Checkbox(
                                 state = if (checked) ToggleableState.On else ToggleableState.Off,
                                 onClick = null
+                            )
+                        }
+                    } else if (appInfo.isPatched) {
+                        {
+                            Text(
+                                text = stringResource(R.string.patch_target_already_patched),
+                                fontSize = 12.sp,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight(500),
+                                color = COUITheme.colorScheme.primary
                             )
                         }
                     } else null

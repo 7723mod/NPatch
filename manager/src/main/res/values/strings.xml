@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="add">Add</string>
     <string name="install">Install</string>
@@ -131,6 +131,15 @@
     <string name="patch_install_successfully">Install successfully</string>
     <string name="patch_install_failed">Install failed</string>
     <string name="patch_no_xposed_module">No Xposed module(s) were found</string>
+    <string name="patch_target_already_patched">Already patched</string>
+    <string name="patch_extract_original_title">Already Patched App (%1$s)</string>
+    <string name="patch_extract_original_text">This app was previously patched with %1$s.\n\nIt is recommended to extract the embedded original APK to re-patch, avoiding nested patching issues.</string>
+    <string name="patch_extract_original_confirm">Extract and Repatch</string>
+    <string name="patch_extract_original_direct">Patch Outer APK</string>
+    <string name="patch_extract_original_extracting">Extracting original APK…</string>
+    <string name="patch_extract_original_missing">No embedded original APK found in this package (possibly patched with Level 0 bypass).\n\nDo you want to patch the outer APK directly instead?</string>
+    <string name="patch_extract_package_mismatch">Package name mismatch: outer package is \'%1$s\', but extracted APK package is \'%2$s\'.\n\nDo you still want to proceed with the extracted APK?</string>
+    <string name="patch_extract_error">Failed to extract original APK: %1$s</string>
 
     <!-- Select Apps Screen -->
     <string name="screen_select_apps">Select apps</string>

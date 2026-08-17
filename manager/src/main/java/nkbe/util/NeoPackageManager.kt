@@ -50,6 +50,21 @@ object NeoPackageManager {
         SHIZUKU,
     }
 
+    enum class PatchedType(val displayName: String) {
+        NONE(""),
+        NPATCH("NPatch"),
+        LSPATCH("LSPatch"),
+        FPA("FPA");
+    }
+
+    sealed interface ExtractResult {
+        data class Success(val originalAppInfo: AppInfo) : ExtractResult
+        data object NoOriginalApk : ExtractResult
+        data class PackageMismatch(val outerPkg: String, val innerPkg: String, val originalAppInfo: AppInfo) : ExtractResult
+        data class Corrupted(val message: String, val cause: Throwable?) : ExtractResult
+        data class Error(val message: String, val cause: Throwable?) : ExtractResult
+    }
+
     sealed interface InstallOutcome {
         data class Completed(val status: Int, val message: String?) : InstallOutcome
         data object PermissionRequired : InstallOutcome
@@ -69,6 +84,29 @@ object NeoPackageManager {
     ) : Parcelable {
         val isXposedModule: Boolean
             get() = moduleMetadata != null
+
+        // Fast in-memory Tier 1 & 2 detection (for zero-IO UI rendering)
+        val patchedType: PatchedType
+            get() {
+                val meta = app.metaData
+                val factory = app.appComponentFactory.orEmpty()
+                val className = app.className.orEmpty()
+
+                // Tier 1: Manifest Meta-Data (Outermost explicit marker)
+                if (meta?.containsKey("npatch") == true) return PatchedType.NPATCH
+                if (meta?.containsKey("lspatch") == true) return PatchedType.LSPATCH
+                if (meta?.containsKey("fpa") == true) return PatchedType.FPA
+
+                // Tier 2: AppComponentFactory & Application class name
+                if (factory.contains("top.nkbe.npatch") || className.contains("top.nkbe.npatch")) return PatchedType.NPATCH
+                if (factory.contains("org.lsposed.lspatch") || className.contains("org.lsposed.lspatch")) return PatchedType.LSPATCH
+                if (factory.startsWith("fpa.") || className.startsWith("fpa.") || factory.contains("fun.fpa") || className.contains("fun.fpa")) return PatchedType.FPA
+
+                return PatchedType.NONE
+            }
+
+        val isPatched: Boolean
+            get() = patchedType != PatchedType.NONE
     }
 
     var appList by mutableStateOf(listOf<AppInfo>())
@@ -507,5 +545,145 @@ object NeoPackageManager {
                 ris[0].activityInfo.packageName,
                 ris[0].activityInfo.name
             )
+    }
+
+    fun detectPatchedTypeDeep(appInfo: AppInfo): PatchedType {
+        val fastType = appInfo.patchedType
+        if (fastType != PatchedType.NONE) return fastType
+
+        val sourceDir = appInfo.app.sourceDir ?: return PatchedType.NONE
+        val sourceFile = File(sourceDir)
+        if (!sourceFile.isFile) return PatchedType.NONE
+
+        return runCatching {
+            ZipFile(sourceFile).use { zip ->
+                when {
+                    zip.getEntry("assets/npatch/config.json") != null || zip.getEntry("assets/npatch/loader.bin") != null -> PatchedType.NPATCH
+                    zip.getEntry("assets/lspatch/config.json") != null || zip.getEntry("assets/lspatch/loader.bin") != null -> PatchedType.LSPATCH
+                    zip.getEntry("fpa/config.json") != null || zip.getEntry("assets/fpa/config.json") != null || zip.getEntry("extra/core.dex") != null || zip.getEntry("fpa/source.apk") != null -> PatchedType.FPA
+                    else -> PatchedType.NONE
+                }
+            }
+        }.getOrDefault(PatchedType.NONE)
+    }
+
+    suspend fun extractOriginalApk(patchedApp: AppInfo): ExtractResult {
+        return withContext(Dispatchers.IO) {
+            val sourceDir = patchedApp.app.sourceDir
+            if (sourceDir.isNullOrEmpty()) {
+                return@withContext ExtractResult.Error("Source path is empty", null)
+            }
+            val sourceFile = File(sourceDir)
+            if (!sourceFile.isFile) {
+                return@withContext ExtractResult.Error("Source APK file not found: $sourceDir", null)
+            }
+
+            val targetType = detectPatchedTypeDeep(patchedApp)
+            val candidatePaths = when (targetType) {
+                PatchedType.NPATCH -> listOf(
+                    "assets/npatch/origin.apk",
+                    "assets/origin.apk",
+                    "assets/lspatch/origin.apk",
+                    "fpa/source.apk",
+                    "fpa/o_app.apk"
+                )
+                PatchedType.LSPATCH -> listOf(
+                    "assets/lspatch/origin.apk",
+                    "assets/origin.apk",
+                    "assets/npatch/origin.apk",
+                    "fpa/source.apk",
+                    "fpa/o_app.apk"
+                )
+                PatchedType.FPA -> listOf(
+                    "fpa/source.apk",
+                    "fpa/o_app.apk",
+                    "assets/fpa/source.apk",
+                    "assets/fpa/o_app.apk",
+                    "assets/npatch/origin.apk",
+                    "assets/lspatch/origin.apk"
+                )
+                PatchedType.NONE -> listOf(
+                    "assets/npatch/origin.apk",
+                    "assets/lspatch/origin.apk",
+                    "assets/origin.apk",
+                    "fpa/source.apk",
+                    "fpa/o_app.apk",
+                    "assets/fpa/source.apk"
+                )
+            }
+
+            val extractedFile = uniqueTempFile(sanitizeVisibleFileName(patchedApp.label + "_original.apk"))
+            var extractedEntryName: String? = null
+
+            try {
+                ZipFile(sourceFile).use { zip ->
+                    for (path in candidatePaths) {
+                        val entry = zip.getEntry(path)
+                        if (entry != null) {
+                            extractedEntryName = path
+                            zip.getInputStream(entry).use { input ->
+                                extractedFile.outputStream().use { output ->
+                                    input.copyTo(output)
+                                }
+                            }
+                            break
+                        }
+                    }
+                }
+            } catch (t: java.util.zip.ZipException) {
+                extractedFile.delete()
+                return@withContext ExtractResult.Corrupted("Corrupted APK archive", t)
+            } catch (t: Throwable) {
+                extractedFile.delete()
+                return@withContext ExtractResult.Error("Extraction failed: ${t.message}", t)
+            }
+
+            if (extractedEntryName == null || !extractedFile.exists() || extractedFile.length() == 0L) {
+                extractedFile.delete()
+                return@withContext ExtractResult.NoOriginalApk
+            }
+
+            try {
+                val pm = lspApp.packageManager
+                val pkgInfo = pm.getPackageArchiveInfo(
+                    extractedFile.absolutePath,
+                    PackageManager.GET_META_DATA or PackageManager.GET_SIGNING_CERTIFICATES
+                ) ?: run {
+                    extractedFile.delete()
+                    return@withContext ExtractResult.Corrupted("Failed to parse extracted original APK", null)
+                }
+
+                val appInfo = pkgInfo.applicationInfo ?: run {
+                    extractedFile.delete()
+                    return@withContext ExtractResult.Corrupted("Extracted APK contains no application info", null)
+                }
+
+                appInfo.sourceDir = extractedFile.absolutePath
+                appInfo.publicSourceDir = extractedFile.absolutePath
+                appInfo.splitSourceDirs = null
+
+                val innerLabel = runCatching { pm.getApplicationLabel(appInfo).toString() }
+                    .getOrDefault(pkgInfo.packageName)
+                val originalAppInfo = AppInfo(
+                    app = appInfo,
+                    label = innerLabel,
+                    versionName = pkgInfo.versionName ?: "",
+                    versionCode = androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(pkgInfo),
+                    moduleMetadata = ModuleMetadataReader.read(pkgInfo, pm)
+                )
+
+                val outerPkg = patchedApp.app.packageName
+                val innerPkg = pkgInfo.packageName
+                if (outerPkg != innerPkg) {
+                    Log.w(TAG, "Extracted APK package mismatch: outer=$outerPkg, inner=$innerPkg")
+                    return@withContext ExtractResult.PackageMismatch(outerPkg, innerPkg, originalAppInfo)
+                }
+
+                return@withContext ExtractResult.Success(originalAppInfo)
+            } catch (t: Throwable) {
+                extractedFile.delete()
+                return@withContext ExtractResult.Error("Failed to validate extracted APK: ${t.message}", t)
+            }
+        }
     }
 }
