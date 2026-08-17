@@ -52,7 +52,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
-
+import android.os.IBinder;
+import java.lang.reflect.Method;
+import org.matrix.vector.impl.core.VectorModuleManager;
+import top.nkbe.npatch.service.EmbeddedXposedService;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import hidden.HiddenApiBridge;
@@ -300,6 +303,27 @@ public class LSPApplication {
         logInfo("Load modules");
         LSPLoader.initModules(appLoadedApk);
         logInfo("Modules initialized");
+
+        if (!config.useManager) {
+            for (String modulePkg : VectorModuleManager.INSTANCE.loadedModulePackages()) {
+                try {
+                    ClassLoader moduleCl = VectorModuleManager.INSTANCE.getModuleClassLoader(modulePkg);
+                    if (moduleCl == null) continue;
+                    Class<?> helper = moduleCl.loadClass("io.github.libxposed.service.XposedServiceHelper");
+                    if (helper.getClassLoader() == EmbeddedXposedService.class.getClassLoader()) {
+                        continue;
+                    }
+                    var stub = new EmbeddedXposedService(context, modulePkg, config.newPackage);
+                    Method onBinderReceived = helper.getDeclaredMethod("onBinderReceived", IBinder.class);
+                    onBinderReceived.setAccessible(true);
+                    onBinderReceived.invoke(null, stub.asBinder());
+                    Log.i(TAG, "Delivered XposedService to embedded module " + modulePkg);
+                } catch (ClassNotFoundException ignored) {
+                } catch (Throwable t) {
+                    Log.w(TAG, "XposedService delivery failed for " + modulePkg, t);
+                }
+            }
+        }
         try {
             CacheCleaner.sweepModuleNativeCache(context.getApplicationInfo(), LSPLoader.getActiveModuleApkPaths());
         } catch (Throwable e) {

@@ -59,7 +59,9 @@ object ManagerService : IFrameworkService.Stub() {
             runBlocking { ConfigManager.getModuleFilesForApp(it) }
         }.orEmpty().filter { it.code?.legacy == false }
         Log.d(TAG, "$app calls getModules: $list")
-        return recordModules(list)
+        val recorded = recordModules(list)
+        ModuleActivationController.pushToCompanionsAsync(recorded.map { it.packageName })
+        return recorded
     }
 
     override fun getPrefsPath(packageName: String): String {

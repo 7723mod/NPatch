@@ -23,6 +23,9 @@ interface ModuleDao {
     @Update
     suspend fun update(LoadedModule: LoadedModule)
 
+    @Query("UPDATE LoadedModule SET apkPath = :apkPath WHERE pkgName = :pkgName")
+    suspend fun updatePath(pkgName: String, apkPath: String)
+
     @Delete
     suspend fun delete(LoadedModule: LoadedModule)
 }

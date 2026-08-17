@@ -27,4 +27,7 @@ interface ScopeDao {
 
     @Query("SELECT DISTINCT modulePkgName FROM scope")
     suspend fun getScopedModulePackageNames(): List<String>
+
+    @Query("DELETE FROM scope WHERE appPkgName = :appPkgName")
+    suspend fun deleteForApp(appPkgName: String)
 }

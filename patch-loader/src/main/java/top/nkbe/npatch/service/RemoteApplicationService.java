@@ -367,7 +367,7 @@ public class RemoteApplicationService implements IFrameworkService {
         IFrameworkService current = service;
         if (current != null && managerAvailable.get()) {
             try {
-                current.attachProcessChannel(target);
+                current.attachProcessChannel(new NPatchProcessChannel());
             } catch (RemoteException error) {
                 onManagerFailure("register hot reload target", error);
             }

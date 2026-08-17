@@ -2,6 +2,7 @@ package top.nkbe.npatch.manager
 
 import android.app.IActivityManager
 import android.content.AttributionSource
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Binder
@@ -10,11 +11,16 @@ import android.os.Process
 import android.util.Log
 import io.github.libxposed.service.IXposedService
 import java.lang.reflect.Method
+import java.util.concurrent.Executors
 import nkbe.util.ShizukuApi
 import top.nkbe.npatch.lspApp
 
 object ModuleActivationController {
     private const val TAG = "ModuleActivationController"
+
+    private val pushExecutor = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "npatch-companion-push").apply { isDaemon = true }
+    }
 
     fun activate(packageName: String): Result<Unit> {
         return runCatching {
@@ -38,6 +44,39 @@ object ModuleActivationController {
         }.onFailure {
             Log.w(TAG, "Failed to activate LoadedModule display for $packageName", it)
         }
+    }
+
+    /**
+     * Pushes the module's IXposedService binder to its companion app.
+     * Prioritizes Shizuku if connected, and falls back to standard exported ContentProvider call.
+     */
+    fun pushToCompanion(packageName: String): Boolean {
+        // 1. Try Shizuku first
+        runCatching {
+            ShizukuApi.refreshState()
+            if (ShizukuApi.isReady) {
+                val res = activate(packageName)
+                if (res.isSuccess) return true
+            }
+        }
+
+        // 2. Fallback to standard exported provider call
+        val authority = packageName + IXposedService.AUTHORITY_SUFFIX
+        val uri = Uri.parse("content://$authority")
+        return runCatching {
+            val extras = Bundle().apply { putBinder("binder", XposedServiceBinder(packageName).asBinder()) }
+            lspApp.contentResolver.call(uri, IXposedService.SEND_BINDER, null, extras) != null
+        }.getOrElse {
+            Log.d(TAG, "No companion to receive the service for $packageName: ${it.message}")
+            false
+        }
+    }
+
+    /** Best-effort push to each named module's companion, off the caller's thread. */
+    fun pushToCompanionsAsync(pkgs: Collection<String>) {
+        if (pkgs.isEmpty()) return
+        val snapshot = pkgs.toList()
+        pushExecutor.execute { snapshot.forEach { pushToCompanion(it) } }
     }
 
     private fun IActivityManager.getContentProviderExternalCompat(authority: String, token: IBinder): Any {
