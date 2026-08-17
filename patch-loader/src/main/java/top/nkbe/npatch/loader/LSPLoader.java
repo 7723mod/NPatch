@@ -39,6 +39,7 @@ import org.matrix.vector.ipc.IModuleService;
 import org.matrix.vector.ipc.IFrameworkService;
 import org.matrix.vector.ipc.IProcessChannel;
 import org.matrix.vector.ipc.IRemotePreferenceCallback;
+import org.matrix.vector.Startup;
 import org.matrix.vector.impl.VectorContext;
 import org.matrix.vector.impl.VectorLifecycleManager;
 import org.matrix.vector.impl.core.VectorServiceClient;
@@ -65,6 +66,7 @@ public class LSPLoader {
         installNativeModuleServiceProxy();
         registerModuleRuntimeAppInfos();
         installModuleSelfPathCompatibility();
+        Startup.trackLoadedApk(loadedApk);
         XposedInit.loadModules(ActivityThread.currentActivityThread());
         ApplicationInfo moduleCompatibleAppInfo =
                 SigBypass.createModuleCompatibleApplicationInfo(loadedApk.getApplicationInfo());
