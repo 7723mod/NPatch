@@ -499,20 +499,32 @@ public class LSPLoader {
                     ? moduleCompatibleAppInfo
                     : loadedApk.getApplicationInfo();
             ClassLoader classLoader = loadedApk.getClassLoader();
+            ClassLoader defaultClassLoader = null;
+            try {
+                defaultClassLoader = (ClassLoader) XposedHelpers.getObjectField(loadedApk, "mDefaultClassLoader");
+            } catch (Throwable ignored) {
+            }
+            if (defaultClassLoader == null) {
+                defaultClassLoader = classLoader;
+            }
             Object appComponentFactory = createAppComponentFactory(appInfo, classLoader);
 
-            VectorLifecycleManager.INSTANCE.dispatchPackageLoaded(
-                    packageName,
-                    appInfo,
-                    true,
-                    classLoader);
-            VectorLifecycleManager.INSTANCE.dispatchPackageReady(
-                    packageName,
-                    appInfo,
-                    true,
-                    classLoader,
-                    classLoader,
-                    appComponentFactory);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                VectorLifecycleManager.INSTANCE.dispatchPackageLoaded(
+                        packageName,
+                        appInfo,
+                        true,
+                        defaultClassLoader);
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                VectorLifecycleManager.INSTANCE.dispatchPackageReady(
+                        packageName,
+                        appInfo,
+                        true,
+                        defaultClassLoader,
+                        classLoader,
+                        appComponentFactory);
+            }
         } catch (Throwable e) {
             Log.e(TAG, "Failed to dispatch modern Xposed lifecycle", e);
         }
