@@ -620,16 +620,15 @@ public class NPatch {
         // 處理注入 Provider 的邏輯
         if (isInjectProvider){
             String injectedAuthority = targetPackage + ".MTDataFilesProvider";
-            HashMap<String,String> providerMap = new HashMap<>();
-            providerMap.put("name","bin.mt.file.content.MTDataFilesProvider");
-            providerMap.put("permission","android.permission.MANAGE_DOCUMENTS");
-            providerMap.put("exported","true");
-            providerMap.put("authorities", injectedAuthority);
-            providerMap.put("grantUriPermissions","true");
+            List<AttributeItem> providerAttrs = new ArrayList<>();
+            providerAttrs.add(new AttributeItem("name", "bin.mt.file.content.MTDataFilesProvider"));
+            providerAttrs.add(new AttributeItem("permission", "android.permission.MANAGE_DOCUMENTS"));
+            providerAttrs.add(new AttributeItem("exported", true));
+            providerAttrs.add(new AttributeItem("authorities", injectedAuthority));
+            providerAttrs.add(new AttributeItem("grantUriPermissions", true));
 
             property.addDeleteProviderAuthorities(injectedAuthority);
-            property.addProvider(providerMap,"android.content.action.DOCUMENTS_PROVIDER");
-
+            property.addProvider(providerAttrs, "android.content.action.DOCUMENTS_PROVIDER");
         }
 
         try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
