@@ -117,6 +117,9 @@
     <string name="patch_override_version_code">Override version code</string>
     <string name="patch_override_version_code_desc">Override the patched app\'s version code with a custom value, defaulting to 1.\nThis allows downgrade installation in more cases, and generally does not affect the version code actually perceived by the application</string>
     <string name="patch_custom_version_code">Custom version code</string>
+    <string name="patch_override_target_sdk">Override target SDK</string>
+    <string name="patch_override_target_sdk_desc">Override the patched app\'s target SDK version with a custom value, defaulting to 28.\nThis can improve compatibility with certain Xposed modules that rely on older Android behaviors.</string>
+    <string name="patch_custom_target_sdk">Custom target SDK</string>
     <string name="patch_inject_mt_provider">Inject Files Provider</string>
     <string name="patch_inject_mt_provider_desc">Inject file providers to manage files in the data directory without root privileges (From MT Manager)</string>
     <string name="patch_use_microg">Force enable MicroG support</string>

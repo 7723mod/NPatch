@@ -40,8 +40,14 @@ object Patcher {
                 if (config.useManager) add("--manager")
                 if (injectDex) add("--injectdex")
                 if (config.overrideVersionCode) {
-                    add("-r")
-                    add("--versioncode"); add(config.overrideVersionCodeValue.toString())
+                    add("--allowdown")
+                    add("--versioncode")
+                    add(config.overrideVersionCodeValue.toString())
+                }
+                if (config.overrideTargetSdk) {
+                    add("--override-target-sdk")
+                    add("--target-sdk")
+                    add(config.overrideTargetSdkValue.toString())
                 }
                 if (Configs.detailPatchLogs) add("-v")
                 embeddedModules?.forEach {

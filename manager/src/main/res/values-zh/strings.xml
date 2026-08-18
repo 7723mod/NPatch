@@ -112,6 +112,9 @@
     <string name="patch_override_version_code">覆写版本号</string>
     <string name="patch_override_version_code_desc">将修补的 App 版本号重写为自定义值，默认为 1\n这将允许更多场景下的降级安装，并且通常来说这不会影响应用实际感知到的版本号</string>
     <string name="patch_custom_version_code">自定义版本号</string>
+    <string name="patch_override_target_sdk">覆写 targetSdk</string>
+    <string name="patch_override_target_sdk_desc">将修补的 App 的 targetSdk 版本重写为自定义值，默认为 28\n这可以提升部分依赖旧版 Android 行为特征的 Xposed 模块的兼容性</string>
+    <string name="patch_custom_target_sdk">自定义 targetSdk</string>
     <string name="patch_new_package">修补新包名</string>
     <string name="hint_patch_new_package">请输入新的包名</string>
     <string name="patch_inject_mt_provider">注入文件提供器</string>

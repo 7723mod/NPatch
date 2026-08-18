@@ -240,6 +240,24 @@ fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
                     )
                 }
                 SwitchPreference(
+                    title = stringResource(R.string.patch_override_target_sdk),
+                    summary = stringResource(R.string.patch_override_target_sdk_desc),
+                    startAction = { Icon(Icons.Outlined.Android, null) },
+                    checked = viewModel.overrideTargetSdk,
+                    onCheckedChange = { viewModel.overrideTargetSdk = it }
+                )
+                if (viewModel.overrideTargetSdk) {
+                    SettingsEditor(
+                        Modifier.padding(horizontal = 12.dp),
+                        stringResource(R.string.patch_custom_target_sdk),
+                        viewModel.overrideTargetSdkValue,
+                        onValueChange = { value ->
+                            viewModel.overrideTargetSdkValue = value.filter { it in '0'..'9' }
+                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                }
+                SwitchPreference(
                     title = stringResource(R.string.patch_inject_mt_provider),
                     summary = stringResource(R.string.patch_inject_mt_provider_desc),
                     startAction = { Icon(Icons.Outlined.AddCard, null) },

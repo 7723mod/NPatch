@@ -67,6 +67,10 @@
     <string name="patch_override_version_code">覆写版本号</string>
     <string name="patch_override_version_code_desc">將修補的 App 版本號重寫為自訂值，預設為 1\n這將允許更多場景下的降級安裝，並且通常來說這不會影響應用程式實際感知到的版本號</string>
     <string name="patch_custom_version_code">自訂版本號</string>
+    <string name="patch_override_target_sdk">覆寫 targetSdk</string>
+    <string name="patch_override_target_sdk_desc">將修補的 App 的 targetSdk 版本重寫為自訂值，預設為 28\n這可以提升部分依賴舊版 Android 行為特徵的 Xposed 模組的相容性</string>
+    <string name="patch_custom_target_sdk">自訂 targetSdk</string>
+    <string name="patch_cleartext_traffic">允許 HTTP 明文流量</string>
     <string name="patch_start">开始修补</string>
     <string name="patch_return">返回</string>
     <string name="patch_uninstall_text">由于簽名不同，安裝修补的應用程式前需要先解除安裝原應用程式。\n确保您已备份好个人数据。</string>
