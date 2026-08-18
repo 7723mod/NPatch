@@ -105,6 +105,9 @@ public class NPatch {
     @Parameter(names = {"--hidelibs"}, description = "Exempt basic environment checks by sanitizing ART and sensitive system library visibility")
     private boolean hideLibs = false;
 
+    @Parameter(names = {"--cleartext", "--usesCleartextTraffic"}, description = "Force android:usesCleartextTraffic=\"true\" in manifest to allow plain HTTP traffic")
+    private boolean usesCleartextTraffic = false;
+
     @Parameter(names = {"-k", "--keystore"}, arity = 4, description = "Set custom signature keystore. Followed by 4 arguments: keystore path, keystore password, keystore alias, keystore alias password")
     private List<String> keystoreArgs = null;
 
@@ -349,7 +352,20 @@ public class NPatch {
             }
 
             // modify manifest
-            final var config = new PatchConfig(useManager, debuggableFlag, overrideVersionCode, overrideVersionCodeValue, sigbypassLevel, originalSignature, appComponentFactory, isInjectProvider, outputLog, newPackage, useMicroG, hideLibs && sigbypassLevel > Constants.SIGBYPASS_NONE);
+            final var config = new PatchConfig(
+                    useManager,
+                    debuggableFlag,
+                    overrideVersionCode,
+                    overrideVersionCodeValue,
+                    sigbypassLevel,
+                    originalSignature,
+                    appComponentFactory,
+                    isInjectProvider,
+                    outputLog,
+                    newPackage,
+                    useMicroG,
+                    hideLibs && sigbypassLevel > Constants.SIGBYPASS_NONE,
+                    usesCleartextTraffic);
             final var configBytes = new Gson().toJson(config).getBytes(StandardCharsets.UTF_8);
             final var metadata = Base64.getEncoder().encodeToString(configBytes);
             try (var is = new ByteArrayInputStream(modifyManifestFile(manifestEntry.open(), metadata, minSdkVersion, pair.packageName, newPackage, originalSignature))) {
@@ -588,6 +604,9 @@ public class NPatch {
         property.addApplicationAttribute(new AttributeItem(NodeValue.Application.DEBUGGABLE, debuggableFlag));
         property.addApplicationAttribute(new AttributeItem("appComponentFactory", PROXY_APP_COMPONENT_FACTORY));
         property.addApplicationAttribute(new AttributeItem("isSplitRequired", false));
+        if (usesCleartextTraffic) {
+            property.addApplicationAttribute(new AttributeItem("usesCleartextTraffic", true));
+        }
 
         if (!targetPackage.equals(originPackage)) {
             property.addManifestAttribute(new AttributeItem(NodeValue.Manifest.PACKAGE, targetPackage).setNamespace(null));

@@ -127,6 +127,8 @@
     <string name="patch_hide_libs_desc">Sanitize ART and sensitive system library visibility for apps that perform basic runtime environment checks.</string>
     <string name="patch_inject_dex">Inject Loader DEX</string>
     <string name="patch_inject_dex_desc">Physically inject the loader DEX into the main DEX sequence. Only enable this special opt-in workaround if your modules need to hook isolated or multi-process components.</string>
+    <string name="patch_cleartext_traffic">Allow cleartext HTTP traffic</string>
+    <string name="patch_cleartext_traffic_desc">Force android:usesCleartextTraffic=\"true\" in the manifest, allowing the application and modules to access plain HTTP endpoints for traffic inspection, proxies, and debugging.</string>
     <string name="patch_subprocess_detected_hint">Detected %1$d isolated or multi-process component(s). If your module needs to hook these sub-processes, consider enabling “Inject Loader DEX”.</string>
     <string name="patch_start">Start Patch</string>
     <string name="patch_return">Return</string>

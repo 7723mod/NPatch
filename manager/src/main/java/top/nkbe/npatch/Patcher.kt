@@ -50,6 +50,7 @@ object Patcher {
                 if (config.injectProvider) add("--provider")
                 if (config.useMicroG) add("--useMicroG")
                 if (config.hideLibs) add("--hidelibs")
+                if (config.usesCleartextTraffic) add("--cleartext")
                 when (Configs.keyStorePreset) {
                     KeystorePreset.NPATCH -> add("-npa")
                     KeystorePreset.FPA -> add("-fpa")

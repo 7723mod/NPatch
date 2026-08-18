@@ -16,6 +16,40 @@ public class PatchConfig {
     public final String newPackage;
     public final boolean useMicroG;
     public final boolean hideLibs;
+    public final boolean usesCleartextTraffic;
+
+    public PatchConfig(
+            boolean useManager,
+            boolean debuggable,
+            boolean overrideVersionCode,
+            int overrideVersionCodeValue,
+            int sigBypassLevel,
+            String originalSignature,
+            String appComponentFactory,
+            boolean injectProvider,
+            boolean outputLog,
+            String newPackage,
+            boolean useMicroG,
+            boolean hideLibs,
+            boolean usesCleartextTraffic
+    ) {
+        this.useManager = useManager;
+        this.debuggable = debuggable;
+        this.overrideVersionCode = overrideVersionCode;
+        this.overrideVersionCodeValue = overrideVersionCodeValue;
+        this.sigBypassLevel = sigBypassLevel;
+        this.originalSignature = originalSignature;
+        this.appComponentFactory = appComponentFactory;
+        this.injectProvider = injectProvider;
+        this.managerPackageName = Constants.MANAGER_PACKAGE_NAME;
+        this.newPackage = newPackage;
+        this.outputLog = outputLog;
+        this.useMicroG = useMicroG;
+        this.hideLibs = hideLibs;
+        this.usesCleartextTraffic = usesCleartextTraffic;
+
+        this.lspConfig = LSPConfig.instance;
+    }
 
     public PatchConfig(
             boolean useManager,
@@ -31,20 +65,20 @@ public class PatchConfig {
             boolean useMicroG,
             boolean hideLibs
     ) {
-        this.useManager = useManager;
-        this.debuggable = debuggable;
-        this.overrideVersionCode = overrideVersionCode;
-        this.overrideVersionCodeValue = overrideVersionCodeValue;
-        this.sigBypassLevel = sigBypassLevel;
-        this.originalSignature = originalSignature;
-        this.appComponentFactory = appComponentFactory;
-        this.injectProvider = injectProvider;
-        this.managerPackageName = Constants.MANAGER_PACKAGE_NAME;
-        this.newPackage = newPackage;
-        this.outputLog = outputLog;
-        this.useMicroG = useMicroG;
-        this.hideLibs = hideLibs;
-
-        this.lspConfig = LSPConfig.instance;
+        this(
+                useManager,
+                debuggable,
+                overrideVersionCode,
+                overrideVersionCodeValue,
+                sigBypassLevel,
+                originalSignature,
+                appComponentFactory,
+                injectProvider,
+                outputLog,
+                newPackage,
+                useMicroG,
+                hideLibs,
+                false
+        );
     }
 }

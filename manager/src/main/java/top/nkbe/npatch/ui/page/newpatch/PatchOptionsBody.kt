@@ -268,6 +268,13 @@ fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
                     onCheckedChange = { viewModel.outputLog = it }
                 )
                 SwitchPreference(
+                    title = stringResource(R.string.patch_cleartext_traffic),
+                    summary = stringResource(R.string.patch_cleartext_traffic_desc),
+                    startAction = { Icon(Icons.Outlined.Http, null) },
+                    checked = viewModel.usesCleartextTraffic,
+                    onCheckedChange = { viewModel.usesCleartextTraffic = it }
+                )
+                SwitchPreference(
                     title = stringResource(R.string.patch_hide_libs),
                     summary = stringResource(R.string.patch_hide_libs_desc),
                     startAction = { Icon(Icons.Outlined.VisibilityOff, null) },
