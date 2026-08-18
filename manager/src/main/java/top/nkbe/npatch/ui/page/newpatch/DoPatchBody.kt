@@ -337,7 +337,8 @@ fun DoPatchBody(modifier: Modifier, navigator: Navigator) {
 @Composable
 fun UninstallConfirmationDialog(
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
+    onIgnoreAndInstall: () -> Unit,
 ) {
     val show = remember { mutableStateOf(true) }
     OverlayDialog(
@@ -347,13 +348,17 @@ fun UninstallConfirmationDialog(
         onDismissRequest = { show.value = false; onDismiss() },
     ) {
         DialogButtonBar(
-            negative = DialogButtonBarAction(
-                text = stringResource(android.R.string.cancel),
-                onClick = { show.value = false; onDismiss() },
-            ),
             positive = DialogButtonBarAction(
                 text = stringResource(android.R.string.ok),
                 onClick = { show.value = false; onConfirm() },
+            ),
+            neutral = DialogButtonBarAction(
+                text = stringResource(R.string.patch_ignore_risk_install),
+                onClick = { show.value = false; onIgnoreAndInstall() },
+            ),
+            negative = DialogButtonBarAction(
+                text = stringResource(android.R.string.cancel),
+                onClick = { show.value = false; onDismiss() },
             ),
         )
     }
@@ -435,6 +440,14 @@ fun InstallDialog(
     if (uninstallFirst) {
         UninstallConfirmationDialog(
             onDismiss = { onFinish(NeoPackageManager.STATUS_USER_CANCELLED, "User cancelled") },
+            onIgnoreAndInstall = {
+                uninstallFirst = false
+                if (!installStarted) {
+                    scope.launch {
+                        doInstall()
+                    }
+                }
+            },
             onConfirm = {
                 if (method == NeoPackageManager.InstallMethod.SHIZUKU) {
                     scope.launch {

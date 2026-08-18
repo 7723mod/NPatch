@@ -1,4 +1,4 @@
-﻿<?xml version='1.0' encoding='UTF-8'?>
+<?xml version='1.0' encoding='UTF-8'?>
 <resources>
     <string name="add">添加</string>
     <string name="install">安裝</string>
@@ -70,6 +70,7 @@
     <string name="patch_start">开始修补</string>
     <string name="patch_return">返回</string>
     <string name="patch_uninstall_text">由于簽名不同，安裝修补的應用程式前需要先解除安裝原應用程式。\n确保您已备份好个人数据。</string>
+    <string name="patch_ignore_risk_install">無視風險，繼續安裝</string>
     <string name="patch_install_successfully">安裝成功</string>
     <string name="patch_install_failed">安裝失敗</string>
     <string name="patch_no_xposed_module">未找到 Xposed 模組</string>

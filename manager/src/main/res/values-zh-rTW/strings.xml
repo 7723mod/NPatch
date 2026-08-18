@@ -128,6 +128,7 @@
     <string name="patch_start">開始打包</string>
     <string name="patch_return">返回</string>
     <string name="patch_uninstall_text">由於簽名不同，安裝前需要先解除安裝原程式。\n確保您已備份好個人資料。</string>
+    <string name="patch_ignore_risk_install">無視風險，繼續安裝</string>
     <string name="patch_install_successfully">安裝成功</string>
     <string name="patch_install_failed">安裝失敗</string>
     <string name="patch_no_xposed_module">未找到 Xposed 模組</string>
