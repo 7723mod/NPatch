@@ -346,6 +346,7 @@ fun UninstallConfirmationDialog(
         summary = stringResource(R.string.patch_uninstall_text),
         show = show.value,
         onDismissRequest = { show.value = false; onDismiss() },
+        renderInRootScaffold = false,
     ) {
         DialogButtonBar(
             positive = DialogButtonBarAction(
@@ -486,6 +487,7 @@ fun InstallDialog(
             text = stringResource(if (installing == 1) R.string.installing else R.string.uninstalling),
             show = showInstalling.value,
             onDismissRequest = {},
+            renderInRootScaffold = false,
         )
     }
 }

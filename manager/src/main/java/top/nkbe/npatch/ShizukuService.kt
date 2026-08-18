@@ -19,6 +19,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 import kotlin.system.exitProcess
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import nkbe.util.IntentSenderHelper
 
 class ShizukuService : INPatchShizukuService.Stub() {
@@ -51,12 +52,24 @@ class ShizukuService : INPatchShizukuService.Stub() {
                     "Invalid APK session name"
                 }
 
+                runCatching {
+                    Runtime.getRuntime().exec(
+                        arrayOf("sh", "-c", "settings put global verifier_verify_adb_installs 0; settings put global package_verifier_enable 0")
+                    ).waitFor()
+                }
+
                 val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
                     setAppPackageName(packageName)
                     setSize(totalSize)
                 }
                 var flags = Refine.unsafeCast<SessionParamsHidden>(params).installFlags
-                flags = flags or PackageManagerHidden.INSTALL_ALLOW_TEST or PackageManagerHidden.INSTALL_REPLACE_EXISTING
+                flags = flags or
+                    PackageManagerHidden.INSTALL_ALLOW_TEST or
+                    PackageManagerHidden.INSTALL_REPLACE_EXISTING or
+                    0x00000040 or // INSTALL_ALL_USERS
+                    0x00000080 or // INSTALL_ALLOW_DOWNGRADE
+                    0x00080000 or // INSTALL_SKIP_VERIFICATION
+                    0x01000000    // INSTALL_BYPASS_LOW_TARGET_SDK_BLOCK
                 Refine.unsafeCast<SessionParamsHidden>(params).installFlags = flags
 
                 createSession(params, userId).use { session ->
@@ -81,12 +94,17 @@ class ShizukuService : INPatchShizukuService.Stub() {
         return runBlocking {
             runCatching {
                 var result: Intent? = null
-                suspendCoroutine { cont ->
-                    val adapter = IntentSenderHelper.IIntentSenderAdaptor { intent ->
-                        result = intent
-                        cont.resume(Unit)
+                val timeoutResult = withTimeoutOrNull(30_000L) {
+                    suspendCoroutine { cont ->
+                        val adapter = IntentSenderHelper.IIntentSenderAdaptor { intent ->
+                            result = intent
+                            cont.resume(Unit)
+                        }
+                        packageInstaller(userId).uninstall(packageName, IntentSenderHelper.newIntentSender(adapter))
                     }
-                    packageInstaller(userId).uninstall(packageName, IntentSenderHelper.newIntentSender(adapter))
+                }
+                if (timeoutResult == null) {
+                    throw IOException("Uninstall timed out (30s). Please check if the system Package Installer or Play Protect is disabled.")
                 }
                 result ?: throw IOException("Intent is null")
             }.fold(
@@ -149,12 +167,22 @@ class ShizukuService : INPatchShizukuService.Stub() {
 
     private suspend fun commit(session: PackageInstaller.Session): Intent {
         var result: Intent? = null
-        suspendCoroutine { cont ->
-            val adapter = IntentSenderHelper.IIntentSenderAdaptor { intent ->
-                result = intent
-                cont.resume(Unit)
+        val timeoutResult = withTimeoutOrNull(30_000L) {
+            suspendCoroutine { cont ->
+                val adapter = IntentSenderHelper.IIntentSenderAdaptor { intent ->
+                    result = intent
+                    cont.resume(Unit)
+                }
+                session.commit(IntentSenderHelper.newIntentSender(adapter))
             }
-            session.commit(IntentSenderHelper.newIntentSender(adapter))
+        }
+        if (timeoutResult == null) {
+            runCatching {
+                Runtime.getRuntime().exec(
+                    arrayOf("sh", "-c", "settings put global verifier_verify_adb_installs 0; settings put global package_verifier_enable 0")
+                ).waitFor()
+            }
+            throw IOException("Installation timed out (30s). ADB package verification has been automatically disabled. Please retry installation.")
         }
         return result ?: throw IOException("Intent is null")
     }

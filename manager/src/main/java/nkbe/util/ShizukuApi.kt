@@ -21,6 +21,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeout
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import top.nkbe.npatch.INPatchShizukuService
 import top.nkbe.npatch.ShizukuService
 import top.nkbe.npatch.install.ApkInstallSet
@@ -268,7 +269,13 @@ object ShizukuApi {
                 setSize(installSet.totalSize)
             }
             var flags = Refine.unsafeCast<SessionParamsHidden>(params).installFlags
-            flags = flags or PackageManagerHidden.INSTALL_ALLOW_TEST or PackageManagerHidden.INSTALL_REPLACE_EXISTING
+            flags = flags or
+                PackageManagerHidden.INSTALL_ALLOW_TEST or
+                PackageManagerHidden.INSTALL_REPLACE_EXISTING or
+                0x00000040 or // INSTALL_ALL_USERS
+                0x00000080 or // INSTALL_ALLOW_DOWNGRADE
+                0x00080000 or // INSTALL_SKIP_VERIFICATION
+                0x01000000    // INSTALL_BYPASS_LOW_TARGET_SDK_BLOCK
             Refine.unsafeCast<SessionParamsHidden>(params).installFlags = flags
 
             createPackageInstallerSession(params).use { session ->
@@ -300,11 +307,19 @@ object ShizukuApi {
 
     private suspend fun awaitPackageInstallerResult(
         action: (android.content.IntentSender) -> Unit,
-    ): Intent = suspendCoroutine { continuation ->
-        val adapter = IntentSenderHelper.IIntentSenderAdaptor { intent ->
-            continuation.resume(intent)
+    ): Intent {
+        val result = withTimeoutOrNull(30_000L) {
+            suspendCoroutine { continuation ->
+                val adapter = IntentSenderHelper.IIntentSenderAdaptor { intent ->
+                    continuation.resume(intent)
+                }
+                action(IntentSenderHelper.newIntentSender(adapter))
+            }
         }
-        action(IntentSenderHelper.newIntentSender(adapter))
+        if (result == null) {
+            throw java.io.IOException("Installation timed out (30s). Please check if system installer or Play Protect is disabled.")
+        }
+        return result
     }
 
     private fun resultBundle(intent: Intent): Bundle = Bundle().apply {

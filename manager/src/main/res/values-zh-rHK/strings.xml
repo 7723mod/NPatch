@@ -71,6 +71,7 @@
     <string name="patch_override_target_sdk_desc">將修補的 App 的 targetSdk 版本重寫為自訂值，預設為 28\n這可以提升部分依賴舊版 Android 行為特徵的 Xposed 模組的相容性</string>
     <string name="patch_custom_target_sdk">自訂 targetSdk</string>
     <string name="patch_cleartext_traffic">允許 HTTP 明文流量</string>
+    <string name="patch_cleartext_traffic_desc">在清單中強制啟用 usesCleartextTraffic，允許應用程式與模組存取未加密的 HTTP 網路端點以利抓包、代理或除錯。</string>
     <string name="patch_start">开始修补</string>
     <string name="patch_return">返回</string>
     <string name="patch_uninstall_text">由于簽名不同，安裝修补的應用程式前需要先解除安裝原應用程式。\n确保您已备份好个人数据。</string>
@@ -105,6 +106,4 @@
     <string name="time_days_ago">%d天前</string>
     <string name="settings_card_background_alpha">卡片背景不透明度</string>
     <string name="settings_card_background_alpha_summary">啟用自訂背景圖片時生效</string>
-    <string name="patch_cleartext_traffic">允許 HTTP 明文流量</string>
-    <string name="patch_cleartext_traffic_desc">在清單中強制啟用 usesCleartextTraffic，允許應用程式與模組存取未加密的 HTTP 網路端點以利抓包、代理或除錯。</string>
 </resources>

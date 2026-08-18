@@ -59,7 +59,13 @@ object SystemPackageInstaller {
                     session.commit(createStatusIntent(appContext, sessionId, token).intentSender)
                     committed = true
                 }
-                completion.await()
+                val result = kotlinx.coroutines.withTimeoutOrNull(60_000L) {
+                    completion.await()
+                }
+                result ?: SystemInstallResult.Completed(
+                    PackageInstaller.STATUS_FAILURE,
+                    "Installation timed out (60s). Please check if system installer or permission prompt was cancelled/blocked.",
+                )
             } catch (error: Throwable) {
                 if (!committed) runCatching { packageInstaller.abandonSession(sessionId) }
                 throw error
