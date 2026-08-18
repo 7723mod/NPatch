@@ -62,15 +62,7 @@ class ShizukuService : INPatchShizukuService.Stub() {
                     setAppPackageName(packageName)
                     setSize(totalSize)
                 }
-                var flags = Refine.unsafeCast<SessionParamsHidden>(params).installFlags
-                flags = flags or
-                    PackageManagerHidden.INSTALL_ALLOW_TEST or
-                    PackageManagerHidden.INSTALL_REPLACE_EXISTING or
-                    0x00000040 or // INSTALL_ALL_USERS
-                    0x00000080 or // INSTALL_ALLOW_DOWNGRADE
-                    0x00080000 or // INSTALL_SKIP_VERIFICATION
-                    0x01000000    // INSTALL_BYPASS_LOW_TARGET_SDK_BLOCK
-                Refine.unsafeCast<SessionParamsHidden>(params).installFlags = flags
+                Refine.unsafeCast<SessionParamsHidden>(params).installFlags = computeInstallFlags(false)
 
                 createSession(params, userId).use { session ->
                     apkFiles.forEachIndexed { index, descriptor ->
@@ -198,6 +190,18 @@ class ShizukuService : INPatchShizukuService.Stub() {
         private const val COPY_BUFFER_SIZE = 4096 * 4096
         const val KEY_STATUS = "status"
         const val KEY_MESSAGE = "message"
+
+        fun computeInstallFlags(installAllUsers: Boolean): Int {
+            var flags = PackageManagerHidden.INSTALL_ALLOW_TEST or
+                PackageManagerHidden.INSTALL_REPLACE_EXISTING or
+                0x00000080 or // INSTALL_ALLOW_DOWNGRADE
+                0x00080000 or // INSTALL_SKIP_VERIFICATION
+                0x01000000    // INSTALL_BYPASS_LOW_TARGET_SDK_BLOCK
+            if (installAllUsers) {
+                flags = flags or 0x00000040 // INSTALL_ALL_USERS
+            }
+            return flags
+        }
 
         fun failureBundle(throwable: Throwable): Bundle {
             return Bundle().apply {

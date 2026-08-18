@@ -100,6 +100,12 @@ object SystemPackageInstaller {
             } else {
                 runCatching {
                     context.startActivity(confirmation.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    completion.complete(
+                        SystemInstallResult.Completed(
+                            PackageInstaller.STATUS_PENDING_USER_ACTION,
+                            "Installation confirmation opened",
+                        ),
+                    )
                 }.onFailure { error ->
                     completion.complete(
                         SystemInstallResult.Completed(

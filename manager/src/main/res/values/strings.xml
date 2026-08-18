@@ -308,4 +308,17 @@
     <string name="time_minutes_ago">%d minutes ago</string>
     <string name="time_hours_ago">%d hours ago</string>
     <string name="time_days_ago">%d days ago</string>
+    <string name="settings_installation_category">Installation Settings</string>
+    <string name="settings_install_notification">Installation completed notification</string>
+    <string name="settings_install_notification_summary">Display a notification in the status bar upon installation completion</string>
+    <string name="settings_install_all_users">Install for all users</string>
+    <string name="settings_install_all_users_summary">Install to all user spaces when enabled, or current user only when disabled</string>
+    <string name="settings_third_party_installer">Third-party installer</string>
+    <string name="settings_third_party_installer_system_default">System default</string>
+    <string name="settings_third_party_installer_custom">Custom package name</string>
+    <string name="settings_third_party_installer_dialog_title">Select Installer</string>
+    <string name="settings_third_party_installer_custom_hint">e.g. com.rosan.installer.x.revived</string>
+    <string name="settings_third_party_installer_invalid_pkg">Selected or entered package is not installed or invalid</string>
+    <string name="install_notification_title">%s installed successfully</string>
+    <string name="install_notification_text">Tap to launch the application</string>
 </resources>

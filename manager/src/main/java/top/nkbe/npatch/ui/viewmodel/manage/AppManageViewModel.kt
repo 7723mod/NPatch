@@ -190,7 +190,9 @@ class AppManageViewModel : ViewModel() {
                 }
                 when (val outcome = NeoPackageManager.install(method)) {
                     is NeoPackageManager.InstallOutcome.Completed -> {
-                        if (outcome.status != PackageInstaller.STATUS_SUCCESS) {
+                        if (outcome.status != PackageInstaller.STATUS_SUCCESS &&
+                            outcome.status != PackageInstaller.STATUS_PENDING_USER_ACTION
+                        ) {
                             throw RuntimeException(outcome.message)
                         }
                     }

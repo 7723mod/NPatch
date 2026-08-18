@@ -299,4 +299,17 @@
     <string name="time_minutes_ago">%d分钟前</string>
     <string name="time_hours_ago">%d小时前</string>
     <string name="time_days_ago">%d天前</string>
+    <string name="settings_installation_category">安装设置</string>
+    <string name="settings_install_notification">安装完成通知</string>
+    <string name="settings_install_notification_summary">安装完成后在通知栏提示，点击可直接打开应用</string>
+    <string name="settings_install_all_users">为所有用户安装</string>
+    <string name="settings_install_all_users_summary">开启后将安装到所有用户空间，关闭则仅安装到当前用户</string>
+    <string name="settings_third_party_installer">第三方安装器</string>
+    <string name="settings_third_party_installer_system_default">系统默认</string>
+    <string name="settings_third_party_installer_custom">自定义包名</string>
+    <string name="settings_third_party_installer_dialog_title">选择安装器</string>
+    <string name="settings_third_party_installer_custom_hint">例如 com.rosan.installer.x.revived</string>
+    <string name="settings_third_party_installer_invalid_pkg">所选或输入的安装器未安装或无效</string>
+    <string name="install_notification_title">%s 安装成功</string>
+    <string name="install_notification_text">点击启动应用程序</string>
 </resources>

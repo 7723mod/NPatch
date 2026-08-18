@@ -249,6 +249,8 @@ fun DoPatchBody(modifier: Modifier, navigator: Navigator) {
                                 context.getString(R.string.patch_install_successfully),
                                 Toast.LENGTH_SHORT,
                             ).show()
+                        } else if (status == PackageInstaller.STATUS_PENDING_USER_ACTION) {
+                            installation = null
                         } else if (status != NeoPackageManager.STATUS_USER_CANCELLED) {
                             val result = snackbarHost.showSnackbar(installFailed, copyError)
                             if (result == SnackbarResult.ActionPerformed) {

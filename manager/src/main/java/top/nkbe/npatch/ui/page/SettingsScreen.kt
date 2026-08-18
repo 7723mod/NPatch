@@ -17,6 +17,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Android
+import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material.icons.outlined.BlurCircular
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Dashboard
@@ -29,7 +31,12 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.SettingsBrightness
+import android.Manifest
+import android.os.Build
+import top.nkbe.npatch.install.InstallNotificationHelper
+import top.nkbe.npatch.install.ThirdPartyPackageInstaller
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -150,6 +157,16 @@ fun SettingsScreen() {
 
             Spacer(Modifier.height(12.dp))
 
+            SmallTitle(text = stringResource(R.string.settings_installation_category))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = backgroundAwareCardColors(),
+            ) {
+                InstallationSettings()
+            }
+
+            Spacer(Modifier.height(12.dp))
+
             SmallTitle(text = stringResource(R.string.settings_network))
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -253,6 +270,211 @@ private fun DnsPreference() {
                             }
                         }
                     )
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun InstallationSettings() {
+    val context = LocalContext.current
+    var installNotificationEnabled by remember { mutableStateOf(Configs.installNotificationEnabled) }
+    var installAllUsers by remember { mutableStateOf(Configs.installAllUsers) }
+    var thirdPartyInstallerPackage by remember { mutableStateOf(Configs.thirdPartyInstallerPackage) }
+    var showInstallerDialog by remember { mutableStateOf(false) }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        Configs.installNotificationEnabled = isGranted
+        installNotificationEnabled = isGranted
+    }
+
+    SwitchPreference(
+        title = stringResource(R.string.settings_install_notification),
+        summary = stringResource(R.string.settings_install_notification_summary),
+        checked = installNotificationEnabled,
+        onCheckedChange = { enable ->
+            if (enable && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !InstallNotificationHelper.hasNotificationPermission(context)) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                Configs.installNotificationEnabled = enable
+                installNotificationEnabled = enable
+            }
+        },
+        startAction = { SettingsStartIcon(Icons.Outlined.ArrowUpward) },
+    )
+
+    SwitchPreference(
+        title = stringResource(R.string.settings_install_all_users),
+        summary = stringResource(R.string.settings_install_all_users_summary),
+        checked = installAllUsers,
+        onCheckedChange = {
+            Configs.installAllUsers = it
+            installAllUsers = it
+        },
+        startAction = { SettingsStartIcon(Icons.Outlined.Person) },
+    )
+
+    val currentInstallerSummary = remember(thirdPartyInstallerPackage) {
+        if (thirdPartyInstallerPackage.isBlank()) {
+            context.getString(R.string.settings_third_party_installer_system_default)
+        } else {
+            runCatching {
+                val appInfo = context.packageManager.getApplicationInfo(thirdPartyInstallerPackage, 0)
+                "${context.packageManager.getApplicationLabel(appInfo)} ($thirdPartyInstallerPackage)"
+            }.getOrDefault(thirdPartyInstallerPackage)
+        }
+    }
+
+    ArrowPreference(
+        title = stringResource(R.string.settings_third_party_installer),
+        summary = currentInstallerSummary,
+        startAction = { SettingsStartIcon(Icons.Outlined.Android) },
+        onClick = { showInstallerDialog = true },
+    )
+
+    if (showInstallerDialog) {
+        val discoveredInstallers = remember {
+            ThirdPartyPackageInstaller.getDiscoveredInstallers(context)
+        }
+        var customPkgText by rememberSaveable {
+            mutableStateOf(
+                if (thirdPartyInstallerPackage.isNotBlank() && discoveredInstallers.none { it.packageName == thirdPartyInstallerPackage }) {
+                    thirdPartyInstallerPackage
+                } else {
+                    ""
+                }
+            )
+        }
+        var isCustomError by rememberSaveable { mutableStateOf(false) }
+
+        OverlayDialog(
+            title = stringResource(R.string.settings_third_party_installer_dialog_title),
+            show = true,
+            onDismissRequest = { showInstallerDialog = false },
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                // System default option
+                val isDefaultSelected = thirdPartyInstallerPackage.isBlank()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable {
+                            Configs.thirdPartyInstallerPackage = ""
+                            thirdPartyInstallerPackage = ""
+                            showInstallerDialog = false
+                        }
+                        .padding(vertical = 12.dp, horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.settings_third_party_installer_system_default),
+                            style = COUITheme.textStyles.body1,
+                        )
+                    }
+                    if (isDefaultSelected) {
+                        Icon(
+                            imageVector = Icons.Outlined.Check,
+                            contentDescription = "Selected",
+                            tint = COUITheme.colorScheme.primary,
+                        )
+                    }
+                }
+
+                // Discovered third-party installers
+                discoveredInstallers.forEach { installer ->
+                    val isSelected = thirdPartyInstallerPackage == installer.packageName
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable {
+                                Configs.thirdPartyInstallerPackage = installer.packageName
+                                thirdPartyInstallerPackage = installer.packageName
+                                showInstallerDialog = false
+                            }
+                            .padding(vertical = 12.dp, horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = installer.label,
+                                style = COUITheme.textStyles.body1,
+                            )
+                            Text(
+                                text = installer.packageName,
+                                style = COUITheme.textStyles.footnote1,
+                                color = COUITheme.colorScheme.onSurfaceVariantSummary,
+                            )
+                        }
+                        if (isSelected) {
+                            Icon(
+                                imageVector = Icons.Outlined.Check,
+                                contentDescription = "Selected",
+                                tint = COUITheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // Custom package input
+                Text(
+                    text = stringResource(R.string.settings_third_party_installer_custom),
+                    style = COUITheme.textStyles.body2,
+                    color = COUITheme.colorScheme.onSurfaceVariantSummary,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                )
+                TextField(
+                    value = customPkgText,
+                    onValueChange = {
+                        customPkgText = it.trim()
+                        isCustomError = false
+                    },
+                    label = stringResource(R.string.settings_third_party_installer_custom_hint),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (isCustomError) {
+                    Text(
+                        text = stringResource(R.string.settings_third_party_installer_invalid_pkg),
+                        color = COUITheme.colorScheme.error,
+                        style = COUITheme.textStyles.footnote1,
+                        modifier = Modifier.padding(top = 4.dp, start = 8.dp),
+                    )
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                DialogButtonBar(
+                    negative = DialogButtonBarAction(
+                        text = stringResource(android.R.string.cancel),
+                        onClick = { showInstallerDialog = false },
+                    ),
+                    positive = DialogButtonBarAction(
+                        text = stringResource(android.R.string.ok),
+                        onClick = {
+                            if (customPkgText.isBlank()) {
+                                Configs.thirdPartyInstallerPackage = ""
+                                thirdPartyInstallerPackage = ""
+                                showInstallerDialog = false
+                            } else if (ThirdPartyPackageInstaller.isInstallerValid(context, customPkgText)) {
+                                Configs.thirdPartyInstallerPackage = customPkgText
+                                thirdPartyInstallerPackage = customPkgText
+                                showInstallerDialog = false
+                            } else {
+                                isCustomError = true
+                            }
+                        },
+                    ),
                 )
             }
         }

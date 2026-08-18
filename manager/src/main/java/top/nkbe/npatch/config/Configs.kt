@@ -67,4 +67,19 @@ object Configs {
     var outputFullLog by delegateStateOf(lspApp.prefs.getBoolean(PREFS_OUTPUT_FULL_LOG, false)) {
         lspApp.prefs.edit().putBoolean(PREFS_OUTPUT_FULL_LOG, it).apply()
     }
+
+    private const val PREFS_INSTALL_NOTIFICATION = "install_notification_enabled"
+    var installNotificationEnabled by delegateStateOf(lspApp.prefs.getBoolean(PREFS_INSTALL_NOTIFICATION, false)) {
+        lspApp.prefs.edit().putBoolean(PREFS_INSTALL_NOTIFICATION, it).apply()
+    }
+
+    private const val PREFS_INSTALL_ALL_USERS = "install_all_users"
+    var installAllUsers by delegateStateOf(lspApp.prefs.getBoolean(PREFS_INSTALL_ALL_USERS, false)) {
+        lspApp.prefs.edit().putBoolean(PREFS_INSTALL_ALL_USERS, it).apply()
+    }
+
+    private const val PREFS_THIRD_PARTY_INSTALLER = "third_party_installer_package"
+    var thirdPartyInstallerPackage by delegateStateOf(lspApp.prefs.getString(PREFS_THIRD_PARTY_INSTALLER, "") ?: "") {
+        lspApp.prefs.edit().putString(PREFS_THIRD_PARTY_INSTALLER, it).apply()
+    }
 }

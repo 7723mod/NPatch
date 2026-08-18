@@ -12,6 +12,7 @@ import android.os.IBinder
 import android.os.IInterface
 import android.os.Process
 import android.os.SystemProperties
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -25,6 +26,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import top.nkbe.npatch.INPatchShizukuService
 import top.nkbe.npatch.ShizukuService
 import top.nkbe.npatch.install.ApkInstallSet
+import top.nkbe.npatch.config.Configs
 import top.nkbe.npatch.lspApp
 import rikka.shizuku.Shizuku
 import rikka.shizuku.ShizukuBinderWrapper
@@ -33,6 +35,7 @@ import rikka.shizuku.SystemServiceHelper
 import java.io.File
 
 object ShizukuApi {
+    private const val TAG = "ShizukuApi"
     private const val PERMISSION_REQUEST_CODE = 114514
     private const val USER_SERVICE_TAG = "npatch"
     private const val USER_SERVICE_VERSION = 1
@@ -261,22 +264,38 @@ object ShizukuApi {
         }
     }
 
+    fun computeInstallFlags(installAllUsers: Boolean): Int {
+        var flags = PackageManagerHidden.INSTALL_ALLOW_TEST or
+            PackageManagerHidden.INSTALL_REPLACE_EXISTING or
+            0x00000080 or // INSTALL_ALLOW_DOWNGRADE
+            0x00080000 or // INSTALL_SKIP_VERIFICATION
+            0x01000000    // INSTALL_BYPASS_LOW_TARGET_SDK_BLOCK
+        if (installAllUsers) {
+            flags = flags or 0x00000040 // INSTALL_ALL_USERS
+        }
+        return flags
+    }
+
     suspend fun installApks(installSet: ApkInstallSet): Bundle {
         ensureReady()
+        val installAllUsers = Configs.installAllUsers
+        val result = performInstallApks(installSet, installAllUsers)
+        val status = result.getInt(ShizukuService.KEY_STATUS, PackageInstaller.STATUS_FAILURE)
+        if (installAllUsers && status != PackageInstaller.STATUS_SUCCESS) {
+            val msg = result.getString(ShizukuService.KEY_MESSAGE)
+            android.util.Log.w(TAG, "Install with INSTALL_ALL_USERS failed ($status: $msg), retrying for single user")
+            return performInstallApks(installSet, false)
+        }
+        return result
+    }
+
+    private suspend fun performInstallApks(installSet: ApkInstallSet, installAllUsers: Boolean): Bundle {
         return runCatching {
             val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
                 setAppPackageName(installSet.packageName)
                 setSize(installSet.totalSize)
             }
-            var flags = Refine.unsafeCast<SessionParamsHidden>(params).installFlags
-            flags = flags or
-                PackageManagerHidden.INSTALL_ALLOW_TEST or
-                PackageManagerHidden.INSTALL_REPLACE_EXISTING or
-                0x00000040 or // INSTALL_ALL_USERS
-                0x00000080 or // INSTALL_ALLOW_DOWNGRADE
-                0x00080000 or // INSTALL_SKIP_VERIFICATION
-                0x01000000    // INSTALL_BYPASS_LOW_TARGET_SDK_BLOCK
-            Refine.unsafeCast<SessionParamsHidden>(params).installFlags = flags
+            Refine.unsafeCast<SessionParamsHidden>(params).installFlags = computeInstallFlags(installAllUsers)
 
             createPackageInstallerSession(params).use { session ->
                 installSet.entries.forEach { entry ->
@@ -323,10 +342,23 @@ object ShizukuApi {
     }
 
     private fun resultBundle(intent: Intent): Bundle = Bundle().apply {
-        putInt(
-            ShizukuService.KEY_STATUS,
-            intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE),
-        )
+        val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
+        if (status == PackageInstaller.STATUS_PENDING_USER_ACTION) {
+            val confirmationIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent.getParcelableExtra(Intent.EXTRA_INTENT)
+            }
+            if (confirmationIntent != null) {
+                runCatching {
+                    lspApp.startActivity(confirmationIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                }.onFailure {
+                    Log.e(TAG, "Failed to launch Shizuku confirmation intent", it)
+                }
+            }
+        }
+        putInt(ShizukuService.KEY_STATUS, status)
         putString(ShizukuService.KEY_MESSAGE, intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE))
     }
 

@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
     <external-path name="external_files" path="." />
+    <external-files-path name="external_files_path" path="." />
+    <external-cache-path name="external_cache" path="." />
     <files-path name="files" path="." />
-    <cache-path name="diagnostics" path="diagnostics/" />
+    <cache-path name="cache" path="." />
 </paths>

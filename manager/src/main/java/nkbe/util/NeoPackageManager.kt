@@ -201,30 +201,25 @@ object NeoPackageManager {
     suspend fun install(method: InstallMethod): InstallOutcome {
         Log.i(TAG, "Installing patched APK set with $method")
         return withContext(Dispatchers.IO) {
-            runCatching {
-                val installSet = ApkInstallSet.fromFiles(lspApp, collectInstallApkFiles())
-                when (method) {
-                    InstallMethod.SHIZUKU -> {
-                        val result = ShizukuApi.installApks(installSet)
-                        InstallOutcome.Completed(
-                            result.getInt(
-                                ShizukuService.KEY_STATUS,
-                                PackageInstaller.STATUS_FAILURE,
-                            ),
-                            result.getString(ShizukuService.KEY_MESSAGE),
-                        )
-                    }
+            val installFiles = collectInstallApkFiles()
+            val installSet = ApkInstallSet.fromFiles(lspApp, installFiles)
+            val targetPkg = installSet.packageName
+            val thirdPartyPkg = top.nkbe.npatch.config.Configs.thirdPartyInstallerPackage
 
-                    InstallMethod.SYSTEM -> when (
-                        val result = SystemPackageInstaller.install(lspApp, installSet)
-                    ) {
-                        is SystemInstallResult.Completed -> InstallOutcome.Completed(
-                            result.status,
-                            result.message,
-                        )
-
-                        SystemInstallResult.PermissionRequired -> InstallOutcome.PermissionRequired
+            val outcome = runCatching {
+                if (thirdPartyPkg.isNotBlank() && top.nkbe.npatch.install.ThirdPartyPackageInstaller.isInstallerValid(lspApp, thirdPartyPkg)) {
+                    val launched = top.nkbe.npatch.install.ThirdPartyPackageInstaller.install(
+                        lspApp,
+                        installSet.entries.first().file,
+                        thirdPartyPkg,
+                    )
+                    if (launched) {
+                        InstallOutcome.Completed(PackageInstaller.STATUS_SUCCESS, "Handoff to $thirdPartyPkg")
+                    } else {
+                        performInternalInstall(method, installSet)
                     }
+                } else {
+                    performInternalInstall(method, installSet)
                 }
             }.getOrElse { error ->
                 InstallOutcome.Completed(
@@ -232,6 +227,44 @@ object NeoPackageManager {
                     error.message + "\n" + error.stackTraceToString(),
                 )
             }
+
+            if (outcome is InstallOutcome.Completed && (outcome.status == PackageInstaller.STATUS_SUCCESS || outcome.status == PackageInstaller.STATUS_PENDING_USER_ACTION)) {
+                runCatching {
+                    top.nkbe.npatch.install.InstallNotificationHelper.notifyInstallSuccess(lspApp, targetPkg)
+                }.onFailure {
+                    Log.e(TAG, "Failed to send install notification for $targetPkg", it)
+                }
+            }
+
+            outcome
+        }
+    }
+
+    private suspend fun performInternalInstall(method: InstallMethod, installSet: ApkInstallSet): InstallOutcome {
+        return when (method) {
+            InstallMethod.SHIZUKU -> {
+                val result = ShizukuApi.installApks(installSet)
+                InstallOutcome.Completed(
+                    result.getInt(
+                        ShizukuService.KEY_STATUS,
+                        PackageInstaller.STATUS_FAILURE,
+                    ),
+                    result.getString(ShizukuService.KEY_MESSAGE),
+                )
+            }
+
+            InstallMethod.SYSTEM -> fallbackSystemInstall(installSet)
+        }
+    }
+
+    private suspend fun fallbackSystemInstall(installSet: ApkInstallSet): InstallOutcome {
+        return when (val result = SystemPackageInstaller.install(lspApp, installSet)) {
+            is SystemInstallResult.Completed -> InstallOutcome.Completed(
+                result.status,
+                result.message,
+            )
+
+            SystemInstallResult.PermissionRequired -> InstallOutcome.PermissionRequired
         }
     }
 
