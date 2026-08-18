@@ -50,6 +50,7 @@ object Patcher {
                     add(config.overrideTargetSdkValue.toString())
                 }
                 if (Configs.detailPatchLogs) add("-v")
+                add("--force")
                 embeddedModules?.forEach {
                     add("-m"); add(it)
                 }
