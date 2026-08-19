@@ -31,7 +31,7 @@ public interface TemporaryDirectory extends Closeable {
    * when closed.
    */
   static TemporaryDirectory newSystemTemporaryDirectory() throws IOException {
-    Path tempDir = Files.createTempDirectory("tempdir_");
+    final Path tempDir = createSystemTempDirPath();
     TemporaryFile tempDirFile = new TemporaryFile(tempDir.toFile());
     return new TemporaryDirectory() {
       @Override
@@ -49,6 +49,17 @@ public interface TemporaryDirectory extends Closeable {
         tempDirFile.close();
       }
     };
+  }
+
+  static Path createSystemTempDirPath() throws IOException {
+    try {
+      return Files.createTempDirectory("tempdir_");
+    } catch (IOException e) {
+      String tmpProp = System.getProperty("java.io.tmpdir");
+      File fallbackDir = tmpProp != null ? new File(tmpProp) : new File(".");
+      fallbackDir.mkdirs();
+      return Files.createTempDirectory(fallbackDir.toPath(), "tempdir_");
+    }
   }
 
   /**

@@ -17,7 +17,7 @@ import javax.annotation.Nullable;
 public class ChunkBasedByteStorage implements ByteStorage {
 
   /** Size of the default chunk size. */
-  private static final long DEFAULT_CHUNK_SIZE_BYTES = 10 * 1024 * 1024;
+  private static final long DEFAULT_CHUNK_SIZE_BYTES = 4 * 1024 * 1024;
 
   /** Maximum size of each chunk. */
   private final long maxChunkSize;
