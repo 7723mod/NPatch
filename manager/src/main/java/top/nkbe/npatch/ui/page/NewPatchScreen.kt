@@ -248,7 +248,11 @@ fun NewPatchScreen(
 
             pendingPatchedApp?.let { app ->
                 val patchedType = NeoPackageManager.detectPatchedTypeDeep(app)
-                val typeName = if (patchedType != NeoPackageManager.PatchedType.NONE) patchedType.displayName else "NPatch/LSPatch/FPA"
+                val typeName = when (patchedType) {
+                    NeoPackageManager.PatchedType.EMBEDDED -> stringResource(R.string.patch_type_embedded_apk)
+                    NeoPackageManager.PatchedType.NONE -> "NPatch/LSPatch/FPA"
+                    else -> patchedType.displayName
+                }
                 OverlayDialog(
                     title = stringResource(R.string.patch_extract_original_title, typeName),
                     summary = stringResource(R.string.patch_extract_original_text, typeName),

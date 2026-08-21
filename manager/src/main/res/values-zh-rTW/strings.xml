@@ -138,6 +138,7 @@
     <string name="patch_install_failed">安裝失敗</string>
     <string name="patch_no_xposed_module">未找到 Xposed 模組</string>
     <string name="patch_target_already_patched">已修補</string>
+    <string name="patch_type_embedded_apk">內嵌原包/外掛</string>
     <string name="patch_extract_original_title">偵測到已修補應用程式 (%1$s)</string>
     <string name="patch_extract_original_text">該應用程式先前已由 %1$s 修補。\n\n建議解壓內嵌的原始 APK 重新修補，避免多層嵌套打包導致崩潰。</string>
     <string name="patch_extract_original_confirm">提取原包修補</string>

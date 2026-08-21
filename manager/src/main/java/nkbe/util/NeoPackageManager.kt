@@ -54,7 +54,8 @@ object NeoPackageManager {
         NONE(""),
         NPATCH("NPatch"),
         LSPATCH("LSPatch"),
-        FPA("FPA");
+        FPA("FPA"),
+        EMBEDDED("Embedded APK");
     }
 
     sealed interface ExtractResult {
@@ -619,9 +620,11 @@ object NeoPackageManager {
         return runCatching {
             ZipFile(sourceFile).use { zip ->
                 when {
-                    zip.getEntry("assets/npatch/config.json") != null || zip.getEntry("assets/npatch/loader.bin") != null -> PatchedType.NPATCH
-                    zip.getEntry("assets/lspatch/config.json") != null || zip.getEntry("assets/lspatch/loader.bin") != null -> PatchedType.LSPATCH
+                    zip.getEntry("assets/npatch/config.json") != null || zip.getEntry("assets/npatch/loader.bin") != null || zip.getEntry("assets/npatch/origin.apk") != null -> PatchedType.NPATCH
+                    zip.getEntry("assets/lspatch/config.json") != null || zip.getEntry("assets/lspatch/loader.bin") != null || zip.getEntry("assets/lspatch/origin.apk") != null -> PatchedType.LSPATCH
                     zip.getEntry("fpa/config.json") != null || zip.getEntry("assets/fpa/config.json") != null || zip.getEntry("extra/core.dex") != null || zip.getEntry("fpa/source.apk") != null -> PatchedType.FPA
+                    zip.getEntry("assets/origin.apk") != null -> PatchedType.EMBEDDED
+                    zip.entries().asSequence().any { !it.isDirectory && it.name.startsWith("assets/") && it.name.endsWith(".apk") } -> PatchedType.EMBEDDED
                     else -> PatchedType.NONE
                 }
             }
@@ -663,10 +666,10 @@ object NeoPackageManager {
                     "assets/npatch/origin.apk",
                     "assets/lspatch/origin.apk"
                 )
-                PatchedType.NONE -> listOf(
+                PatchedType.EMBEDDED, PatchedType.NONE -> listOf(
+                    "assets/origin.apk",
                     "assets/npatch/origin.apk",
                     "assets/lspatch/origin.apk",
-                    "assets/origin.apk",
                     "fpa/source.apk",
                     "fpa/o_app.apk",
                     "assets/fpa/source.apk"
@@ -688,6 +691,20 @@ object NeoPackageManager {
                                 }
                             }
                             break
+                        }
+                    }
+
+                    if (extractedEntryName == null) {
+                        val anyEmbedded = zip.entries().asSequence().firstOrNull {
+                            !it.isDirectory && it.name.startsWith("assets/") && it.name.endsWith(".apk")
+                        }
+                        if (anyEmbedded != null) {
+                            extractedEntryName = anyEmbedded.name
+                            zip.getInputStream(anyEmbedded).use { input ->
+                                extractedFile.outputStream().use { output ->
+                                    input.copyTo(output)
+                                }
+                            }
                         }
                     }
                 }

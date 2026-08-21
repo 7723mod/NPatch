@@ -141,6 +141,7 @@
     <string name="patch_install_failed">Install failed</string>
     <string name="patch_no_xposed_module">No Xposed module(s) were found</string>
     <string name="patch_target_already_patched">Already patched</string>
+    <string name="patch_type_embedded_apk">Embedded APK/Plugin</string>
     <string name="patch_extract_original_title">Already Patched App (%1$s)</string>
     <string name="patch_extract_original_text">This app was previously patched with %1$s.\n\nIt is recommended to extract the embedded original APK to re-patch, avoiding nested patching issues.</string>
     <string name="patch_extract_original_confirm">Extract and Repatch</string>
