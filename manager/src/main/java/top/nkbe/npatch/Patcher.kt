@@ -203,6 +203,8 @@ object Patcher {
             }
     }
 
+    private const val STREAM_BUFFER_SIZE = 64 * 1024
+
     private fun exportFile(
         root: DocumentFile,
         source: File,
@@ -213,8 +215,8 @@ object Patcher {
         val destination = root.createFile(mimeType, outputName)
             ?: throw IOException("Unable to create output file: $outputName")
         try {
-            lspApp.contentResolver.openOutputStream(destination.uri, "w")?.use { output ->
-                source.inputStream().use { input -> input.copyTo(output) }
+            lspApp.contentResolver.openOutputStream(destination.uri, "w")?.buffered(STREAM_BUFFER_SIZE)?.use { output ->
+                source.inputStream().buffered(STREAM_BUFFER_SIZE).use { input -> input.copyTo(output, STREAM_BUFFER_SIZE) }
             } ?: throw IOException("Unable to open an output stream: ${destination.uri}")
         } catch (error: Throwable) {
             destination.delete()
@@ -230,15 +232,24 @@ object Patcher {
         require(apkFiles.isNotEmpty()) { "APK set is empty" }
         val duplicateNames = apkFiles.groupBy { it.name.lowercase() }.filterValues { it.size > 1 }
         require(duplicateNames.isEmpty()) { "Duplicate APKS entries: ${duplicateNames.keys}" }
-        ZipOutputStream(output.buffered()).use { zip ->
-            zip.setLevel(Deflater.NO_COMPRESSION)
-            apkFiles.forEach { apkFile ->
-                val entry = ZipEntry(apkFile.name).apply { time = 0L }
-                zip.putNextEntry(entry)
-                apkFile.inputStream().use { input ->
-                    input.copyTo(zip)
+        java.io.BufferedOutputStream(output, STREAM_BUFFER_SIZE).use { bufferedOut ->
+            ZipOutputStream(bufferedOut).use { zip ->
+                zip.setLevel(Deflater.NO_COMPRESSION)
+                val buffer = ByteArray(STREAM_BUFFER_SIZE)
+                apkFiles.forEach { apkFile ->
+                    val entry = ZipEntry(apkFile.name).apply {
+                        time = 0L
+                        size = apkFile.length()
+                    }
+                    zip.putNextEntry(entry)
+                    apkFile.inputStream().buffered(STREAM_BUFFER_SIZE).use { input ->
+                        var read: Int
+                        while (input.read(buffer).also { read = it } >= 0) {
+                            zip.write(buffer, 0, read)
+                        }
+                    }
+                    zip.closeEntry()
                 }
-                zip.closeEntry()
             }
         }
     }

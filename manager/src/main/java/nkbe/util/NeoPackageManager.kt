@@ -312,14 +312,15 @@ object NeoPackageManager {
                     val src = DocumentFile.fromSingleUri(lspApp, uri)
                         ?: throw IOException("DocumentFile is null")
                     val srcName = src.name ?: "selected-$index.apk"
-                    val copiedName = if (isApksArchive(srcName)) {
+                    val copiedName = if (isApksArchiveName(srcName)) {
                         "$index-$srcName"
                     } else {
                         sanitizeVisibleFileName(srcName)
                     }
                     val copiedFile = copyDocumentToTempFile(uri, copiedName)
+                    val isArchive = isApksArchive(srcName, copiedFile)
                     val selectedFiles =
-                        if (isApksArchive(srcName)) extractApkArchive(copiedFile, srcName)
+                        if (isArchive) extractApkArchive(copiedFile, srcName)
                         else listOf(copiedFile)
                     candidates += selectedFiles
                 }
@@ -369,9 +370,24 @@ object NeoPackageManager {
         return dst
     }
 
-    private fun isApksArchive(fileName: String): Boolean {
+    private fun isStandaloneApk(file: File): Boolean {
+        return runCatching {
+            ZipFile(file).use { zip ->
+                zip.getEntry("AndroidManifest.xml") != null
+            }
+        }.getOrDefault(false)
+    }
+
+    private fun isApksArchiveName(fileName: String): Boolean {
         val lower = fileName.lowercase(Locale.ROOT)
         return lower.endsWith(".apks") || lower.endsWith(".xapk") || lower.endsWith(".apkm") || lower.endsWith(".zip")
+    }
+
+    private fun isApksArchive(fileName: String, file: File? = null): Boolean {
+        if (file != null && isStandaloneApk(file)) {
+            return false
+        }
+        return isApksArchiveName(fileName)
     }
 
     private fun extractApkArchive(archiveFile: File, archiveName: String): List<File> {
@@ -455,7 +471,15 @@ object NeoPackageManager {
 
     private fun selectInstallableApkEntries(entries: List<java.util.zip.ZipEntry>): List<java.util.zip.ZipEntry> {
         val apkEntries = entries
-            .filter { entry -> !entry.isDirectory && entry.name.lowercase(Locale.ROOT).endsWith(".apk") }
+            .filter { entry ->
+                if (entry.isDirectory || !entry.name.lowercase(Locale.ROOT).endsWith(".apk")) return@filter false
+                val normalized = normalizeZipPath(entry.name)
+                // Filter out embedded APKs that might be in assets, res, lib, META-INF
+                !normalized.startsWith("assets/") &&
+                !normalized.startsWith("res/") &&
+                !normalized.startsWith("lib/") &&
+                !normalized.startsWith("meta-inf/")
+            }
             .sortedBy { entry -> normalizeZipPath(entry.name) }
         if (apkEntries.isEmpty()) return emptyList()
 

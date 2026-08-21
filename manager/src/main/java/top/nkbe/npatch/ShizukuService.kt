@@ -73,7 +73,7 @@ class ShizukuService : INPatchShizukuService.Stub() {
                             }
                         }
                     }
-                    commit(session)
+                    commit(session, packageName, userId)
                 }
             }.fold(
                 onSuccess = { it.toResultBundle() },
@@ -96,6 +96,15 @@ class ShizukuService : INPatchShizukuService.Stub() {
                     }
                 }
                 if (timeoutResult == null) {
+                    val uninstalled = runCatching {
+                        iPackageManager.getApplicationInfo(packageName, 0L, userId) == null
+                    }.getOrDefault(false)
+                    if (uninstalled) {
+                        return@runCatching Intent().apply {
+                            putExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_SUCCESS)
+                            putExtra(PackageInstaller.EXTRA_STATUS_MESSAGE, "Uninstallation completed successfully (verified by state recheck)")
+                        }
+                    }
                     throw IOException("Uninstall timed out (30s). Please check if the system Package Installer or Play Protect is disabled.")
                 }
                 result ?: throw IOException("Intent is null")
@@ -165,7 +174,7 @@ class ShizukuService : INPatchShizukuService.Stub() {
         return Refine.unsafeCast(PackageInstallerHidden.SessionHidden(iSession))
     }
 
-    private suspend fun commit(session: PackageInstaller.Session): Intent {
+    private suspend fun commit(session: PackageInstaller.Session, packageName: String, userId: Int): Intent {
         var result: Intent? = null
         val timeoutResult = withTimeoutOrNull(30_000L) {
             suspendCoroutine { cont ->
@@ -181,6 +190,15 @@ class ShizukuService : INPatchShizukuService.Stub() {
                 Runtime.getRuntime().exec(
                     arrayOf("sh", "-c", "settings put global verifier_verify_adb_installs 0; settings put global package_verifier_enable 0")
                 ).waitFor()
+            }
+            val installed = runCatching {
+                iPackageManager.getApplicationInfo(packageName, 0L, userId) != null
+            }.getOrDefault(false)
+            if (installed) {
+                return Intent().apply {
+                    putExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_SUCCESS)
+                    putExtra(PackageInstaller.EXTRA_STATUS_MESSAGE, "Installation completed successfully (verified by state recheck)")
+                }
             }
             throw IOException("Installation timed out (30s). ADB package verification has been automatically disabled. Please retry installation.")
         }

@@ -47,6 +47,7 @@ object SystemPackageInstaller {
             val token = UUID.randomUUID().toString()
             val completion = CompletableDeferred<SystemInstallResult.Completed>()
             requests[token] = completion
+            val startTime = System.currentTimeMillis()
             var committed = false
             try {
                 packageInstaller.openSession(sessionId).use { session ->
@@ -59,13 +60,28 @@ object SystemPackageInstaller {
                     session.commit(createStatusIntent(appContext, sessionId, token).intentSender)
                     committed = true
                 }
-                val result = kotlinx.coroutines.withTimeoutOrNull(60_000L) {
+                val result = kotlinx.coroutines.withTimeoutOrNull(45_000L) {
                     completion.await()
                 }
-                result ?: SystemInstallResult.Completed(
-                    PackageInstaller.STATUS_FAILURE,
-                    "Installation timed out (60s). Please check if system installer or permission prompt was cancelled/blocked.",
-                )
+                if (result != null && result.status == PackageInstaller.STATUS_SUCCESS) {
+                    result
+                } else {
+                    val isInstalled = runCatching {
+                        val pkgInfo = appContext.packageManager.getPackageInfo(installSet.packageName, 0)
+                        pkgInfo != null && (pkgInfo.lastUpdateTime >= startTime - 5000L)
+                    }.getOrDefault(false)
+                    if (isInstalled) {
+                        SystemInstallResult.Completed(
+                            PackageInstaller.STATUS_SUCCESS,
+                            "Installation completed successfully (verified by state recheck)",
+                        )
+                    } else {
+                        result ?: SystemInstallResult.Completed(
+                            PackageInstaller.STATUS_FAILURE,
+                            "Installation timed out (45s). State rechecked: package not installed.",
+                        )
+                    }
+                }
             } catch (error: Throwable) {
                 if (!committed) runCatching { packageInstaller.abandonSession(sessionId) }
                 throw error

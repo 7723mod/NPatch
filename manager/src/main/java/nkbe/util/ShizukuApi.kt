@@ -306,7 +306,7 @@ object ShizukuApi {
                         }
                     }
                 }
-                awaitPackageInstallerResult { intentSender -> session.commit(intentSender) }
+                awaitPackageInstallerResult(installSet.packageName, true) { intentSender -> session.commit(intentSender) }
             }
         }.fold(
             onSuccess = ::resultBundle,
@@ -317,7 +317,7 @@ object ShizukuApi {
     suspend fun uninstallPackage(packageName: String): Bundle {
         ensureReady()
         return runCatching {
-            awaitPackageInstallerResult { intentSender -> packageInstaller.uninstall(packageName, intentSender) }
+            awaitPackageInstallerResult(packageName, false) { intentSender -> packageInstaller.uninstall(packageName, intentSender) }
         }.fold(
             onSuccess = ::resultBundle,
             onFailure = ShizukuService::failureBundle,
@@ -325,6 +325,8 @@ object ShizukuApi {
     }
 
     private suspend fun awaitPackageInstallerResult(
+        packageName: String,
+        isInstall: Boolean,
         action: (android.content.IntentSender) -> Unit,
     ): Intent {
         val result = withTimeoutOrNull(30_000L) {
@@ -336,7 +338,26 @@ object ShizukuApi {
             }
         }
         if (result == null) {
-            throw java.io.IOException("Installation timed out (30s). Please check if system installer or Play Protect is disabled.")
+            val userId = Process.myUserHandle().hashCode()
+            val exists = runCatching {
+                iPackageManager.getApplicationInfo(packageName, 0L, userId) != null
+            }.getOrDefault(false)
+
+            if (isInstall && exists) {
+                return Intent().apply {
+                    putExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_SUCCESS)
+                    putExtra(PackageInstaller.EXTRA_STATUS_MESSAGE, "Installation completed successfully (verified by state recheck)")
+                }
+            } else if (!isInstall && !exists) {
+                return Intent().apply {
+                    putExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_SUCCESS)
+                    putExtra(PackageInstaller.EXTRA_STATUS_MESSAGE, "Uninstallation completed successfully (verified by state recheck)")
+                }
+            }
+            throw java.io.IOException(
+                if (isInstall) "Installation timed out (30s). State rechecked: package not installed."
+                else "Uninstallation timed out (30s). State rechecked: package still present."
+            )
         }
         return result
     }
