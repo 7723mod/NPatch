@@ -8,4 +8,5 @@ interface INPatchShizukuService {
     Bundle uninstallPackage(String packageName, int userId) = 2;
     boolean performDexOptMode(String packageName, int userId) = 3;
     void destroy() = 4;
+    void startManagerService(String packageName) = 5;
 }

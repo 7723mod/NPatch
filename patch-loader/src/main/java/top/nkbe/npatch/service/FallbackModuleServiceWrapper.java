@@ -13,24 +13,47 @@ import top.nkbe.npatch.util.NPatchRemoteStore;
 
 public class FallbackModuleServiceWrapper extends IModuleService.Stub {
     private static final String TAG = "NPatch-FallbackWrapper";
-    private final IModuleService remoteService;
+    private final Object switchLock = new Object();
+    private volatile IModuleService activeRemoteService;
     private final LocalInjectedModuleService localService;
     private final NPatchRemoteStore localStore;
-    private boolean isRemoteDead = false;
+    private final String modulePackageName;
 
     public FallbackModuleServiceWrapper(Context context, String modulePackageName, IModuleService remoteService) {
-        this.remoteService = remoteService;
-        // The fallback local service
+        this.modulePackageName = modulePackageName;
         this.localService = new LocalInjectedModuleService(context, modulePackageName);
-        // The store used to cache/sync preferences
         this.localStore = NPatchRemoteStore.get(context, modulePackageName);
+        this.activeRemoteService = remoteService;
+    }
+
+    public void setRemoteService(IModuleService remoteService) {
+        synchronized (switchLock) {
+            this.activeRemoteService = remoteService;
+            Log.i(TAG, "Switched remote service for " + modulePackageName + " (remoteAvailable=" + (remoteService != null) + ")");
+        }
+    }
+
+    private IModuleService getActiveRemote() {
+        synchronized (switchLock) {
+            return activeRemoteService;
+        }
+    }
+
+    private void markRemoteDead(RemoteException e) {
+        synchronized (switchLock) {
+            if (activeRemoteService != null) {
+                Log.w(TAG, "Remote Manager Service died for " + modulePackageName + ", falling back to local service", e);
+                activeRemoteService = null;
+            }
+        }
     }
 
     @Override
     public long getFrameworkProperties() throws RemoteException {
-        if (!isRemoteDead) {
+        IModuleService remote = getActiveRemote();
+        if (remote != null) {
             try {
-                return remoteService.getFrameworkProperties();
+                return remote.getFrameworkProperties();
             } catch (RemoteException e) {
                 markRemoteDead(e);
             }
@@ -40,9 +63,9 @@ public class FallbackModuleServiceWrapper extends IModuleService.Stub {
 
     @Override
     public Bundle requestRemotePreferences(String group, IRemotePreferenceCallback callback) throws RemoteException {
-        if (!isRemoteDead) {
+        IModuleService remote = getActiveRemote();
+        if (remote != null) {
             try {
-                // Wrap callback to intercept dynamic updates pushed from the Manager
                 IRemotePreferenceCallback wrappedCallback = null;
                 if (callback != null) {
                     wrappedCallback = new IRemotePreferenceCallback.Stub() {
@@ -59,9 +82,8 @@ public class FallbackModuleServiceWrapper extends IModuleService.Stub {
                     };
                 }
 
-                Bundle result = remoteService.requestRemotePreferences(group, wrappedCallback);
-                
-                // Cache the initial snapshot locally
+                Bundle result = remote.requestRemotePreferences(group, wrappedCallback);
+
                 if (result != null && result.containsKey("map")) {
                     try {
                         Bundle diff = new Bundle();
@@ -73,23 +95,23 @@ public class FallbackModuleServiceWrapper extends IModuleService.Stub {
                         Log.w(TAG, "Failed to cache initial preferences", e);
                     }
                 }
-                
+
                 return result;
             } catch (RemoteException e) {
                 markRemoteDead(e);
             }
         }
-        
-        // Fallback to local storage
+
         Log.d(TAG, "Using local fallback for requestRemotePreferences: " + group);
         return localService.requestRemotePreferences(group, callback);
     }
 
     @Override
     public ParcelFileDescriptor openRemoteFile(String path) throws RemoteException {
-        if (!isRemoteDead) {
+        IModuleService remote = getActiveRemote();
+        if (remote != null) {
             try {
-                return remoteService.openRemoteFile(path);
+                return remote.openRemoteFile(path);
             } catch (RemoteException e) {
                 markRemoteDead(e);
             }
@@ -100,20 +122,15 @@ public class FallbackModuleServiceWrapper extends IModuleService.Stub {
 
     @Override
     public String[] getRemoteFileNames() throws RemoteException {
-        if (!isRemoteDead) {
+        IModuleService remote = getActiveRemote();
+        if (remote != null) {
             try {
-                return remoteService.getRemoteFileNames();
+                return remote.getRemoteFileNames();
             } catch (RemoteException e) {
                 markRemoteDead(e);
             }
         }
         return localService.getRemoteFileNames();
     }
-
-    private void markRemoteDead(RemoteException e) {
-        if (!isRemoteDead) {
-            Log.w(TAG, "Remote Manager Service died, downgrading to local service mode", e);
-            isRemoteDead = true;
-        }
-    }
 }
+

@@ -5,45 +5,54 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
-import android.os.ParcelFileDescriptor;
 import android.os.Parcel;
+import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
 import android.os.UserHandle;
 import android.util.Log;
 
-import top.nkbe.npatch.share.Constants;
-import org.matrix.vector.ipc.LoadedModule;
-import org.matrix.vector.ipc.IProcessChannel;
-import org.matrix.vector.ipc.IModuleService;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.matrix.vector.ipc.IFrameworkService;
-import org.matrix.vector.ipc.IRemotePreferenceCallback;
+import org.matrix.vector.ipc.IModuleService;
+import org.matrix.vector.ipc.IProcessChannel;
+import org.matrix.vector.ipc.LoadedModule;
+
+import top.nkbe.npatch.loader.util.XLog;
+import top.nkbe.npatch.share.Constants;
+import top.nkbe.npatch.util.ModuleLoader;
 
 import java.io.File;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class RemoteApplicationService implements IFrameworkService {
 
     private static final String TAG = "NPatch";
     private static final String MODULE_SERVICE = "top.nkbe.npatch.manager.ModuleService";
     private static final int CONNECTION_TIMEOUT_SEC = 2;
-    private static final int MAX_BIND_ATTEMPTS = 2;
+    private static final long MAX_BACKGROUND_WAIT_MS = 5 * 60 * 1000L;
     private static final int REGISTER_CLIENT_PACKAGE = 0x4E5041;
+    private static final Handler MAIN_HANDLER = new Handler(Looper.getMainLooper());
     private static final ExecutorService BIND_EXECUTOR =
             Executors.newCachedThreadPool(runnable -> {
                 Thread thread = new Thread(runnable, "NPatch-ManagerBind");
@@ -52,141 +61,355 @@ public class RemoteApplicationService implements IFrameworkService {
             });
 
     private final Context context;
-    private final AtomicBoolean managerAvailable = new AtomicBoolean(true);
+    private final AtomicBoolean managerAvailable = new AtomicBoolean(false);
+    private final Map<String, FallbackModuleServiceWrapper> dynamicModuleServices = new ConcurrentHashMap<>();
     private volatile List<LoadedModule> cachedLegacyModuleScope = Collections.emptyList();
     private volatile List<LoadedModule> cachedModuleScope = Collections.emptyList();
     private volatile IFrameworkService service;
     private volatile ServiceConnection connection;
+    private Runnable giveUpRunnable;
 
     @SuppressLint("DiscouragedPrivateApi")
-    public RemoteApplicationService(Context context) throws RemoteException {
+    public RemoteApplicationService(Context context) {
         Context appContext = context.getApplicationContext();
         this.context = appContext == null ? context : appContext;
-        try {
-            Intent intent = new Intent()
-                    .setComponent(new ComponentName(Constants.MANAGER_PACKAGE_NAME, MODULE_SERVICE))
-                    .putExtra("packageName", this.context.getPackageName());
 
-            Throwable lastError = null;
-            for (int attempt = 1; attempt <= MAX_BIND_ATTEMPTS && service == null; attempt++) {
-                Log.i(TAG, "Requesting manager binder... attempt " + attempt + "/" + MAX_BIND_ATTEMPTS);
-                try {
-                    service = bindOnce(intent);
-                } catch (Throwable error) {
-                    lastError = error;
-                    Log.w(TAG, "Manager bind attempt failed", error);
-                }
-            }
+        CountDownLatch bindLatch = new CountDownLatch(1);
+        AtomicBoolean connectedOnTime = new AtomicBoolean(false);
 
-            if (service == null) {
-                RemoteException failure =
-                        new RemoteException("Failed to get manager binder after "
-                                + MAX_BIND_ATTEMPTS + " attempts");
-                if (lastError != null) {
-                    failure.initCause(lastError);
-                }
-                throw failure;
-            }
-        } catch (Throwable e) {
-            if (e instanceof RemoteException) {
-                throw (RemoteException) e;
-            }
-            RemoteException remoteException = new RemoteException("Failed to get manager binder");
-            remoteException.initCause(e);
-            throw remoteException;
-        }
-    }
-
-    private IFrameworkService bindOnce(Intent intent) throws Exception {
-        CountDownLatch latch = new CountDownLatch(1);
-        AtomicBoolean cancelled = new AtomicBoolean(false);
-        AtomicBoolean disconnected = new AtomicBoolean(false);
-        AtomicReference<IFrameworkService> result = new AtomicReference<>();
-        AtomicReference<Throwable> failure = new AtomicReference<>();
+        Intent intent = new Intent()
+                .setComponent(new ComponentName(Constants.MANAGER_PACKAGE_NAME, MODULE_SERVICE))
+                .putExtra("packageName", this.context.getPackageName());
 
         ServiceConnection candidate = new ServiceConnection() {
             @Override
             public void onServiceConnected(ComponentName name, IBinder binder) {
-                if (cancelled.get()) {
-                    safeUnbind(this);
-                    return;
-                }
                 try {
-                    registerClientPackage(binder, context.getPackageName());
+                    registerClientPackage(binder, RemoteApplicationService.this.context.getPackageName());
                     IFrameworkService connected = Stub.asInterface(binder);
                     if (connected == null || !binder.isBinderAlive()) {
                         throw new RemoteException("Manager returned a dead binder");
                     }
+                    service = connected;
                     managerAvailable.set(true);
-                    result.set(connected);
-                    Log.i(TAG, "Manager binder received and caller identity registered");
+                    connection = this;
+                    Log.i(TAG, "Manager binder connected and registered successfully");
+
+                    // Restore Process Channel (Hot reload)
+                    try {
+                        connected.attachProcessChannel(new NPatchProcessChannel());
+                    } catch (Throwable t) {
+                        Log.w(TAG, "Failed to restore hot reload process channel on reconnect", t);
+                    }
+
+                    // Fetch latest modules from Manager and dynamically upgrade module wrappers
+                    BIND_EXECUTOR.execute(() -> onManagerReconnected(connected));
                 } catch (Throwable error) {
-                    failure.set(error);
+                    Log.w(TAG, "Manager binder connection setup failed", error);
+                    managerAvailable.set(false);
                 } finally {
-                    latch.countDown();
+                    bindLatch.countDown();
                 }
             }
 
             @Override
             public void onServiceDisconnected(ComponentName name) {
-                disconnected.set(true);
+                Log.w(TAG, "Manager service disconnected");
                 managerAvailable.set(false);
-                if (connection == this) {
-                    Log.e(TAG, "Manager service disconnected");
-                    service = null;
-                    connection = null;
-                }
+                recordFallbackEvent("manager_disconnected");
+                dynamicModuleServices.values().forEach(wrapper -> wrapper.setRemoteService(null));
             }
 
             @Override
             public void onBindingDied(ComponentName name) {
+                Log.w(TAG, "Manager binding died");
                 managerAvailable.set(false);
-                failure.compareAndSet(null, new RemoteException("Manager binding died"));
-                onServiceDisconnected(name);
-                latch.countDown();
+                recordFallbackEvent("binding_died");
+                dynamicModuleServices.values().forEach(wrapper -> wrapper.setRemoteService(null));
             }
 
             @Override
             public void onNullBinding(ComponentName name) {
-                disconnected.set(true);
+                Log.w(TAG, "Manager returned a null binding");
                 managerAvailable.set(false);
-                failure.compareAndSet(null, new RemoteException("Manager returned a null binding"));
-                latch.countDown();
+                recordFallbackEvent("null_binding");
+                bindLatch.countDown();
             }
         };
 
-        boolean bindStarted = bindServiceCompat(intent, candidate);
-        if (!bindStarted) {
-            throw new RemoteException("bindService returned false");
+        // 1. Asynchronously initiate bind
+        boolean bindInitiated = false;
+        try {
+            bindInitiated = bindServiceCompat(intent, candidate);
+        } catch (Throwable t) {
+            Log.w(TAG, "bindServiceCompat failed immediately", t);
         }
 
-        if (!latch.await(CONNECTION_TIMEOUT_SEC, TimeUnit.SECONDS)) {
-            cancelled.set(true);
-            safeUnbind(candidate);
-            throw new TimeoutException("Manager bind timed out");
-        }
+        // 2. Concurrently load modules from local cache
+        List<LoadedModule> localLegacy = new ArrayList<>();
+        List<LoadedModule> localModern = new ArrayList<>();
+        loadModulesFromCache(this.context, localLegacy, localModern);
 
-        Throwable error = failure.get();
-        IFrameworkService connected = result.get();
-        if (error != null
-                || disconnected.get()
-                || connected == null
-                || !connected.asBinder().isBinderAlive()) {
-            cancelled.set(true);
-            safeUnbind(candidate);
-            if (error instanceof Exception) {
-                throw (Exception) error;
+        // 3. Wait up to CONNECTION_TIMEOUT_SEC for manager to respond
+        if (bindInitiated) {
+            try {
+                connectedOnTime.set(bindLatch.await(CONNECTION_TIMEOUT_SEC, TimeUnit.SECONDS));
+            } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
             }
-            throw new RemoteException("Manager bind failed");
         }
-        connection = candidate;
-        if (disconnected.get() || !connected.asBinder().isBinderAlive()) {
-            connection = null;
-            cancelled.set(true);
-            safeUnbind(candidate);
-            throw new RemoteException("Manager disconnected while completing bind");
+
+        IFrameworkService active = service;
+        if (connectedOnTime.get() && active != null && active.asBinder().isBinderAlive()) {
+            Log.i(TAG, "Manager connected within startup deadline");
+            try {
+                cacheModuleScope(true, active.getLegacyModules());
+                cacheModuleScope(false, active.getModules());
+                updateModulesCache(this.context);
+            } catch (Throwable t) {
+                Log.w(TAG, "Failed to read initial modules from manager, fallback to local cache", t);
+                applyLocalCachedModules(localLegacy, localModern);
+            }
+        } else {
+            Log.w(TAG, "Manager not ready in time; starting with local cached modules");
+            recordFallbackEvent("bind_timeout");
+            applyLocalCachedModules(localLegacy, localModern);
+
+            // Schedule give-up timer for background connection
+            if (bindInitiated) {
+                this.connection = candidate;
+                scheduleGiveUp(candidate);
+            }
         }
-        return connected;
+    }
+
+    private void scheduleGiveUp(ServiceConnection candidate) {
+        giveUpRunnable = () -> {
+            if (!managerAvailable.get() && connection == candidate) {
+                Log.i(TAG, "Max background wait reached (5m), unbinding manager connection");
+                safeUnbind(candidate);
+                connection = null;
+            }
+        };
+        MAIN_HANDLER.postDelayed(giveUpRunnable, MAX_BACKGROUND_WAIT_MS);
+    }
+
+    private void applyLocalCachedModules(List<LoadedModule> localLegacy, List<LoadedModule> localModern) {
+        for (LoadedModule m : localLegacy) {
+            FallbackModuleServiceWrapper wrapper = dynamicModuleServices.computeIfAbsent(
+                    m.packageName,
+                    pkg -> new FallbackModuleServiceWrapper(context, pkg, null)
+            );
+            m.service = wrapper;
+        }
+        for (LoadedModule m : localModern) {
+            FallbackModuleServiceWrapper wrapper = dynamicModuleServices.computeIfAbsent(
+                    m.packageName,
+                    pkg -> new FallbackModuleServiceWrapper(context, pkg, null)
+            );
+            m.service = wrapper;
+        }
+        cachedLegacyModuleScope = new ArrayList<>(localLegacy);
+        cachedModuleScope = new ArrayList<>(localModern);
+    }
+
+    private void onManagerReconnected(IFrameworkService connected) {
+        try {
+            List<LoadedModule> remoteLegacy = connected.getLegacyModules();
+            List<LoadedModule> remoteModern = connected.getModules();
+
+            if (remoteLegacy != null) {
+                for (LoadedModule rm : remoteLegacy) {
+                    if (rm != null && rm.packageName != null) {
+                        FallbackModuleServiceWrapper wrapper = dynamicModuleServices.computeIfAbsent(
+                                rm.packageName,
+                                pkg -> new FallbackModuleServiceWrapper(context, pkg, rm.service)
+                        );
+                        wrapper.setRemoteService(rm.service);
+                    }
+                }
+            }
+
+            if (remoteModern != null) {
+                for (LoadedModule rm : remoteModern) {
+                    if (rm != null && rm.packageName != null) {
+                        FallbackModuleServiceWrapper wrapper = dynamicModuleServices.computeIfAbsent(
+                                rm.packageName,
+                                pkg -> new FallbackModuleServiceWrapper(context, pkg, rm.service)
+                        );
+                        wrapper.setRemoteService(rm.service);
+                    }
+                }
+            }
+
+            cacheModuleScope(true, remoteLegacy);
+            cacheModuleScope(false, remoteModern);
+            updateModulesCache(context);
+            Log.i(TAG, "Successfully synced remote modules and services after reconnection");
+        } catch (Throwable t) {
+            Log.w(TAG, "Failed to sync remote modules on reconnect", t);
+        }
+    }
+
+    private void recordFallbackEvent(String reason) {
+        try {
+            SharedPreferences shared = context.getSharedPreferences("npatch", Context.MODE_PRIVATE);
+            shared.edit()
+                    .putLong("last_fallback_ts", System.currentTimeMillis())
+                    .putString("last_fallback_reason", reason)
+                    .apply();
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private void updateModulesCache(Context context) {
+        try {
+            JSONArray moduleArr = new JSONArray();
+            Map<String, String> cachedModules = new LinkedHashMap<>();
+
+            for (LoadedModule m : cachedLegacyModuleScope) {
+                if (m != null && m.packageName != null && m.apkPath != null) {
+                    cachedModules.put(m.packageName, m.apkPath);
+                }
+            }
+            for (LoadedModule m : cachedModuleScope) {
+                if (m != null && m.packageName != null && m.apkPath != null) {
+                    cachedModules.put(m.packageName, m.apkPath);
+                }
+            }
+
+            for (Map.Entry<String, String> entry : cachedModules.entrySet()) {
+                JSONObject moduleObj = new JSONObject();
+                moduleObj.put("path", entry.getValue());
+                moduleObj.put("packageName", entry.getKey());
+                moduleArr.put(moduleObj);
+            }
+            SharedPreferences shared = context.getSharedPreferences("npatch", Context.MODE_PRIVATE);
+            shared.edit().putString("modules", moduleArr.toString()).apply();
+            XLog.i(TAG, "Updated local module scope cache: " + moduleArr);
+        } catch (Throwable e) {
+            Log.e(TAG, "Failed to update local module scope cache", e);
+        }
+    }
+
+    private void loadModulesFromCache(
+            Context context,
+            List<LoadedModule> legacyTarget,
+            List<LoadedModule> modernTarget
+    ) {
+        try {
+            SharedPreferences shared = context.getSharedPreferences("npatch", Context.MODE_PRIVATE);
+            String jsonStr = shared.getString("modules", "[]");
+            JSONArray jsonArray = new JSONArray(jsonStr);
+            PackageManager pm = context.getPackageManager();
+
+            Log.i(TAG, "Loading modules from local cache: " + jsonStr);
+
+            for (int i = 0; i < jsonArray.length(); i++) {
+                JSONObject obj = jsonArray.getJSONObject(i);
+                String packageName = obj.optString("packageName");
+                String path = obj.optString("path");
+
+                if (path != null && !path.isEmpty() && new File(path).exists()) {
+                    loadModuleByPath(context, packageName, path, legacyTarget, modernTarget);
+                } else if (packageName != null && pm != null) {
+                    loadSingleModuleByPm(context, pm, packageName, legacyTarget, modernTarget);
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to load modules from cache", e);
+        }
+    }
+
+    private void loadModuleByPath(
+            Context context,
+            String pkgName,
+            String path,
+            List<LoadedModule> legacyTarget,
+            List<LoadedModule> modernTarget
+    ) {
+        try {
+            LoadedModule m = new LoadedModule();
+            m.packageName = pkgName;
+            m.apkPath = path;
+            m.applicationInfo = readApplicationInfo(context, path, pkgName);
+            var parsedModule = ModuleLoader.loadModule(
+                    m.apkPath,
+                    readLegacyMinApiVersion(m.applicationInfo));
+            m.code = parsedModule == null ? null : parsedModule.code;
+            if (m.code == null) {
+                Log.w(TAG, "Skipping unsupported cached module " + pkgName);
+                return;
+            }
+            m.appId = m.applicationInfo == null ? -1 : m.applicationInfo.uid;
+            if (m.code.legacy) {
+                legacyTarget.add(m);
+            } else {
+                modernTarget.add(m);
+            }
+            Log.i(TAG, "Loaded cached module " + pkgName);
+        } catch (Throwable e) {
+            Log.e(TAG, "Failed to load cached module " + pkgName, e);
+        }
+    }
+
+    private void loadSingleModuleByPm(
+            Context context,
+            PackageManager pm,
+            String pkgName,
+            List<LoadedModule> legacyTarget,
+            List<LoadedModule> modernTarget
+    ) {
+        try {
+            ApplicationInfo appInfo = pm.getApplicationInfo(pkgName, 0);
+            if (appInfo.sourceDir != null && new File(appInfo.sourceDir).exists()) {
+                loadModuleByPath(context, pkgName, appInfo.sourceDir, legacyTarget, modernTarget);
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private static ApplicationInfo readApplicationInfo(Context context, String apkPath, String fallbackPackageName) {
+        try {
+            PackageManager packageManager = context.getPackageManager();
+            if (packageManager != null) {
+                PackageInfo packageInfo = packageManager.getPackageArchiveInfo(apkPath, PackageManager.GET_META_DATA);
+                if (packageInfo != null && packageInfo.applicationInfo != null) {
+                    ApplicationInfo applicationInfo = packageInfo.applicationInfo;
+                    applicationInfo.sourceDir = apkPath;
+                    applicationInfo.publicSourceDir = apkPath;
+                    if (applicationInfo.packageName == null) {
+                        applicationInfo.packageName = packageInfo.packageName;
+                    }
+                    return applicationInfo;
+                }
+            }
+        } catch (Throwable e) {
+            Log.w(TAG, "Failed to read cached module ApplicationInfo: " + fallbackPackageName, e);
+        }
+        ApplicationInfo fallback = new ApplicationInfo();
+        fallback.packageName = fallbackPackageName;
+        fallback.sourceDir = apkPath;
+        fallback.publicSourceDir = apkPath;
+        fallback.uid = -1;
+        return fallback;
+    }
+
+    private static int readLegacyMinApiVersion(ApplicationInfo applicationInfo) {
+        if (applicationInfo == null || applicationInfo.metaData == null) {
+            return 0;
+        }
+        Object value = applicationInfo.metaData.get("xposedminversion");
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+        if (value != null) {
+            try {
+                return Integer.parseInt(String.valueOf(value).trim());
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return 0;
     }
 
     @SuppressLint("DiscouragedPrivateApi")
@@ -297,13 +520,18 @@ public class RemoteApplicationService implements IFrameworkService {
         if (modules == null || modules.isEmpty()) {
             return modules;
         }
-        for (LoadedModule LoadedModule : modules) {
-            if (LoadedModule == null || LoadedModule.service == null
-                    || LoadedModule.service instanceof DisconnectSafeInjectedModuleService) {
+        for (LoadedModule loadedModule : modules) {
+            if (loadedModule == null || loadedModule.packageName == null) {
                 continue;
             }
-            LoadedModule.service = new DisconnectSafeInjectedModuleService(
-                    LoadedModule.service, LoadedModule.packageName, managerAvailable);
+            FallbackModuleServiceWrapper wrapper = dynamicModuleServices.computeIfAbsent(
+                    loadedModule.packageName,
+                    pkg -> new FallbackModuleServiceWrapper(context, pkg, loadedModule.service)
+            );
+            if (loadedModule.service != null) {
+                wrapper.setRemoteService(loadedModule.service);
+            }
+            loadedModule.service = wrapper;
         }
         return modules;
     }
@@ -376,94 +604,9 @@ public class RemoteApplicationService implements IFrameworkService {
 
     private void onManagerFailure(String operation, RemoteException error) {
         managerAvailable.set(false);
+        recordFallbackEvent("manager_call_failed_" + operation);
         Log.w(TAG, "Manager unavailable while attempting to " + operation
                 + "; using local fallback", error);
     }
-
-    /**
-     * LoadedModule metadata crosses the manager boundary together with a remote preference/file
-     * service. That Binder belongs to the manager process, so keeping it after the manager dies
-     * makes a later LoadedModule callback throw DeadObjectException in the target process. The LoadedModule
-     * remains in its locally cached scope; only remote data calls degrade to empty read-only
-     * results instead of allowing manager lifecycle to terminate the host app.
-     */
-    private static final class DisconnectSafeInjectedModuleService
-            extends IModuleService.Stub {
-        private final IModuleService delegate;
-        private final String modulePackageName;
-        private final AtomicBoolean managerAvailable;
-
-        DisconnectSafeInjectedModuleService(
-                IModuleService delegate,
-                String modulePackageName,
-                AtomicBoolean managerAvailable
-        ) {
-            this.delegate = delegate;
-            this.modulePackageName = modulePackageName;
-            this.managerAvailable = managerAvailable;
-        }
-
-        @Override
-        public long getFrameworkProperties() {
-            if (!managerAvailable.get()) {
-                return 0L;
-            }
-            try {
-                return delegate.getFrameworkProperties();
-            } catch (RemoteException error) {
-                onManagerFailure(error);
-                return 0L;
-            }
-        }
-
-        @Override
-        public Bundle requestRemotePreferences(
-                String group,
-                IRemotePreferenceCallback callback
-        ) {
-            if (!managerAvailable.get()) {
-                return Bundle.EMPTY;
-            }
-            try {
-                Bundle result = delegate.requestRemotePreferences(group, callback);
-                return result == null ? Bundle.EMPTY : result;
-            } catch (RemoteException error) {
-                onManagerFailure(error);
-                return Bundle.EMPTY;
-            }
-        }
-
-        @Override
-        public ParcelFileDescriptor openRemoteFile(String path) {
-            if (!managerAvailable.get()) {
-                return null;
-            }
-            try {
-                return delegate.openRemoteFile(path);
-            } catch (RemoteException error) {
-                onManagerFailure(error);
-                return null;
-            }
-        }
-
-        @Override
-        public String[] getRemoteFileNames() {
-            if (!managerAvailable.get()) {
-                return new String[0];
-            }
-            try {
-                String[] result = delegate.getRemoteFileNames();
-                return result == null ? new String[0] : result;
-            } catch (RemoteException error) {
-                onManagerFailure(error);
-                return new String[0];
-            }
-        }
-
-        private void onManagerFailure(RemoteException error) {
-            managerAvailable.set(false);
-            Log.w(TAG, "Manager-backed service unavailable for " + modulePackageName
-                    + "; using empty read-only service", error);
-        }
-    }
 }
+

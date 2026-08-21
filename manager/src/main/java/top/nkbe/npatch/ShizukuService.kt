@@ -139,6 +139,14 @@ class ShizukuService : INPatchShizukuService.Stub() {
         exitProcess(0)
     }
 
+    override fun startManagerService(packageName: String) {
+        runCatching {
+            Runtime.getRuntime().exec(
+                arrayOf("am", "start-service", "-n", "$packageName/top.nkbe.npatch.manager.ModuleService")
+            ).waitFor()
+        }
+    }
+
     private fun packageInstaller(userId: Int): PackageInstaller {
         return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
             Refine.unsafeCast(PackageInstallerHidden(iPackageInstaller, "com.android.shell", null, userId))

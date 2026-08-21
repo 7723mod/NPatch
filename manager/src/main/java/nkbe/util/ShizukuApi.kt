@@ -437,4 +437,13 @@ object ShizukuApi {
         )
         return method.invoke(iPackageManager, packageName, userId) as Int
     }
+
+    suspend fun startManagerService(packageName: String = lspApp.packageName) {
+        ensureReady()
+        runCatching {
+            getUserService().startManagerService(packageName)
+        }.onFailure {
+            Log.w(TAG, "Failed to start manager service via Shizuku user service", it)
+        }
+    }
 }
