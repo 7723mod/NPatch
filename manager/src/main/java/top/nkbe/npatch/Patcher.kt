@@ -26,12 +26,53 @@ object Patcher {
         private val config: PatchConfig,
         private val apkPaths: List<String>,
         private val embeddedModules: List<String>?,
+        val targetPackageName: String? = null,
+        val embeddedModulePackages: List<String>? = null,
         private val injectDex: Boolean = false
     ) {
         internal val inputApks: List<File>
-            get() = apkPaths.map { File(it).absoluteFile }
+            get() = resolveActualApkPaths().map { File(it).absoluteFile }
+
+        fun resolveActualApkPaths(): List<String> {
+            val pkg = targetPackageName
+            if (pkg != null) {
+                val resolved = resolvePackageApks(pkg)
+                if (resolved.isNotEmpty()) {
+                    return resolved
+                }
+            }
+            return apkPaths
+        }
+
+        fun resolveActualEmbeddedModules(): List<String>? {
+            val modulePkgs = embeddedModulePackages
+            if (!modulePkgs.isNullOrEmpty()) {
+                val resolvedList = modulePkgs.flatMap { pkg ->
+                    val resolved = resolvePackageApks(pkg)
+                    if (resolved.isNotEmpty()) resolved
+                    else embeddedModules?.filter { it.contains(pkg) } ?: emptyList()
+                }
+                if (resolvedList.isNotEmpty()) return resolvedList
+            }
+            return embeddedModules
+        }
+
+        private fun resolvePackageApks(packageName: String): List<String> {
+            return runCatching {
+                val appInfo = lspApp.packageManager.getApplicationInfo(packageName, 0)
+                val base = appInfo.sourceDir
+                if (base != null && File(base).exists()) {
+                    val splits = appInfo.splitSourceDirs?.filter { File(it).exists() } ?: emptyList()
+                    listOf(base) + splits
+                } else {
+                    emptyList()
+                }
+            }.getOrDefault(emptyList())
+        }
 
         fun toStringArray(): Array<String> {
+            val actualApks = resolveActualApkPaths()
+            val actualModules = resolveActualEmbeddedModules()
             return buildList {
                 add("-o"); add(lspApp.tmpApkDir.absolutePath)
                 add("-p"); add(config.newPackage)
@@ -51,7 +92,7 @@ object Patcher {
                 }
                 if (Configs.detailPatchLogs) add("-v")
                 add("--force")
-                embeddedModules?.forEach {
+                actualModules?.forEach {
                     add("-m"); add(it)
                 }
                 if (config.injectProvider) add("--provider")
@@ -63,7 +104,7 @@ object Patcher {
                     KeystorePreset.FPA -> add("-fpa")
                     KeystorePreset.CUSTOM -> addAll(arrayOf("-k", MyKeyStore.file.path, Configs.keyStorePassword, Configs.keyStoreAlias, Configs.keyStoreAliasPassword))
                 }
-                addAll(apkPaths)
+                addAll(actualApks)
             }.toTypedArray()
         }
     }

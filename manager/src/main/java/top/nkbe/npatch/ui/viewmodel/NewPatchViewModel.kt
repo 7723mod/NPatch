@@ -191,6 +191,8 @@ class NewPatchViewModel : ViewModel() {
             config = config,
             apkPaths = listOf(patchApp.app.sourceDir) + (patchApp.app.splitSourceDirs ?: emptyArray()),
             embeddedModules = embeddedModules.flatMap { listOf(it.app.sourceDir) + (it.app.splitSourceDirs ?: emptyArray()) },
+            targetPackageName = patchApp.app.packageName,
+            embeddedModulePackages = embeddedModules.map { it.app.packageName },
             injectDex = injectDex
         )
         patchState = PatchState.PATCHING
