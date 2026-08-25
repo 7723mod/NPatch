@@ -34,6 +34,13 @@ object Patcher {
             get() = resolveActualApkPaths().map { File(it).absoluteFile }
 
         fun resolveActualApkPaths(): List<String> {
+            // Re-resolve only apks the system keeps and can move on an update. A recorded path under this
+            // app's own storage is a source copy it owns -- an apk picked from storage, an extracted
+            // original apk or a custom local archive -- and reading the installed apk in its place would
+            // silently patch a different build than the one chosen by the user.
+            if (apkPaths.any { isAppOwnedPath(it) }) {
+                return apkPaths
+            }
             val pkg = targetPackageName
             if (pkg != null) {
                 val resolved = resolvePackageApks(pkg)
@@ -48,13 +55,31 @@ object Patcher {
             val modulePkgs = embeddedModulePackages
             if (!modulePkgs.isNullOrEmpty()) {
                 val resolvedList = modulePkgs.flatMap { pkg ->
-                    val resolved = resolvePackageApks(pkg)
-                    if (resolved.isNotEmpty()) resolved
-                    else embeddedModules?.filter { it.contains(pkg) } ?: emptyList()
+                    val owned = embeddedModules?.filter { isAppOwnedPath(it) && it.contains(pkg) } ?: emptyList()
+                    if (owned.isNotEmpty()) {
+                        owned
+                    } else {
+                        val resolved = resolvePackageApks(pkg)
+                        if (resolved.isNotEmpty()) resolved
+                        else embeddedModules?.filter { it.contains(pkg) } ?: emptyList()
+                    }
                 }
                 if (resolvedList.isNotEmpty()) return resolvedList
             }
             return embeddedModules
+        }
+
+        private fun isAppOwnedPath(path: String): Boolean {
+            val dataPath = lspApp.applicationInfo.dataDir
+            val noBackupPath = lspApp.noBackupFilesDir.path
+            val cachePath = lspApp.cacheDir.path
+            val filesPath = lspApp.filesDir.path
+            val extCachePath = lspApp.externalCacheDir?.path
+            return (dataPath != null && path.startsWith(dataPath)) ||
+                    path.startsWith(noBackupPath) ||
+                    path.startsWith(cachePath) ||
+                    path.startsWith(filesPath) ||
+                    (extCachePath != null && path.startsWith(extCachePath))
         }
 
         private fun resolvePackageApks(packageName: String): List<String> {
@@ -161,10 +186,10 @@ object Patcher {
     }
 
     private fun validateInputSet(inputApks: List<File>) {
-        if (inputApks.isEmpty()) throw IOException("No input APK files")
+        if (inputApks.isEmpty()) throw IOException("No input APK files provided")
         val missing = inputApks.filterNot(File::isFile)
         if (missing.isNotEmpty()) {
-            throw IOException("Input APK does not exist: ${missing.joinToString { it.path }}")
+            throw IOException("Input APK does not exist: ${missing.first().path}" + if (missing.size > 1) " (and ${missing.size - 1} more)" else "")
         }
         val duplicateNames = inputApks
             .groupBy { it.nameWithoutExtension.lowercase() }
