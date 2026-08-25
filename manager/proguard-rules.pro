@@ -34,3 +34,10 @@
 -dontwarn com.squareup.moshi.**
 -dontwarn retrofit2.**
 -dontwarn okio.**
+
+-keep class nkbe.util.NeoPackageManager$AppInfo { *; }
+-keep class nkbe.util.NeoPackageManager$PatchedType { *; }
+-keep class nkbe.util.ModuleMetadataSnapshot { *; }
+-keep class nkbe.util.ModulePipeline { *; }
+-keep class top.nkbe.npatch.config.KeystorePreset { *; }
+
