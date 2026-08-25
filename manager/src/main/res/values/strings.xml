@@ -77,6 +77,7 @@
     <string name="manage_export_diagnostics">Export diagnostic logs</string>
     <string name="manage_export_diagnostics_chooser">Share patched-app diagnostic logs</string>
     <string name="manage_export_diagnostics_failed">Failed to export diagnostic logs</string>
+    <string name="manage_repatch">Re-patch</string>
     <string name="manage_module_pipeline_modern" translatable="false">Modern</string>
 <string name="manage_module_pipeline_legacy" translatable="false">Legacy</string>
     <string name="manage_module_pipeline_unsupported">Unsupported</string>

@@ -413,6 +413,14 @@ fun AppManageBody(
                                     }
                                 }
                             })
+                            actions.add(stringResource(R.string.manage_repatch) to {
+                                navigator.navigate(
+                                    Route.NewPatch(
+                                        id = ACTION_APPLIST,
+                                        data = appInfo.app.packageName,
+                                    )
+                                )
+                            })
                             val shizukuUnavailable = stringResource(R.string.shizuku_unavailable)
                             actions.add(stringResource(R.string.manage_optimize) to {
                                 scope.launch {

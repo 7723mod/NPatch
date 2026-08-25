@@ -116,14 +116,32 @@ fun NewPatchScreen(
                 viewModel.dispatch(ViewAction.DoneInit)
             }
             ACTION_APPLIST -> {
-                activityScope.launch {
-                    val result = navigator.navigateForResult<SelectAppsResult>(Route.SelectApps(false, null))
-                    if (result == null) {
-                        viewModel.reset()
-                        navigator.pop()
+                if (!data.isNullOrEmpty()) {
+                    val targetApp = NeoPackageManager.appList.firstOrNull { it.app.packageName == data }
+                    if (targetApp != null) {
+                        handleAppSelected(targetApp)
                     } else {
-                        val singleApp = result as SelectAppsResult.SingleApp
-                        handleAppSelected(singleApp.selected)
+                        activityScope.launch {
+                            val result = navigator.navigateForResult<SelectAppsResult>(Route.SelectApps(false, null))
+                            if (result == null) {
+                                viewModel.reset()
+                                navigator.pop()
+                            } else {
+                                val singleApp = result as SelectAppsResult.SingleApp
+                                handleAppSelected(singleApp.selected)
+                            }
+                        }
+                    }
+                } else {
+                    activityScope.launch {
+                        val result = navigator.navigateForResult<SelectAppsResult>(Route.SelectApps(false, null))
+                        if (result == null) {
+                            viewModel.reset()
+                            navigator.pop()
+                        } else {
+                            val singleApp = result as SelectAppsResult.SingleApp
+                            handleAppSelected(singleApp.selected)
+                        }
                     }
                 }
                 viewModel.dispatch(ViewAction.DoneInit)
