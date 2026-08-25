@@ -59,7 +59,7 @@ class LSPApplication : Application() {
         lspApp = this
         System.setProperty("java.io.tmpdir", cacheDir.absolutePath)
         filesDir.mkdir()
-        tmpApkDir = cacheDir.resolve("apk").also { it.mkdir() }
+        tmpApkDir = noBackupFilesDir.resolve("apk").also { it.mkdirs() }
         prefs = lspApp.getSharedPreferences("settings", Context.MODE_PRIVATE)
         ManagerLogger.init()
         ShizukuApi.init()

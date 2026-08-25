@@ -362,13 +362,24 @@ object NeoPackageManager {
 
     private fun copyDocumentToTempFile(uri: Uri, fileName: String): File {
         val dst = uniqueTempFile(fileName)
-        lspApp.contentResolver.openInputStream(uri).use { input ->
-            if (input == null) throw IOException("InputStream is null")
-            dst.outputStream().use { output ->
-                input.copyTo(output)
+        val staging = dst.resolveSibling("${dst.name}.part")
+        try {
+            lspApp.contentResolver.openInputStream(uri).use { input ->
+                if (input == null) throw IOException("InputStream is null")
+                staging.outputStream().use { output ->
+                    input.copyTo(output)
+                }
             }
+            if (!staging.renameTo(dst)) {
+                staging.copyTo(dst, overwrite = true)
+                staging.delete()
+            }
+            return dst
+        } catch (t: Throwable) {
+            staging.delete()
+            dst.delete()
+            throw t
         }
-        return dst
     }
 
     private fun isStandaloneApk(file: File): Boolean {
@@ -385,8 +396,21 @@ object NeoPackageManager {
     }
 
     private fun isApksArchive(fileName: String, file: File? = null): Boolean {
-        if (file != null && isStandaloneApk(file)) {
-            return false
+        if (file != null) {
+            // A file that carries AndroidManifest.xml at root is a standalone APK, even if named .zip/.apks
+            // or carrying nested APKs in assets/res.
+            if (isStandaloneApk(file)) {
+                return false
+            }
+            // A zip that does NOT have root AndroidManifest.xml but has .apk entries is an app bundle
+            val hasNestedApks = runCatching {
+                ZipFile(file).use { zip ->
+                    zip.entries().asSequence().any { entry ->
+                        !entry.isDirectory && entry.name.lowercase(Locale.ROOT).endsWith(".apk")
+                    }
+                }
+            }.getOrDefault(false)
+            if (hasNestedApks) return true
         }
         return isApksArchiveName(fileName)
     }
@@ -447,10 +471,11 @@ object NeoPackageManager {
         if (remainingBytes <= 0L || entry.size > remainingBytes) {
             throw IOException("APK archive exceeds extraction size limit")
         }
+        val staging = destination.resolveSibling("${destination.name}.part")
         var written = 0L
         try {
             zipFile.getInputStream(entry).use { input ->
-                destination.outputStream().use { output ->
+                staging.outputStream().use { output ->
                     val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
                     while (true) {
                         val read = input.read(buffer)
@@ -463,8 +488,13 @@ object NeoPackageManager {
                     }
                 }
             }
+            if (!staging.renameTo(destination)) {
+                staging.copyTo(destination, overwrite = true)
+                staging.delete()
+            }
             return written
         } catch (error: Throwable) {
+            staging.delete()
             destination.delete()
             throw error
         }
@@ -677,6 +707,7 @@ object NeoPackageManager {
             }
 
             val extractedFile = uniqueTempFile(sanitizeVisibleFileName(patchedApp.label + "_original.apk"))
+            val stagingFile = extractedFile.resolveSibling("${extractedFile.name}.part")
             var extractedEntryName: String? = null
 
             try {
@@ -686,7 +717,7 @@ object NeoPackageManager {
                         if (entry != null) {
                             extractedEntryName = path
                             zip.getInputStream(entry).use { input ->
-                                extractedFile.outputStream().use { output ->
+                                stagingFile.outputStream().use { output ->
                                     input.copyTo(output)
                                 }
                             }
@@ -701,19 +732,29 @@ object NeoPackageManager {
                         if (anyEmbedded != null) {
                             extractedEntryName = anyEmbedded.name
                             zip.getInputStream(anyEmbedded).use { input ->
-                                extractedFile.outputStream().use { output ->
+                                stagingFile.outputStream().use { output ->
                                     input.copyTo(output)
                                 }
                             }
                         }
                     }
                 }
+                if (extractedEntryName != null && stagingFile.exists() && stagingFile.length() > 0L) {
+                    if (!stagingFile.renameTo(extractedFile)) {
+                        stagingFile.copyTo(extractedFile, overwrite = true)
+                        stagingFile.delete()
+                    }
+                }
             } catch (t: java.util.zip.ZipException) {
+                stagingFile.delete()
                 extractedFile.delete()
                 return@withContext ExtractResult.Corrupted("Corrupted APK archive", t)
             } catch (t: Throwable) {
+                stagingFile.delete()
                 extractedFile.delete()
                 return@withContext ExtractResult.Error("Extraction failed: ${t.message}", t)
+            } finally {
+                stagingFile.delete()
             }
 
             if (extractedEntryName == null || !extractedFile.exists() || extractedFile.length() == 0L) {
