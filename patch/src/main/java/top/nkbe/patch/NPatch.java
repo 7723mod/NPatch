@@ -249,31 +249,81 @@ public class NPatch {
 
         logger.i("Parsing original apk...");
 
-        boolean embedOriginal = sigbypassLevel >= Constants.SIGBYPASS_BASIC;
+        ManifestParser.Pair pair;
+        try (var tempSrc = ZFile.openReadOnly(srcApkFile)) {
+            var manifestEntry = tempSrc.get(ANDROID_MANIFEST_XML);
+            if (manifestEntry == null) {
+                throw new PatchError("Provided file is not a valid apk");
+            }
+            try (var is = manifestEntry.open()) {
+                pair = ManifestParser.parseManifestFile(is);
+            }
+        }
+        if (pair == null) {
+            throw new PatchError("Failed to parse AndroidManifest.xml");
+        }
+
+        final String appComponentFactory = pair.appComponentFactory;
+        final int minSdkVersion = pair.minSdkVersion;
+        final int effectiveMinSdk = minSdkVersion > 0 ? minSdkVersion : 21;
+        packageName = pair.packageName;
+
+        String newPackage = newPackageName;
+        if (newPackage == null || newPackage.isEmpty()) {
+            newPackage = pair.packageName;
+        }
+
+        logger.d("original appComponentFactory class: " + appComponentFactory);
+        logger.d("original split name: " + pair.splitName);
+        logger.d("original minSdkVersion: " + minSdkVersion);
+
+        logger.i("permissions size: " + (pair.permissions == null ? 0 : pair.permissions.size()));
+        logger.i("use-permissions size: " + (pair.use_permissions == null ? 0 : pair.use_permissions.size()));
+        logger.i("authorities size: " + (pair.authorities == null ? 0 : pair.authorities.size()));
+
+        if (pair.hasIsolatedOrMultiProcessComponents()) {
+            logger.i("--------------------------------------------------");
+            logger.i("[Analysis Hint] Detected " + pair.getIsolatedOrMultiProcessCount() + " isolated/multi-process component(s):");
+            for (String comp : pair.getIsolatedOrMultiProcessComponents()) {
+                logger.i("  - " + comp);
+            }
+            if (!injectDex) {
+                logger.i("If your modules need to hook these sub-processes (e.g. sandbox/isolated), you can enable --injectdex.");
+                logger.i("(Default: disabled. Most UI and business modules only hook the main process)");
+            } else {
+                logger.i("--injectdex enabled: Loader DEX will be injected into the main DEX sequence for sub-process support.");
+            }
+            logger.i("--------------------------------------------------");
+        }
+
+        final boolean isSplit = apkPaths.size() > 1 && pair.splitName != null && !pair.splitName.isEmpty();
+        final boolean embedOriginal = !isSplit && (sigbypassLevel >= Constants.SIGBYPASS_BASIC);
 
         try (ZFile dstZFile = ZFile.openReadWrite(outputFile, Z_FILE_OPTIONS);
              ZFile srcZFile = embedOriginal
                      ? dstZFile.addNestedZip((ignore) -> Constants.ORIGINAL_APK_ASSET_PATH, srcApkFile, false)
                      : ZFile.openReadOnly(srcApkFile)) {
 
-            // sign apk
+            // sign apk with V1 + V2 + V3
             try {
                 var keyStore = KeyStore.getInstance("BKS");
                 if (useNpatchKeystore || (!useFpaKeystore && keystoreArgs == null)) {
-                    logger.i("Register apk signer with built-in NPatch keystore...");
-                    registerBuiltinSigner(keyStore, dstZFile, "assets/npatch.key", NPATCH_KEYSTORE_PASSWORD_ENC, NPATCH_KEY_ALIAS_ENC);
+                    logger.i("Register apk signer with built-in NPatch keystore (V1+V2+V3, minSdk " + effectiveMinSdk + ")...");
+                    registerBuiltinSigner(keyStore, dstZFile, "assets/npatch.key", NPATCH_KEYSTORE_PASSWORD_ENC, NPATCH_KEY_ALIAS_ENC, effectiveMinSdk);
                 } else if (useFpaKeystore) {
-                    logger.i("Register apk signer with built-in FPA keystore...");
-                    registerBuiltinSigner(keyStore, dstZFile, "assets/fpa_app.key", FPA_KEYSTORE_PASSWORD_ENC, FPA_KEY_ALIAS_ENC);
+                    logger.i("Register apk signer with built-in FPA keystore (V1+V2+V3, minSdk " + effectiveMinSdk + ")...");
+                    registerBuiltinSigner(keyStore, dstZFile, "assets/fpa_app.key", FPA_KEYSTORE_PASSWORD_ENC, FPA_KEY_ALIAS_ENC, effectiveMinSdk);
                 } else if (keystoreArgs != null) {
-                    logger.i("Register apk signer with custom keystore...");
+                    logger.i("Register apk signer with custom keystore (V1+V2+V3, minSdk " + effectiveMinSdk + ")...");
                     try (var is = new FileInputStream(keystoreArgs.get(0))) {
                         keyStore.load(is, keystoreArgs.get(1).toCharArray());
                     }
                     var entry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(keystoreArgs.get(2), new KeyStore.PasswordProtection(keystoreArgs.get(3).toCharArray()));
                     new SigningExtension(SigningOptions.builder()
-                            .setMinSdkVersion(27)
+                            .setMinSdkVersion(effectiveMinSdk)
+                            .setV1SigningEnabled(true)
                             .setV2SigningEnabled(true)
+                            .setV3SigningEnabled(true)
                             .setCertificates((X509Certificate[]) entry.getCertificateChain())
                             .setKey(entry.getPrivateKey())
                             .build()).register(dstZFile);
@@ -282,68 +332,60 @@ public class NPatch {
                 throw new PatchError("Failed to register signer", e);
             }
 
-            // copy out manifest file from zlib
             var manifestEntry = srcZFile.get(ANDROID_MANIFEST_XML);
             if (manifestEntry == null)
                 throw new PatchError("Provided file is not a valid apk");
 
-            String newPackage = newPackageName;
-
-            int minSdkVersion;
-            // parse the app appComponentFactory full name from the manifest file
-            final String appComponentFactory;
-            ManifestParser.Pair pair;
-            try (var is = manifestEntry.open()) {
-                pair = ManifestParser.parseManifestFile(is);
-                if (pair == null)
-                    throw new PatchError("Failed to parse AndroidManifest.xml");
-                appComponentFactory = pair.appComponentFactory;
-                minSdkVersion = pair.minSdkVersion;
-                packageName = pair.packageName;
-                logger.d("original appComponentFactory class: " + appComponentFactory);
-                logger.d("original split name: " + pair.splitName);
-                logger.d("original minSdkVersion: " + minSdkVersion);
-
-                if (newPackage == null || newPackage.isEmpty()) {
-                    newPackage = pair.packageName;
+            if (isSplit) {
+                logger.i("Packing split apk: " + pair.splitName + "...");
+                boolean needModifyManifest = !newPackage.equals(pair.packageName) || overrideVersionCode || overrideTargetSdk || minSdkVersion > 0;
+                if (needModifyManifest) {
+                    ModificationProperty splitProperty = new ModificationProperty();
+                    if (overrideVersionCode) {
+                        splitProperty.addManifestAttribute(new AttributeItem(NodeValue.Manifest.VERSION_CODE, overrideVersionCodeValue));
+                    }
+                    if (overrideTargetSdk) {
+                        splitProperty.addUsesSdkAttribute(new AttributeItem(NodeValue.UsesSDK.TARGET_SDK_VERSION, overrideTargetSdkValue));
+                    }
+                    if (minSdkVersion > 0) {
+                        splitProperty.addUsesSdkAttribute(new AttributeItem(NodeValue.UsesSDK.MIN_SDK_VERSION, minSdkVersion));
+                    }
+                    if (!newPackage.equals(pair.packageName)) {
+                        splitProperty.addManifestAttribute(new AttributeItem(NodeValue.Manifest.PACKAGE, newPackage).setNamespace(null));
+                    }
+                    try (var xmlIs = manifestEntry.open();
+                         var os = new ByteArrayOutputStream()) {
+                        new ManifestEditor(xmlIs, os, splitProperty).processManifest();
+                        dstZFile.add(ANDROID_MANIFEST_XML, new ByteArrayInputStream(os.toByteArray()));
+                    } catch (Throwable e) {
+                        logger.e("Failed to modify split manifest: " + e.getMessage() + ", falling back to copy");
+                        try (var xmlIs = manifestEntry.open()) {
+                            dstZFile.add(ANDROID_MANIFEST_XML, xmlIs);
+                        }
+                    }
+                } else {
+                    try (var xmlIs = manifestEntry.open()) {
+                        dstZFile.add(ANDROID_MANIFEST_XML, xmlIs);
+                    }
                 }
 
-                logger.i("permissions size: " + (pair.permissions == null ? 0 : pair.permissions.size()));
-                logger.i("use-permissions size: " + (pair.use_permissions == null ? 0 : pair.use_permissions.size()));
-                logger.i("authorities size: " + (pair.authorities == null ? 0 : pair.authorities.size()));
-
-                if (pair.hasIsolatedOrMultiProcessComponents()) {
-                    logger.i("--------------------------------------------------");
-                    logger.i("[Analysis Hint] Detected " + pair.getIsolatedOrMultiProcessCount() + " isolated/multi-process component(s):");
-                    for (String comp : pair.getIsolatedOrMultiProcessComponents()) {
-                        logger.i("  - " + comp);
-                    }
-                    if (!injectDex) {
-                        logger.i("If your modules need to hook these sub-processes (e.g. sandbox/isolated), you can enable --injectdex.");
-                        logger.i("(Default: disabled. Most UI and business modules only hook the main process)");
-                    } else {
-                        logger.i("--injectdex enabled: Loader DEX will be injected into the main DEX sequence for sub-process support.");
-                    }
-                    logger.i("--------------------------------------------------");
-                }
-            }
-
-            final boolean skipSplit = apkPaths.size() > 1 && pair.splitName != null && !pair.splitName.isEmpty();
-            if (skipSplit) {
-                logger.i("Packing split apk...");
                 for (StoredEntry entry : srcZFile.entries()) {
                     String name = entry.getCentralDirectoryHeader().getName();
                     if (dstZFile.get(name) != null) continue;
+                    if (name.equals(ANDROID_MANIFEST_XML)) continue;
                     if (isApkSignatureEntry(name))
                         continue;
-                    if (srcZFile instanceof NestedZip) {
-                        ((NestedZip) srcZFile).addFileLink(name, name);
-                    } else {
-                        try (InputStream is = entry.open()) {
+                    try (InputStream is = entry.open()) {
+                        if (name.endsWith(".so") || name.equals("resources.arsc")) {
+                            dstZFile.add(name, is, false);
+                        } else {
                             dstZFile.add(name, is);
                         }
+                    } catch (IOException e) {
+                        throw new PatchError("Failed to copy entry: " + name, e);
                     }
                 }
+                dstZFile.realign();
                 return;
             }
 
@@ -558,7 +600,7 @@ public class NPatch {
         }
     }
 
-    private void registerBuiltinSigner(KeyStore keyStore, ZFile dstZFile, String keystoreResource, String passwordToken, String aliasToken) throws Exception {
+    private void registerBuiltinSigner(KeyStore keyStore, ZFile dstZFile, String keystoreResource, String passwordToken, String aliasToken, int minSdkVersion) throws Exception {
         var password = decodeSecretChars(passwordToken);
         try {
             try (var is = getClass().getClassLoader().getResourceAsStream(keystoreResource)) {
@@ -568,8 +610,10 @@ public class NPatch {
             var alias = decodeSecretString(aliasToken);
             var entry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(alias, new KeyStore.PasswordProtection(password));
             new SigningExtension(SigningOptions.builder()
-                    .setMinSdkVersion(27)
+                    .setMinSdkVersion(minSdkVersion)
+                    .setV1SigningEnabled(true)
                     .setV2SigningEnabled(true)
+                    .setV3SigningEnabled(true)
                     .setCertificates((X509Certificate[]) entry.getCertificateChain())
                     .setKey(entry.getPrivateKey())
                     .build()).register(dstZFile);

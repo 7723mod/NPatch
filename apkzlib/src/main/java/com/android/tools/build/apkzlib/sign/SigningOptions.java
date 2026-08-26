@@ -37,6 +37,7 @@ public abstract class SigningOptions {
         public abstract Builder setCertificates(X509Certificate... certs);
         public abstract Builder setV1SigningEnabled(boolean enabled);
         public abstract Builder setV2SigningEnabled(boolean enabled);
+        public abstract Builder setV3SigningEnabled(boolean enabled);
         public abstract Builder setMinSdkVersion(int version);
         public abstract Builder setValidation(@Nonnull Validation validation);
         public abstract Builder setExecutor(@Nullable RunnablesExecutor executor);
@@ -56,8 +57,9 @@ public abstract class SigningOptions {
 
     public static Builder builder() {
         return new AutoValue_SigningOptions.Builder()
-                .setV1SigningEnabled(false)
-                .setV2SigningEnabled(false)
+                .setV1SigningEnabled(true)
+                .setV2SigningEnabled(true)
+                .setV3SigningEnabled(true)
                 .setValidation(Validation.ALWAYS_VALIDATE);
     }
 
@@ -75,6 +77,9 @@ public abstract class SigningOptions {
 
     /** Shows whether signing with APK Signature Scheme v2 (aka v2 signing) is enabled. */
     public abstract boolean isV2SigningEnabled();
+
+    /** Shows whether signing with APK Signature Scheme v3 (aka v3 signing) is enabled. */
+    public abstract boolean isV3SigningEnabled();
 
     /** Minimum SDK version supported. */
     public abstract int getMinSdkVersion();

@@ -644,66 +644,37 @@ public class ZFile implements Closeable {
 
       entryEndOffset = 0;
 
-      for (StoredEntry entry : directory.getEntries().values()) {
+      List<StoredEntry> sortedEntries = new java.util.ArrayList<>(directory.getEntries().values());
+      sortedEntries.sort(
+          (a, b) -> {
+            try {
+              return Long.compare(b.getInFileSize(), a.getInFileSize());
+            } catch (IOException e) {
+              return 0;
+            }
+          });
+
+      for (StoredEntry entry : sortedEntries) {
         long start = entry.getCentralDirectoryHeader().getOffset();
         long end = start + entry.getInFileSize();
 
-        /*
-         * If isExtraAlignmentBlock(entry.getLocalExtra()) is true, we know the entry
-         * has an extra field that is solely used for alignment. This means the
-         * actual entry could start at start + extra.length and leave space before.
-         *
-         * But, if we did this here, we would be modifying the zip file and that is
-         * weird because we're just opening it for reading.
-         *
-         * The downside is that we will never reuse that space. Maybe one day ZFile
-         * can be clever enough to remove the local extra when we start modifying the zip
-         * file.
-         */
+        FileUseMapEntry<StoredEntry> mapEntry;
+        if (entry.isLinkingEntry()) {
+          mapEntry = FileUseMapEntry.makeUsed(start, end, entry);
+        } else {
+          Verify.verify(start >= 0, "start < 0");
+          Verify.verify(end < map.size(), "end >= map.size()");
 
-        Verify.verify(start >= 0, "start < 0");
-        Verify.verify(end < map.size(), "end >= map.size()");
+          FileUseMapEntry<?> found = map.at(start);
+          Verify.verifyNotNull(found);
 
-        FileUseMapEntry<?> found = map.at(start);
-        Verify.verifyNotNull(found);
-
-        // We've got a problem if the found entry is not free or is a free entry but
-        // doesn't cover the whole file.
-        if (!found.isFree() || found.getEnd() < end) {
-          if (found.isFree()) {
-            found = map.after(found);
-            Verify.verify(found != null && !found.isFree());
-          }
-
-          Object foundEntry = found.getStore();
-          Verify.verify(foundEntry != null);
-
-          // Obtains a custom description of an entry.
-          IOExceptionFunction<StoredEntry, String> describe =
-              e ->
-                  String.format(
-                      "'%s' (offset: %d, size: %d)",
-                      e.getCentralDirectoryHeader().getName(),
-                      e.getCentralDirectoryHeader().getOffset(),
-                      e.getInFileSize());
-
-          String overlappingEntryDescription;
-          if (foundEntry instanceof StoredEntry) {
-            StoredEntry foundStored = (StoredEntry) foundEntry;
-            overlappingEntryDescription = describe.apply(foundStored);
+          if (!found.isFree() || found.getEnd() < end) {
+            // Overlapping or nested entry (e.g. nested zip origin.apk or shared data)
+            mapEntry = FileUseMapEntry.makeUsed(start, end, entry);
           } else {
-            overlappingEntryDescription =
-                "Central Directory / EOCD: " + found.getStart() + " - " + found.getEnd();
+            mapEntry = map.add(start, end, entry);
           }
-
-          throw new IOException(
-              "Cannot read entry "
-                  + describe.apply(entry)
-                  + " because it overlaps with "
-                  + overlappingEntryDescription);
         }
-
-        FileUseMapEntry<StoredEntry> mapEntry = map.add(start, end, entry);
         entries.put(entry.getCentralDirectoryHeader().getName(), mapEntry);
 
         if (end > entryEndOffset) {

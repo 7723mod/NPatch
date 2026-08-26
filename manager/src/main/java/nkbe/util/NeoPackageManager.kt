@@ -652,9 +652,8 @@ object NeoPackageManager {
                 when {
                     zip.getEntry("assets/npatch/config.json") != null || zip.getEntry("assets/npatch/loader.bin") != null || zip.getEntry("assets/npatch/origin.apk") != null -> PatchedType.NPATCH
                     zip.getEntry("assets/lspatch/config.json") != null || zip.getEntry("assets/lspatch/loader.bin") != null || zip.getEntry("assets/lspatch/origin.apk") != null -> PatchedType.LSPATCH
-                    zip.getEntry("fpa/config.json") != null || zip.getEntry("assets/fpa/config.json") != null || zip.getEntry("extra/core.dex") != null || zip.getEntry("fpa/source.apk") != null -> PatchedType.FPA
+                    zip.getEntry("fpa/config.json") != null || zip.getEntry("extra/core.dex") != null || zip.getEntry("fpa/source.apk") != null || zip.getEntry("fpa/o_app.apk") != null -> PatchedType.FPA
                     zip.getEntry("assets/origin.apk") != null -> PatchedType.EMBEDDED
-                    zip.entries().asSequence().any { !it.isDirectory && it.name.startsWith("assets/") && it.name.endsWith(".apk") } -> PatchedType.EMBEDDED
                     else -> PatchedType.NONE
                 }
             }
@@ -691,8 +690,7 @@ object NeoPackageManager {
                 PatchedType.FPA -> listOf(
                     "fpa/source.apk",
                     "fpa/o_app.apk",
-                    "assets/fpa/source.apk",
-                    "assets/fpa/o_app.apk",
+                    "assets/origin.apk",
                     "assets/npatch/origin.apk",
                     "assets/lspatch/origin.apk"
                 )
@@ -701,8 +699,7 @@ object NeoPackageManager {
                     "assets/npatch/origin.apk",
                     "assets/lspatch/origin.apk",
                     "fpa/source.apk",
-                    "fpa/o_app.apk",
-                    "assets/fpa/source.apk"
+                    "fpa/o_app.apk"
                 )
             }
 
@@ -722,20 +719,6 @@ object NeoPackageManager {
                                 }
                             }
                             break
-                        }
-                    }
-
-                    if (extractedEntryName == null) {
-                        val anyEmbedded = zip.entries().asSequence().firstOrNull {
-                            !it.isDirectory && it.name.startsWith("assets/") && it.name.endsWith(".apk")
-                        }
-                        if (anyEmbedded != null) {
-                            extractedEntryName = anyEmbedded.name
-                            zip.getInputStream(anyEmbedded).use { input ->
-                                stagingFile.outputStream().use { output ->
-                                    input.copyTo(output)
-                                }
-                            }
                         }
                     }
                 }

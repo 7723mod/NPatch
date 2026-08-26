@@ -11,6 +11,7 @@ import top.nkbe.npatch.share.Constants
 import top.nkbe.npatch.share.PatchConfig
 import top.nkbe.npatch.patch.NPatch
 import top.nkbe.npatch.patch.util.Logger
+import top.nkbe.npatch.patch.util.ManifestParser
 import java.io.File
 import java.io.IOException
 import java.io.OutputStream
@@ -296,14 +297,41 @@ object Patcher {
 
     private fun createApksArchive(output: OutputStream, apkFiles: List<File>) {
         require(apkFiles.isNotEmpty()) { "APK set is empty" }
-        val duplicateNames = apkFiles.groupBy { it.name.lowercase() }.filterValues { it.size > 1 }
-        require(duplicateNames.isEmpty()) { "Duplicate APKS entries: ${duplicateNames.keys}" }
+        val entryNames = mutableSetOf<String>()
+        val mappedEntries = apkFiles.map { apkFile ->
+            val pair = runCatching {
+                java.util.zip.ZipFile(apkFile).use { zip ->
+                    val manifest = zip.getEntry("AndroidManifest.xml") ?: return@use null
+                    zip.getInputStream(manifest).use { input ->
+                        ManifestParser.parseManifestFile(input)
+                    }
+                }
+            }.getOrNull()
+
+            val desiredName = when {
+                pair == null -> apkFile.name
+                pair.splitName.isNullOrEmpty() -> "base.apk"
+                else -> "split_${pair.splitName.replace(Regex("[^A-Za-z0-9._-]"), "_")}.apk"
+            }
+
+            var finalName = desiredName
+            var index = 1
+            while (entryNames.contains(finalName.lowercase(java.util.Locale.ROOT))) {
+                val base = desiredName.substringBeforeLast('.', desiredName)
+                val ext = desiredName.substringAfterLast('.', "")
+                finalName = if (ext.isEmpty()) "${base}_$index" else "${base}_$index.$ext"
+                index++
+            }
+            entryNames.add(finalName.lowercase(java.util.Locale.ROOT))
+            Pair(apkFile, finalName)
+        }
+
         java.io.BufferedOutputStream(output, STREAM_BUFFER_SIZE).use { bufferedOut ->
             ZipOutputStream(bufferedOut).use { zip ->
                 zip.setLevel(Deflater.NO_COMPRESSION)
                 val buffer = ByteArray(STREAM_BUFFER_SIZE)
-                apkFiles.forEach { apkFile ->
-                    val entry = ZipEntry(apkFile.name).apply {
+                mappedEntries.forEach { (apkFile, entryName) ->
+                    val entry = ZipEntry(entryName).apply {
                         time = 0L
                         size = apkFile.length()
                     }

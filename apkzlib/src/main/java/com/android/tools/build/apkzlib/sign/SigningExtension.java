@@ -130,7 +130,7 @@ public class SigningExtension {
             .setOtherSignersSignaturesPreserved(false)
             .setV1SigningEnabled(opts.isV1SigningEnabled())
             .setV2SigningEnabled(opts.isV2SigningEnabled())
-            .setV3SigningEnabled(false)
+            .setV3SigningEnabled(opts.isV3SigningEnabled())
             .setCreatedBy("1.0 (Android)")
             .build();
     if (opts.getSdkDependencyData() != null) {
@@ -224,7 +224,8 @@ public class SigningExtension {
     }
 
     if ((result.isVerifiedUsingV1Scheme() != options.isV1SigningEnabled())
-        || (result.isVerifiedUsingV2Scheme() != options.isV2SigningEnabled())) {
+        || (result.isVerifiedUsingV2Scheme() != options.isV2SigningEnabled())
+        || (result.isVerifiedUsingV3Scheme() != options.isV3SigningEnabled())) {
       // APK isn't signed with exactly the schemes we want it to be signed
       return false;
     }
