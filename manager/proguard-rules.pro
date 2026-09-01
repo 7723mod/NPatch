@@ -41,3 +41,16 @@
 -keep class nkbe.util.ModulePipeline { *; }
 -keep class top.nkbe.npatch.config.KeystorePreset { *; }
 
+# APK Signature & Patching engine reflection/ASN1 requirements
+-keep class com.android.apksig.** { *; }
+-dontwarn com.android.apksig.**
+-keep class com.android.tools.build.apkzlib.** { *; }
+-dontwarn com.android.tools.build.apkzlib.**
+-keep class org.bouncycastle.** { *; }
+-dontwarn org.bouncycastle.**
+-keep class com.wind.meditor.** { *; }
+-dontwarn com.wind.meditor.**
+-keep class pxb.android.axml.** { *; }
+-dontwarn pxb.android.axml.**
+-keep class top.nkbe.npatch.patch.** { *; }
+
