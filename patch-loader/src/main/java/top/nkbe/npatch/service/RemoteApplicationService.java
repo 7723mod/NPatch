@@ -9,6 +9,8 @@ import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
@@ -314,6 +316,31 @@ public class RemoteApplicationService implements IFrameworkService {
                     loadModuleByPath(context, packageName, path, legacyTarget, modernTarget);
                 } else if (packageName != null && pm != null) {
                     loadSingleModuleByPm(context, pm, packageName, legacyTarget, modernTarget);
+                }
+            }
+
+            // If local cache had no modules, try querying ConfigProvider directly
+            if (legacyTarget.isEmpty() && modernTarget.isEmpty() && pm != null) {
+                try {
+                    Uri queryUri = Uri.parse("content://top.nkbe.npatch.manager.provider.config/config")
+                            .buildUpon()
+                            .appendQueryParameter("package", context.getPackageName())
+                            .build();
+                    try (Cursor cursor = context.getContentResolver().query(queryUri, null, null, null, null)) {
+                        if (cursor != null) {
+                            while (cursor.moveToNext()) {
+                                int colIndex = cursor.getColumnIndex("packageName");
+                                if (colIndex != -1) {
+                                    String pkg = cursor.getString(colIndex);
+                                    if (pkg != null && !pkg.isEmpty()) {
+                                        loadSingleModuleByPm(context, pm, pkg, legacyTarget, modernTarget);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (Throwable t) {
+                    Log.d(TAG, "ConfigProvider query fallback failed: " + t.getMessage());
                 }
             }
         } catch (Exception e) {

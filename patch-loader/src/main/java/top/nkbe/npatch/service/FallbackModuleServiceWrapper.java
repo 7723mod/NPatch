@@ -15,11 +15,13 @@ public class FallbackModuleServiceWrapper extends IModuleService.Stub {
     private static final String TAG = "NPatch-FallbackWrapper";
     private final Object switchLock = new Object();
     private volatile IModuleService activeRemoteService;
+    private final Context context;
     private final LocalInjectedModuleService localService;
     private final NPatchRemoteStore localStore;
     private final String modulePackageName;
 
     public FallbackModuleServiceWrapper(Context context, String modulePackageName, IModuleService remoteService) {
+        this.context = context;
         this.modulePackageName = modulePackageName;
         this.localService = new LocalInjectedModuleService(context, modulePackageName);
         this.localStore = NPatchRemoteStore.get(context, modulePackageName);
@@ -35,7 +37,22 @@ public class FallbackModuleServiceWrapper extends IModuleService.Stub {
 
     private IModuleService getActiveRemote() {
         synchronized (switchLock) {
-            return activeRemoteService;
+            if (activeRemoteService != null && activeRemoteService.asBinder().isBinderAlive()) {
+                return activeRemoteService;
+            }
+            if (context != null) {
+                try {
+                    IModuleService bridge = top.nkbe.npatch.util.ManagerRemoteServiceBridge.connect(context, modulePackageName);
+                    if (bridge != null && bridge.asBinder().isBinderAlive()) {
+                        this.activeRemoteService = bridge;
+                        Log.i(TAG, "Lazily connected remote service via Provider bridge for " + modulePackageName);
+                        return activeRemoteService;
+                    }
+                } catch (Throwable t) {
+                    // Manager Provider not available or target app not yet in scope
+                }
+            }
+            return null;
         }
     }
 

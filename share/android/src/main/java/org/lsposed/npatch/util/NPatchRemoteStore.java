@@ -158,6 +158,22 @@ public final class NPatchRemoteStore {
         } catch (Throwable t) {
             Log.w(TAG, "getModulePrefs error for " + modulePackageName + "/" + group, t);
         }
+        if (result.isEmpty() && userId != 0) {
+            try (Cursor cursor = dbHelper.getReadableDatabase().query(
+                    TABLE, new String[]{"`key`", "data"},
+                    "module_pkg_name = ? AND user_id = 0 AND `group` = ?",
+                    new String[]{modulePackageName, group},
+                    null, null, null)) {
+                while (cursor != null && cursor.moveToNext()) {
+                    Object value = deserialize(cursor.getBlob(1));
+                    if (value != null) {
+                        result.put(cursor.getString(0), value);
+                    }
+                }
+            } catch (Throwable t) {
+                Log.w(TAG, "getModulePrefs fallback to user 0 error for " + modulePackageName + "/" + group, t);
+            }
+        }
         return result;
     }
 
