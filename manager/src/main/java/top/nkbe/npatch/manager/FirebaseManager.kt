@@ -56,7 +56,15 @@ object FirebaseManager {
     fun init() {
         systemUncaughtExceptionHandler = Thread.getDefaultUncaughtExceptionHandler()
         val enabled = shouldEnable()
-        val crashlytics = FirebaseCrashlytics.getInstance()
+        val initialized = runCatching {
+            com.google.firebase.FirebaseApp.initializeApp(lspApp) != null
+        }.getOrDefault(false)
+
+        if (!initialized && enabled) {
+            return
+        }
+
+        val crashlytics = runCatching { FirebaseCrashlytics.getInstance() }.getOrNull() ?: return
         crashlytics.setCrashlyticsCollectionEnabled(enabled)
         runCatching {
             FirebaseAnalytics.getInstance(lspApp)
@@ -73,7 +81,9 @@ object FirebaseManager {
      * change takes effect immediately without restarting the app.
      */
     fun setCollectionEnabled(enabled: Boolean) {
-        FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(enabled)
+        runCatching {
+            FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(enabled)
+        }
         runCatching {
             FirebaseAnalytics.getInstance(lspApp)
                 .setAnalyticsCollectionEnabled(enabled)

@@ -42,15 +42,38 @@
 -keep class top.nkbe.npatch.config.KeystorePreset { *; }
 
 # APK Signature & Patching engine reflection/ASN1 requirements
--keep class com.android.apksig.** { *; }
 -dontwarn com.android.apksig.**
--keep class com.android.tools.build.apkzlib.** { *; }
+-keep class com.android.apksig.** {
+    public protected *;
+}
+
 -dontwarn com.android.tools.build.apkzlib.**
--keep class org.bouncycastle.** { *; }
+-keep class com.android.tools.build.apkzlib.** {
+    public protected *;
+}
+
 -dontwarn org.bouncycastle.**
--keep class com.wind.meditor.** { *; }
+-keep class org.bouncycastle.jce.provider.** {
+    public protected *;
+}
+-keep class org.bouncycastle.jcajce.provider.** {
+    public protected *;
+}
+-keep class org.bouncycastle.asn1.** {
+    public protected *;
+}
+
 -dontwarn com.wind.meditor.**
--keep class pxb.android.axml.** { *; }
+-keep class com.wind.meditor.** {
+    public protected *;
+}
+
 -dontwarn pxb.android.axml.**
--keep class top.nkbe.npatch.patch.** { *; }
+-keep class pxb.android.axml.** {
+    public protected *;
+}
+
+-keep class top.nkbe.npatch.patch.** {
+    public protected *;
+}
 
