@@ -130,10 +130,19 @@ public class ManifestParser {
     }
 
     /**
-     * Get the package name and the main application name from the manifest file
+     * Get the package name and the main application name from the manifest file or APK
      */
     public static Pair parseManifestFile(String filePath) throws IOException {
         File file = new File(filePath);
+        if (filePath.endsWith(".apk") || filePath.endsWith(".zip") || filePath.endsWith(".apks")) {
+            try (java.util.zip.ZipFile zip = new java.util.zip.ZipFile(file)) {
+                java.util.zip.ZipEntry entry = zip.getEntry("AndroidManifest.xml");
+                if (entry == null) return null;
+                try (InputStream is = zip.getInputStream(entry)) {
+                    return parseManifestFile(is);
+                }
+            }
+        }
         try (var is = new FileInputStream(file)) {
             return parseManifestFile(is);
         }

@@ -58,16 +58,26 @@ data class ApkInstallSet(
             }
             val baseInfo = baseCandidates.single()
 
-            // Step 3: Parse base APK with system PackageManager to get versionCode + signature.
-            val basePackageInfo = packageManager.getPackageArchiveInfo(
-                baseInfo.file.absolutePath,
-                PackageManager.GET_SIGNING_CERTIFICATES,
-            ) ?: throw IOException("Unable to parse base APK: ${baseInfo.file.name}")
+            // Step 3: Parse base APK with system PackageManager (with fallback to internal ManifestParser + ApkSignatureHelper)
+            val basePackageInfo = runCatching {
+                packageManager.getPackageArchiveInfo(
+                    baseInfo.file.absolutePath,
+                    PackageManager.GET_SIGNING_CERTIFICATES,
+                ) ?: packageManager.getPackageArchiveInfo(
+                    baseInfo.file.absolutePath,
+                    0,
+                )
+            }.getOrNull()
 
-            val baseVersionCode = PackageInfoCompat.getLongVersionCode(basePackageInfo)
+            val baseVersionCode = if (basePackageInfo != null) {
+                PackageInfoCompat.getLongVersionCode(basePackageInfo)
+            } else {
+                readManifestInfo(baseInfo.file).let { 1L }
+            }
+
             val baseSignerDigest = (
-                basePackageInfo.signingInfo?.apkContentsSigners
-                    ?: @Suppress("DEPRECATION") basePackageInfo.signatures
+                basePackageInfo?.signingInfo?.apkContentsSigners
+                    ?: @Suppress("DEPRECATION") basePackageInfo?.signatures
             )?.map { signature -> sha256(signature.toByteArray()) }
                 ?.sorted()
                 ?.joinToString(":")

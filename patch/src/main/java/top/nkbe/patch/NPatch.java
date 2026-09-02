@@ -159,9 +159,8 @@ public class NPatch {
     ));
 
     private static final ZFileOptions Z_FILE_OPTIONS = new ZFileOptions()
-            .setNoTimestamps(true)
             .setAlignmentRule(AlignmentRules.compose(
-                    AlignmentRules.constantForSuffix(".so", 16384),
+                    AlignmentRules.constantForSuffix(".so", 4096),
                     AlignmentRules.constantForSuffix(ORIGINAL_APK_ASSET_PATH, 4096),
                     AlignmentRules.constantForSuffix(".arsc", 4)
             ));
@@ -265,7 +264,7 @@ public class NPatch {
 
         final String appComponentFactory = pair.appComponentFactory;
         final int minSdkVersion = pair.minSdkVersion;
-        final int effectiveMinSdk = minSdkVersion > 0 ? minSdkVersion : 21;
+        final int effectiveMinSdk = Math.max(minSdkVersion, 28);
         packageName = pair.packageName;
 
         String newPackage = newPackageName;
@@ -296,7 +295,14 @@ public class NPatch {
             logger.i("--------------------------------------------------");
         }
 
-        final boolean isSplit = apkPaths.size() > 1 && pair.splitName != null && !pair.splitName.isEmpty();
+        // Only the apk carrying the application element gets the loader; a split that declares
+        // no appComponentFactory has nothing to hook, so it is repacked with synchronized attributes
+        // and left installable alongside the base. A lone apk is never treated this way.
+        final boolean hasSplitIdentity = (pair.splitName != null && !pair.splitName.isEmpty())
+                || srcApkFile.getName().startsWith("split_");
+        final boolean isSplit = apkPaths.size() > 1
+                && hasSplitIdentity
+                && appComponentFactory == null;
         final boolean embedOriginal = !isSplit && (sigbypassLevel >= Constants.SIGBYPASS_BASIC);
 
         try (ZFile dstZFile = ZFile.openReadWrite(outputFile, Z_FILE_OPTIONS);
@@ -304,24 +310,24 @@ public class NPatch {
                      ? dstZFile.addNestedZip((ignore) -> Constants.ORIGINAL_APK_ASSET_PATH, srcApkFile, false)
                      : ZFile.openReadOnly(srcApkFile)) {
 
-            // sign apk with V1 + V2 + V3
+            // sign apk with V2 + V3
             try {
                 var keyStore = KeyStore.getInstance("BKS");
                 if (useNpatchKeystore || (!useFpaKeystore && keystoreArgs == null)) {
-                    logger.i("Register apk signer with built-in NPatch keystore (V1+V2+V3, minSdk " + effectiveMinSdk + ")...");
+                    logger.i("Register apk signer with built-in NPatch keystore (V2+V3, minSdk " + effectiveMinSdk + ")...");
                     registerBuiltinSigner(keyStore, dstZFile, "assets/npatch.key", NPATCH_KEYSTORE_PASSWORD_ENC, NPATCH_KEY_ALIAS_ENC, effectiveMinSdk);
                 } else if (useFpaKeystore) {
-                    logger.i("Register apk signer with built-in FPA keystore (V1+V2+V3, minSdk " + effectiveMinSdk + ")...");
+                    logger.i("Register apk signer with built-in FPA keystore (V2+V3, minSdk " + effectiveMinSdk + ")...");
                     registerBuiltinSigner(keyStore, dstZFile, "assets/fpa_app.key", FPA_KEYSTORE_PASSWORD_ENC, FPA_KEY_ALIAS_ENC, effectiveMinSdk);
                 } else if (keystoreArgs != null) {
-                    logger.i("Register apk signer with custom keystore (V1+V2+V3, minSdk " + effectiveMinSdk + ")...");
+                    logger.i("Register apk signer with custom keystore (V2+V3, minSdk " + effectiveMinSdk + ")...");
                     try (var is = new FileInputStream(keystoreArgs.get(0))) {
                         keyStore.load(is, keystoreArgs.get(1).toCharArray());
                     }
                     var entry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(keystoreArgs.get(2), new KeyStore.PasswordProtection(keystoreArgs.get(3).toCharArray()));
                     new SigningExtension(SigningOptions.builder()
                             .setMinSdkVersion(effectiveMinSdk)
-                            .setV1SigningEnabled(true)
+                            .setV1SigningEnabled(false)
                             .setV2SigningEnabled(true)
                             .setV3SigningEnabled(true)
                             .setCertificates((X509Certificate[]) entry.getCertificateChain())
@@ -337,7 +343,10 @@ public class NPatch {
                 throw new PatchError("Provided file is not a valid apk");
 
             if (isSplit) {
-                logger.i("Packing split apk: " + pair.splitName + "...");
+                String splitDisplayName = (pair.splitName != null && !pair.splitName.isEmpty())
+                        ? pair.splitName
+                        : srcApkFile.getName();
+                logger.i("Packing split apk: " + splitDisplayName + "...");
                 boolean needModifyManifest = !newPackage.equals(pair.packageName) || overrideVersionCode || overrideTargetSdk || minSdkVersion > 0;
                 if (needModifyManifest) {
                     ModificationProperty splitProperty = new ModificationProperty();
@@ -611,7 +620,7 @@ public class NPatch {
             var entry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(alias, new KeyStore.PasswordProtection(password));
             new SigningExtension(SigningOptions.builder()
                     .setMinSdkVersion(minSdkVersion)
-                    .setV1SigningEnabled(true)
+                    .setV1SigningEnabled(false)
                     .setV2SigningEnabled(true)
                     .setV3SigningEnabled(true)
                     .setCertificates((X509Certificate[]) entry.getCertificateChain())
@@ -653,13 +662,11 @@ public class NPatch {
             property.addUsesSdkAttribute(new AttributeItem(NodeValue.UsesSDK.TARGET_SDK_VERSION, overrideTargetSdkValue));
         }
 
-        if (minSdkVersion > 0)
-            property.addUsesSdkAttribute(new AttributeItem(NodeValue.UsesSDK.MIN_SDK_VERSION, minSdkVersion));
-        else
-            property.addUsesSdkAttribute(new AttributeItem(NodeValue.UsesSDK.MIN_SDK_VERSION, 27));
+        if (minSdkVersion < 28) {
+            property.addUsesSdkAttribute(new AttributeItem(NodeValue.UsesSDK.MIN_SDK_VERSION, 28));
+        }
         property.addApplicationAttribute(new AttributeItem(NodeValue.Application.DEBUGGABLE, debuggableFlag));
         property.addApplicationAttribute(new AttributeItem("appComponentFactory", PROXY_APP_COMPONENT_FACTORY));
-        property.addApplicationAttribute(new AttributeItem("isSplitRequired", false));
         if (usesCleartextTraffic) {
             property.addApplicationAttribute(new AttributeItem("usesCleartextTraffic", true));
         }

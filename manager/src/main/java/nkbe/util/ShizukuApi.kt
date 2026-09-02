@@ -220,14 +220,34 @@ object ShizukuApi {
     fun getInstalledApplications(): List<ApplicationInfo> {
         ensureReady()
         val userId = Process.myUserHandle().hashCode()
-        val flags = PackageManager.GET_META_DATA.toLong()
-        return iPackageManager.getInstalledApplications(flags, userId).list
+        val flags = PackageManager.GET_META_DATA
+        return try {
+            iPackageManager.getInstalledApplications(flags.toLong(), userId).list
+        } catch (e: NoSuchMethodError) {
+            try {
+                val method = iPackageManager.javaClass.getMethod("getInstalledApplications", Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
+                val parceledListSlice = method.invoke(iPackageManager, flags, userId)
+                parceledListSlice?.javaClass?.getMethod("getList")?.invoke(parceledListSlice) as List<ApplicationInfo>
+            } catch (e2: Exception) {
+                emptyList()
+            }
+        }
     }
 
     fun getInstalledPackages(flags: Int): List<PackageInfo> {
         ensureReady()
         val userId = Process.myUserHandle().hashCode()
-        return iPackageManager.getInstalledPackages(flags.toLong(), userId).list
+        return try {
+            iPackageManager.getInstalledPackages(flags.toLong(), userId).list
+        } catch (e: NoSuchMethodError) {
+            try {
+                val method = iPackageManager.javaClass.getMethod("getInstalledPackages", Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
+                val parceledListSlice = method.invoke(iPackageManager, flags, userId)
+                parceledListSlice?.javaClass?.getMethod("getList")?.invoke(parceledListSlice) as List<PackageInfo>
+            } catch (e2: Exception) {
+                emptyList()
+            }
+        }
     }
 
     fun createPackageInstallerSession(
@@ -340,7 +360,11 @@ object ShizukuApi {
         if (result == null) {
             val userId = Process.myUserHandle().hashCode()
             val exists = runCatching {
-                iPackageManager.getApplicationInfo(packageName, 0L, userId) != null
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    iPackageManager.getApplicationInfo(packageName, 0L, userId) != null
+                } else {
+                    iPackageManager.getApplicationInfo(packageName, 0, userId) != null
+                }
             }.getOrDefault(false)
 
             if (isInstall && exists) {
