@@ -197,13 +197,7 @@ public class LSPAppComponentFactoryStub extends AppComponentFactory {
     }
 
     private static void bootstrap() throws Throwable {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            try {
-                HiddenApiBypass.addHiddenApiExemptions("");
-            } catch (Throwable t) {
-                Log.w(TAG, "Failed to add hidden api exemptions in bootstrap", t);
-            }
-        }
+        exemptHiddenApi();
 
         bootstrapStage = "resolve_meta_loader";
         ClassLoader loader = Objects.requireNonNull(
@@ -247,6 +241,36 @@ public class LSPAppComponentFactoryStub extends AppComponentFactory {
         Log.i(TAG, "Loading native bootstrap: " + nativeFile);
         System.load(nativeFile.getAbsolutePath());
         clearDexBuffer();
+    }
+
+    private static void exemptHiddenApi() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            return;
+        }
+        boolean exempted = false;
+        try {
+            Class<?> vmRuntimeClass = Class.forName("dalvik.system.VMRuntime");
+            Method getRuntime = vmRuntimeClass.getDeclaredMethod("getRuntime");
+            getRuntime.setAccessible(true);
+            Object vmRuntime = getRuntime.invoke(null);
+            Method setExemptions = vmRuntimeClass.getDeclaredMethod("setHiddenApiExemptions", String[].class);
+            setExemptions.setAccessible(true);
+            setExemptions.invoke(vmRuntime, (Object) new String[]{"L"});
+            exempted = true;
+        } catch (Throwable ignored) {
+        }
+
+        if (!exempted) {
+            try {
+                HiddenApiBypass.addHiddenApiExemptions("L");
+            } catch (Throwable t) {
+                try {
+                    HiddenApiBypass.addHiddenApiExemptions("");
+                } catch (Throwable t2) {
+                    Log.w(TAG, "Hidden API exemption fallback failed", t2);
+                }
+            }
+        }
     }
 
     private static int readConfig(ClassLoader loader) throws IOException {

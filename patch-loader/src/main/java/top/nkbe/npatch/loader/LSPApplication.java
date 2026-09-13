@@ -219,14 +219,38 @@ public class LSPApplication {
         }
     }
 
-    public static void onLoad() throws RemoteException, IOException {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+    private static void exemptHiddenApi() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            return;
+        }
+        boolean exempted = false;
+        try {
+            Class<?> vmRuntimeClass = Class.forName("dalvik.system.VMRuntime");
+            Method getRuntime = vmRuntimeClass.getDeclaredMethod("getRuntime");
+            getRuntime.setAccessible(true);
+            Object vmRuntime = getRuntime.invoke(null);
+            Method setExemptions = vmRuntimeClass.getDeclaredMethod("setHiddenApiExemptions", String[].class);
+            setExemptions.setAccessible(true);
+            setExemptions.invoke(vmRuntime, (Object) new String[]{"L"});
+            exempted = true;
+        } catch (Throwable ignored) {
+        }
+
+        if (!exempted) {
             try {
-                org.lsposed.hiddenapibypass.HiddenApiBypass.addHiddenApiExemptions("");
+                org.lsposed.hiddenapibypass.HiddenApiBypass.addHiddenApiExemptions("L");
             } catch (Throwable t) {
-                Log.w(TAG, "Failed to exempt hidden API in onLoad", t);
+                try {
+                    org.lsposed.hiddenapibypass.HiddenApiBypass.addHiddenApiExemptions("");
+                } catch (Throwable t2) {
+                    Log.w(TAG, "Hidden API exemption in onLoad failed", t2);
+                }
             }
         }
+    }
+
+    public static void onLoad() throws RemoteException, IOException {
+        exemptHiddenApi();
 
         if (isIsolated()) {
             XLog.d(TAG, "Skip isolated process");
@@ -398,6 +422,13 @@ public class LSPApplication {
             try {
                 compatInfo = (CompatibilityInfo) XposedHelpers.getObjectField(mBoundApplication, "compatInfo");
             } catch (Throwable ignored) {
+            }
+            if (compatInfo == null) {
+                try {
+                    compatInfo = (CompatibilityInfo) XposedHelpers.getStaticObjectField(
+                            CompatibilityInfo.class, "DEFAULT_COMPATIBILITY_INFO");
+                } catch (Throwable ignored) {
+                }
             }
             var baseClassLoader = stubLoadedApk.getClassLoader();
             String patchedApkPath = appInfo.sourceDir;
