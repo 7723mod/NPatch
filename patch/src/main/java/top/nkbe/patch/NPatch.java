@@ -145,14 +145,6 @@ public class NPatch {
 
     private static final String ANDROID_MANIFEST_XML = "AndroidManifest.xml";
     private static final Pattern DEX_NAME_PATTERN = Pattern.compile("^classes(\\d*)\\.dex$");
-    private static final String META_INF_PREFIX = "META-INF/";
-    private static final String META_INF_MANIFEST = "META-INF/MANIFEST.MF";
-    private static final HashSet<String> APK_SIGNATURE_EXTENSIONS = new HashSet<>(Arrays.asList(
-            ".SF",
-            ".RSA",
-            ".DSA",
-            ".EC"
-    ));
     private static final HashSet<String> ARCHES = new HashSet<>(Arrays.asList(
             "arm64-v8a",
             "x86_64"
@@ -375,8 +367,6 @@ public class NPatch {
                     String name = entry.getCentralDirectoryHeader().getName();
                     if (dstZFile.get(name) != null) continue;
                     if (name.equals(ANDROID_MANIFEST_XML)) continue;
-                    if (isApkSignatureEntry(name))
-                        continue;
                     try (InputStream is = entry.open()) {
                         if (name.endsWith(".so") || name.equals("resources.arsc")) {
                             dstZFile.add(name, is, false);
@@ -482,8 +472,6 @@ public class NPatch {
                 if (dstZFile.get(name) != null) continue;
                 if (embedOriginal && !injectDex && name.startsWith("classes") && name.endsWith(".dex")) continue;
                 if (name.equals("AndroidManifest.xml")) continue;
-                if (isApkSignatureEntry(name))
-                    continue;
                 maxDexIndex = Math.max(maxDexIndex, getDexIndex(name));
 
                 boolean linked = false;
@@ -561,25 +549,6 @@ public class NPatch {
         }
     }
 
-    private static boolean isApkSignatureEntry(String name) {
-        if (name == null || !name.startsWith(META_INF_PREFIX)) {
-            return false;
-        }
-        String upperName = name.toUpperCase(Locale.ROOT);
-        // v1 簽名的 Manifest 只能移除固定檔名，避免誤刪其他 .MF 資源。
-        if (META_INF_MANIFEST.equals(upperName)) {
-            return true;
-        }
-        int fileNameStart = upperName.lastIndexOf('/') + 1;
-        if (fileNameStart >= upperName.length()) {
-            return false;
-        }
-        String fileName = upperName.substring(fileNameStart);
-        int extensionStart = fileName.lastIndexOf('.');
-        // 只看 META-INF 下的實際檔名副檔名，避免子路徑或目錄名稱誤判。
-        return extensionStart > 0
-                && APK_SIGNATURE_EXTENSIONS.contains(fileName.substring(extensionStart));
-    }
 
     private void embedModules(ZFile zFile) {
         for (var LoadedModule : modules) {

@@ -8,6 +8,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipException;
+import java.util.zip.ZipFile;
 
 import pxb.android.axml.AxmlParser;
 
@@ -134,14 +137,18 @@ public class ManifestParser {
      */
     public static Pair parseManifestFile(String filePath) throws IOException {
         File file = new File(filePath);
-        if (filePath.endsWith(".apk") || filePath.endsWith(".zip") || filePath.endsWith(".apks")) {
-            try (java.util.zip.ZipFile zip = new java.util.zip.ZipFile(file)) {
-                java.util.zip.ZipEntry entry = zip.getEntry("AndroidManifest.xml");
-                if (entry == null) return null;
-                try (InputStream is = zip.getInputStream(entry)) {
+        if (!file.exists()) {
+            return null;
+        }
+        try (ZipFile zipFile = new ZipFile(file)) {
+            ZipEntry manifestEntry = zipFile.getEntry("AndroidManifest.xml");
+            if (manifestEntry != null) {
+                try (InputStream is = zipFile.getInputStream(manifestEntry)) {
                     return parseManifestFile(is);
                 }
             }
+        } catch (ZipException ignored) {
+            // Not a zip/apk file, fallback to treating as standalone binary XML
         }
         try (var is = new FileInputStream(file)) {
             return parseManifestFile(is);
