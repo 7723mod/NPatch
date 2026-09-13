@@ -295,14 +295,7 @@ public class NPatch {
             logger.i("--------------------------------------------------");
         }
 
-        // Only the apk carrying the application element gets the loader; a split that declares
-        // no appComponentFactory has nothing to hook, so it is repacked with synchronized attributes
-        // and left installable alongside the base. A lone apk is never treated this way.
-        final boolean hasSplitIdentity = (pair.splitName != null && !pair.splitName.isEmpty())
-                || srcApkFile.getName().startsWith("split_");
-        final boolean isSplit = apkPaths.size() > 1
-                && hasSplitIdentity
-                && appComponentFactory == null;
+        final boolean isSplit = apkPaths.size() > 1 && pair.splitName != null && !pair.splitName.isEmpty();
         final boolean embedOriginal = !isSplit && (sigbypassLevel >= Constants.SIGBYPASS_BASIC);
 
         try (ZFile dstZFile = ZFile.openReadWrite(outputFile, Z_FILE_OPTIONS);
@@ -667,6 +660,7 @@ public class NPatch {
         }
         property.addApplicationAttribute(new AttributeItem(NodeValue.Application.DEBUGGABLE, debuggableFlag));
         property.addApplicationAttribute(new AttributeItem("appComponentFactory", PROXY_APP_COMPONENT_FACTORY));
+        property.addApplicationAttribute(new AttributeItem("isSplitRequired", false));
         if (usesCleartextTraffic) {
             property.addApplicationAttribute(new AttributeItem("usesCleartextTraffic", true));
         }
