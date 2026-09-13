@@ -11,8 +11,6 @@ plugins {
     alias(libs.plugins.agp.app) apply false
     alias(npatch.plugins.compose.compiler) apply false
     alias(npatch.plugins.kotlin.android) apply false
-    id("com.google.gms.google-services") version "4.5.0" apply false
-    id("com.google.firebase.crashlytics") version "3.0.8" apply false
 }
 
 buildscript {

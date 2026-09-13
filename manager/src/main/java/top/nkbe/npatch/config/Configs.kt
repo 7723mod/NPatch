@@ -82,9 +82,4 @@ object Configs {
     var thirdPartyInstallerPackage by delegateStateOf(lspApp.prefs.getString(PREFS_THIRD_PARTY_INSTALLER, "") ?: "") {
         lspApp.prefs.edit().putString(PREFS_THIRD_PARTY_INSTALLER, it).apply()
     }
-
-    private const val PREFS_ENABLE_CRASH_REPORTING = "enable_crash_reporting"
-    var enableCrashReporting by delegateStateOf(lspApp.prefs.getBoolean(PREFS_ENABLE_CRASH_REPORTING, true)) {
-        lspApp.prefs.edit().putBoolean(PREFS_ENABLE_CRASH_REPORTING, it).apply()
-    }
 }

@@ -12,7 +12,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 import top.nkbe.npatch.manager.AppBroadcastReceiver
-import top.nkbe.npatch.manager.FirebaseManager
 import top.nkbe.npatch.manager.ManagerLogger
 import top.nkbe.npatch.manager.ManagerIntegrity
 import top.nkbe.npatch.manager.ModuleScopeSyncStore
@@ -63,7 +62,6 @@ class LSPApplication : Application() {
         tmpApkDir = noBackupFilesDir.resolve("apk").also { it.mkdirs() }
         prefs = lspApp.getSharedPreferences("settings", Context.MODE_PRIVATE)
         ManagerLogger.init()
-        FirebaseManager.init()
         ShizukuApi.init()
         ShizukuApi.addOnReadyListener {
             globalScope.launch {
