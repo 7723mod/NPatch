@@ -37,6 +37,7 @@ import top.nkbe.npatch.R
 import top.nkbe.npatch.share.LSPConfig
 import top.nkbe.npatch.ui.component.NPatchScaffold
 import top.nkbe.npatch.ui.component.NPatchTopAppBar
+import top.nkbe.npatch.ui.util.LocalFloatingBottomBarPadding
 import top.nkbe.npatch.ui.util.LocalSnackbarHost
 import top.nkbe.npatch.ui.util.backgroundAwareCardColors
 import top.nkbe.npatch.ui.util.backgroundAwareHazeStyle
@@ -103,7 +104,7 @@ fun HomeScreen(
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding() + 12.dp,
-                bottom = innerPadding.calculateBottomPadding() + 24.dp
+                bottom = innerPadding.calculateBottomPadding() + 24.dp + LocalFloatingBottomBarPadding.current
             ),
             overscrollEffect = null
         ) {

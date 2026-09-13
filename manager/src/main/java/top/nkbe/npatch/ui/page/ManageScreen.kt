@@ -37,6 +37,7 @@ import top.nkbe.npatch.ui.component.SearchPager
 import top.nkbe.npatch.ui.component.SearchStatus
 import top.nkbe.npatch.ui.component.NPatchScaffold
 import top.nkbe.npatch.ui.component.NPatchTopAppBar
+import top.nkbe.npatch.ui.util.LocalFloatingBottomBarPadding
 import top.nkbe.npatch.ui.util.LocalFloatingGlassBottomBar
 import top.nkbe.npatch.ui.util.backgroundAwareHazeStyle
 import top.nkbe.npatch.ui.viewmodel.manage.ModuleManageViewModel
@@ -74,7 +75,7 @@ fun ManageScreen(
     val dynamicTopPadding by remember {
         derivedStateOf { 12.dp * (1f - scrollBehavior.state.collapsedFraction) }
     }
-    val floatingFabBottomPadding = rememberFloatingBottomBarFabPadding()
+    val floatingBottomBarPadding = LocalFloatingBottomBarPadding.current
 
     LaunchedEffect(safeSelectedPage) {
         if (pagerState.currentPage != safeSelectedPage) {
@@ -117,7 +118,7 @@ fun ManageScreen(
                 AppManageFab(
                     navigator = navigator,
                     modifier = if (useFloatingGlassBottomBar) {
-                        Modifier.padding(bottom = floatingFabBottomPadding)
+                        Modifier.padding(bottom = floatingBottomBarPadding)
                     } else {
                         Modifier
                     }
@@ -195,7 +196,7 @@ fun ManageScreen(
             ) { page ->
                 val contentPadding = PaddingValues(
                     top = innerPadding.calculateTopPadding() + boxHeight.value + 8.dp,
-                    bottom = innerPadding.calculateBottomPadding()
+                    bottom = innerPadding.calculateBottomPadding() + floatingBottomBarPadding
                 )
                 when (page) {
                     0 -> AppManageBody(navigator, searchStatus.searchText, contentPadding, scrollBehavior, hazeState)
@@ -211,7 +212,3 @@ fun ManageScreen(
         }
     }
 }
-
-@Composable
-private fun rememberFloatingBottomBarFabPadding() =
-    68.dp + 12.dp + 8.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()

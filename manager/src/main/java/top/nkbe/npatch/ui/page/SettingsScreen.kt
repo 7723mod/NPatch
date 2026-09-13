@@ -81,6 +81,7 @@ import top.nkbe.npatch.ui.component.NPatchScaffold
 import top.nkbe.npatch.config.DEFAULT_CUSTOM_COLOR
 import top.nkbe.npatch.config.DEFAULT_CARD_BACKGROUND_ALPHA_PERCENT
 import top.nkbe.npatch.ui.util.BackgroundImageStorage
+import top.nkbe.npatch.ui.util.LocalFloatingBottomBarPadding
 import top.nkbe.npatch.ui.util.LocalFloatingGlassBottomBar
 import top.nkbe.npatch.ui.util.LocalSnackbarHost
 import top.nkbe.npatch.ui.util.backgroundAwareCardColors
@@ -119,13 +120,8 @@ fun SettingsScreen() {
     val scrollBehavior = COUIScrollBehavior()
     val hazeState = rememberHazeState()
     val hazeStyle = backgroundAwareHazeStyle()
-    val useFloatingGlassBottomBar = LocalFloatingGlassBottomBar.current
-    val bottomContentPadding = if (useFloatingGlassBottomBar) {
-        68.dp + 12.dp + 8.dp + 28.dp +
-            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    } else {
-        24.dp
-    }
+    val floatingBottomBarPadding = LocalFloatingBottomBarPadding.current
+    val bottomContentPadding = 24.dp + floatingBottomBarPadding
     NPatchScaffold(
         topBar = {
             NPatchTopAppBar(

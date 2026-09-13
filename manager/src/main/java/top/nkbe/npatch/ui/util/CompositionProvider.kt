@@ -3,6 +3,7 @@ package top.nkbe.npatch.ui.util
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.blur.HazeBlurStyle
 import dev.chrisbanes.haze.blur.HazeColorEffect
 import io.github.suqi8.coui.kmp.basic.CardColors
@@ -25,6 +26,8 @@ val LocalCardBackgroundAlpha = compositionLocalOf { BG_SURFACE_ALPHA }
 val LocalFloatingGlassBottomBar = compositionLocalOf { false }
 
 val LocalFloatingGlassBottomBarBlur = compositionLocalOf { true }
+
+val LocalFloatingBottomBarPadding = compositionLocalOf { 0.dp }
 
 @Composable
 fun backgroundAwareCardColors(

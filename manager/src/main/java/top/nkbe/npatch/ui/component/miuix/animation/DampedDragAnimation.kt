@@ -3,6 +3,9 @@ package top.nkbe.npatch.ui.component.miuix.animation
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.MutatorMutex
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -43,6 +46,9 @@ class DampedDragAnimation(
     private val mutatorMutex = MutatorMutex()
     private val velocityTracker = VelocityTracker()
 
+    var isDragging by mutableStateOf(false)
+        private set
+
     val value: Float get() = valueAnimation.value
     val targetValue: Float get() = valueAnimation.targetValue
     val pressProgress: Float get() = pressProgressAnimation.value
@@ -53,6 +59,7 @@ class DampedDragAnimation(
     val modifier: Modifier = Modifier.pointerInput(Unit) {
         inspectDragGestures(
             onDragStart = { down ->
+                isDragging = true
                 onDragStarted(down.position)
                 press()
             },
@@ -94,6 +101,16 @@ class DampedDragAnimation(
             launch { pressProgressAnimation.animateTo(0f, pressProgressAnimationSpec) }
             launch { scaleXAnimation.animateTo(initialScale, scaleXAnimationSpec) }
             launch { scaleYAnimation.animateTo(initialScale, scaleYAnimationSpec) }
+            isDragging = false
+        }
+    }
+
+    fun snapToValue(value: Float) {
+        if (!isDragging) {
+            val target = value.coerceIn(valueRange)
+            animationScope.launch {
+                valueAnimation.snapTo(target)
+            }
         }
     }
 
