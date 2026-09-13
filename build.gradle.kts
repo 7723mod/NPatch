@@ -38,7 +38,7 @@ val coreCommitCount = runCatching {
             val git = Git(repo)
             git.log().add(repo.resolve("HEAD")).call().count()
         }
-}.getOrDefault(3083)
+}.getOrDefault(3111)
 
 val defaultManagerPackageName by extra("top.nkbe.npatch")
 val apiCode by extra(102)

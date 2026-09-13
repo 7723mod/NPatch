@@ -24,4 +24,5 @@ dependencies {
     implementation(npatch.commons.io)
     implementation(npatch.beust.jcommander)
     implementation(npatch.google.gson)
+    testImplementation("junit:junit:4.13.2")
 }
