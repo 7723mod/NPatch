@@ -51,14 +51,15 @@ public class CacheCleaner {
         if (children == null) return;
 
         String keepName = currentCrc + ".apk";
+        String keepVerified = currentCrc + ".apk.verified";
 
         Arrays.stream(children)
                 .filter(File::isFile)
-                .filter(f -> f.getName().endsWith(".apk"))
-                .filter(f -> !f.getName().equals(keepName))
+                .filter(f -> f.getName().endsWith(".apk") || f.getName().endsWith(".apk.verified") || f.getName().contains(".tmp."))
+                .filter(f -> !f.getName().equals(keepName) && !f.getName().equals(keepVerified))
                 .forEach(f -> {
                     if (!f.delete()) {
-                        Log.w(TAG, "Failed to delete stale origin apk: " + f);
+                        Log.w(TAG, "Failed to delete stale origin apk or sidecar: " + f);
                     }
                 });
     }
