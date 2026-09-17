@@ -469,16 +469,15 @@ public class LSPApplication {
                     appInfo.nativeLibraryDir = nativeLibraryDir.toString();
                 }
                 try {
-                    CacheCleaner.sweepOriginApkCache(appInfo, OriginApkHelper.getOriginalApkCrc(patchedApkPath));
+                    long originCrc = OriginApkHelper.getOriginalApkCrc(patchedApkPath);
+                    if (originCrc > 0) {
+                        CacheCleaner.sweepOriginApkCache(appInfo, originCrc);
+                    }
                 } catch (IOException e) {
                     Log.w(TAG, "Failed to sweep origin apk cache", e);
                 }
             }
-            if (config.lspConfig.sigBypassLevel >= Constants.SIGBYPASS_HIGH) {
-                appInfo.appComponentFactory = config.appComponentFactory;
-            } else {
-                appInfo.appComponentFactory = null;
-            }
+            appInfo.appComponentFactory = config.appComponentFactory;
 
             Path providerPath = null;
             if (config.injectProvider) {
@@ -536,7 +535,9 @@ public class LSPApplication {
                 }
             }
 
-            restoreVisibleApplicationInfo(mBoundApplication, appInfo, patchedApkPath);
+            if (!loadedApkUsesOriginCache) {
+                restoreVisibleApplicationInfo(mBoundApplication, appInfo, patchedApkPath);
+            }
             XposedHelpers.setObjectField(mBoundApplication, "info", appLoadedApk);
 
             var activityClientRecordClass = XposedHelpers.findClass("android.app.ActivityThread$ActivityClientRecord", ActivityThread.class.getClassLoader());

@@ -135,11 +135,6 @@ public class OriginApkHelper {
             }
         }
 
-        try {
-            internalCacheApk.toFile().setWritable(false);
-        } catch (Exception ignored) {
-        }
-
         return internalCacheApk;
     }
 
@@ -160,14 +155,19 @@ public class OriginApkHelper {
 
     private static boolean isApkValid(Path apkPath, long expectedSize) {
         if (!Files.isRegularFile(apkPath)) return false;
+        Path verifiedPath = getVerifiedSidecarPath(apkPath);
         try {
             long actualSize = Files.size(apkPath);
+            if (actualSize <= 0) {
+                Files.deleteIfExists(verifiedPath);
+                return false;
+            }
             if (expectedSize > 0 && actualSize != expectedSize) {
                 Log.w(TAG, "Cache apk size mismatch: actual " + actualSize + ", expected " + expectedSize);
+                Files.deleteIfExists(verifiedPath);
                 return false;
             }
 
-            Path verifiedPath = getVerifiedSidecarPath(apkPath);
             long mtime = Files.getLastModifiedTime(apkPath).toMillis();
             String expectedStamp = mtime + ":" + actualSize;
 
@@ -185,6 +185,7 @@ public class OriginApkHelper {
             try (ZipFile zip = new ZipFile(apkPath.toFile())) {
                 if (zip.getEntry("AndroidManifest.xml") == null) {
                     Log.w(TAG, "Cache apk missing AndroidManifest.xml: " + apkPath);
+                    Files.deleteIfExists(verifiedPath);
                     return false;
                 }
             }
@@ -200,6 +201,10 @@ public class OriginApkHelper {
             return true;
         } catch (Throwable e) {
             Log.w(TAG, "Failed to validate apk: " + apkPath, e);
+            try {
+                Files.deleteIfExists(verifiedPath);
+            } catch (IOException ignored) {
+            }
             return false;
         }
     }

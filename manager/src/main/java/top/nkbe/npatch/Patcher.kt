@@ -35,11 +35,10 @@ object Patcher {
             get() = resolveActualApkPaths().map { File(it).absoluteFile }
 
         fun resolveActualApkPaths(): List<String> {
-            // Re-resolve only apks the system keeps and can move on an update. A recorded path under this
-            // app's own storage is a source copy it owns -- an apk picked from storage, an extracted
-            // original apk or a custom local archive -- and reading the installed apk in its place would
-            // silently patch a different build than the one chosen by the user.
-            if (apkPaths.any { isAppOwnedPath(it) }) {
+            // If the specified APKs already exist on disk, always honour them.
+            // A recorded path under app storage, picked from external storage,
+            // or an extracted original APK must never be silently overridden by the installed package.
+            if (apkPaths.isNotEmpty() && apkPaths.all { File(it).exists() }) {
                 return apkPaths
             }
             val pkg = targetPackageName
@@ -53,10 +52,14 @@ object Patcher {
         }
 
         fun resolveActualEmbeddedModules(): List<String>? {
+            val modules = embeddedModules
+            if (!modules.isNullOrEmpty() && modules.all { File(it).exists() }) {
+                return modules
+            }
             val modulePkgs = embeddedModulePackages
             if (!modulePkgs.isNullOrEmpty()) {
                 val resolvedList = modulePkgs.flatMap { pkg ->
-                    val owned = embeddedModules?.filter { isAppOwnedPath(it) && it.contains(pkg) } ?: emptyList()
+                    val owned = embeddedModules?.filter { File(it).exists() && it.contains(pkg) } ?: emptyList()
                     if (owned.isNotEmpty()) {
                         owned
                     } else {
@@ -70,18 +73,7 @@ object Patcher {
             return embeddedModules
         }
 
-        private fun isAppOwnedPath(path: String): Boolean {
-            val dataPath = lspApp.applicationInfo.dataDir
-            val noBackupPath = lspApp.noBackupFilesDir.path
-            val cachePath = lspApp.cacheDir.path
-            val filesPath = lspApp.filesDir.path
-            val extCachePath = lspApp.externalCacheDir?.path
-            return (dataPath != null && path.startsWith(dataPath)) ||
-                    path.startsWith(noBackupPath) ||
-                    path.startsWith(cachePath) ||
-                    path.startsWith(filesPath) ||
-                    (extCachePath != null && path.startsWith(extCachePath))
-        }
+
 
         private fun resolvePackageApks(packageName: String): List<String> {
             return runCatching {

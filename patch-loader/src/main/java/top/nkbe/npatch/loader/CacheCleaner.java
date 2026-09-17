@@ -44,7 +44,7 @@ public class CacheCleaner {
     }
 
     public static void sweepOriginApkCache(ApplicationInfo appInfo, long currentCrc) {
-        if (appInfo == null || appInfo.dataDir == null) return;
+        if (appInfo == null || appInfo.dataDir == null || currentCrc <= 0) return;
 
         File codeCache = new File(appInfo.dataDir, "cache/code_cache");
         File[] children = codeCache.listFiles();
@@ -160,7 +160,7 @@ public class CacheCleaner {
         if (children != null) {
             Arrays.stream(children)
                     .filter(File::isFile)
-                    .filter(f -> f.getName().endsWith(".apk"))
+                    .filter(f -> f.getName().endsWith(".apk") || f.getName().endsWith(".apk.verified") || f.getName().contains(".tmp."))
                     .forEach(File::delete);
         }
 
