@@ -26,8 +26,8 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.kyant.backdrop.backdrops.layerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import io.github.suqi8.coui.kmp.basic.NavigationBar
 import io.github.suqi8.coui.kmp.basic.NavigationBarItem
 import io.github.suqi8.coui.kmp.theme.COUITheme

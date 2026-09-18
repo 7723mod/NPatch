@@ -167,6 +167,7 @@ dependencies {
     implementation(npatch.haze)
     implementation(npatch.hazeBlur)
     implementation(npatch.backdrop)
+    implementation("top.yukonga.miuix.kmp:miuix-blur:0.9.3")
     implementation("io.github.suqi8.coui.kmp:coui-ui:$couiVersion")
     implementation("io.github.suqi8.coui.kmp:coui-preference:$couiVersion")
     implementation("io.github.suqi8.coui.kmp:coui-icons:$couiVersion")
