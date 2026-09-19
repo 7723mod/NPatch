@@ -76,9 +76,6 @@ public class LSPLoader {
         installModuleSelfPathCompatibility();
         Startup.trackLoadedApk(loadedApk);
         XposedInit.loadModules(ActivityThread.currentActivityThread());
-        ApplicationInfo moduleCompatibleAppInfo =
-                SigBypass.createModuleCompatibleApplicationInfo(loadedApk.getApplicationInfo());
-        dispatchModernLifecycle(loadedApk, moduleCompatibleAppInfo);
 
         XposedInit.loadedPackagesInProcess.add(loadedApk.getPackageName());
         String resDir = null;
@@ -88,16 +85,6 @@ public class LSPLoader {
             Log.w(TAG, "Failed to get mResDir from LoadedApk", e);
         }
         setPackageNameForResDir(loadedApk.getPackageName(), resDir);
-        XC_LoadPackage.LoadPackageParam lpparam = new XC_LoadPackage.LoadPackageParam(
-                XposedBridge.sLoadedPackageCallbacks);
-        lpparam.packageName = loadedApk.getPackageName();
-        lpparam.processName = ActivityThread.currentProcessName();
-        lpparam.classLoader = loadedApk.getClassLoader();
-        lpparam.appInfo = moduleCompatibleAppInfo != null
-                ? moduleCompatibleAppInfo
-                : loadedApk.getApplicationInfo();
-        lpparam.isFirstApplication = true;
-        XC_LoadPackage.callAll(lpparam);
     }
 
     private static void registerModuleRuntimeAppInfos() {

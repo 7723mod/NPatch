@@ -82,6 +82,7 @@ public class LSPApplication {
     private static volatile Throwable lastCoreCapturedCrash;
 
     private static PatchConfig config;
+    private static Path pendingProviderPath;
 
     private static void logInfo(String msg) {
         XLog.i(TAG, msg);
@@ -321,20 +322,31 @@ public class LSPApplication {
             }
         }
 
+        ClassLoader frameworkLoader = XposedBridge.class.getClassLoader();
+        if (frameworkLoader != null && frameworkLoader.getParent() != null) {
+            XposedBridge.dummyClassLoader = frameworkLoader.getParent();
+        }
+
+        Startup.initXposed(false, ActivityThread.currentProcessName(), context.getApplicationInfo().dataDir, service);
+        Startup.bootstrapXposed(false);
+
+        // Track appLoadedApk so its modern + legacy package lifecycle is driven
+        // exactly once when realizeLoadedApk() builds the class loader below.
+        Startup.trackLoadedApk(appLoadedApk);
+
+        logInfo("Load modules");
+        LSPLoader.initModules(appLoadedApk);
+        logInfo("Modules initialized");
+
         registerModuleCallerPrefixes(service);
         SigBypass.registerModuleNativeLibraryRoots(context);
         SigBypass.doSigBypass(context, config.lspConfig.sigBypassLevel, config.hideLibs);
         disableProfile(context);
 
-        Startup.initXposed(false, ActivityThread.currentProcessName(), context.getApplicationInfo().dataDir, service);
-        Startup.bootstrapXposed(false);
-
-        // WARN: Since it uses `XResource`, the following class should not be initialized
-        // before forkPostCommon is invoke. Otherwise, you will get failure of XResources
-
-        logInfo("Load modules");
-        LSPLoader.initModules(appLoadedApk);
-        logInfo("Modules initialized");
+        // Realize the target's class loader now that hooks, modules and signature bypass are all armed.
+        // getClassLoader() -> createOrUpdateClassLoaderLocked -> createAppFactory triggers
+        // onPackageLoaded (pre-<clinit>) then, on return, onPackageReady and legacy handleLoadPackage.
+        realizeLoadedApk();
 
         if (!config.useManager) {
             for (String modulePkg : VectorModuleManager.INSTANCE.loadedModulePackages()) {
@@ -479,11 +491,10 @@ public class LSPApplication {
             }
             appInfo.appComponentFactory = config.appComponentFactory;
 
-            Path providerPath = null;
             if (config.injectProvider) {
                 Path providerDir = Paths.get(appInfo.dataDir, "cache/code_cache/");
                 if (!Files.exists(providerDir)) Files.createDirectories(providerDir);
-                providerPath = providerDir.resolve("provider.dex");
+                Path providerPath = providerDir.resolve("provider.dex");
                 try {
                     Files.deleteIfExists(providerPath);
                     try (InputStream is = baseClassLoader.getResourceAsStream(PROVIDER_DEX_ASSET_PATH)) {
@@ -491,12 +502,13 @@ public class LSPApplication {
                     }
                     if (Files.exists(providerPath)) {
                         providerPath.toFile().setWritable(false);
+                        pendingProviderPath = providerPath;
                     } else {
-                        providerPath = null;
+                        pendingProviderPath = null;
                     }
                 } catch (Exception e) {
                     Log.e(TAG, "Failed to inject provider:" + Log.getStackTraceString(e));
-                    providerPath = null;
+                    pendingProviderPath = null;
                 }
             }
 
@@ -505,66 +517,27 @@ public class LSPApplication {
             appInfo.sourceDir = loadedApkSourceDir;
             appInfo.publicSourceDir = loadedApkSourceDir;
             appLoadedApk = activityThread.getPackageInfoNoCheck(appInfo, compatInfo);
-            appLoadedApk.getClassLoader();
+
             // LoadedApk resources must remain paired with the APK used to create it.  In
             // signature-bypass mode that APK is the cached original APK; replacing mResDir
             // with the patched APK mixes its resource table with the original app's IDs and
             // causes Resources$NotFoundException while inflating layouts.
             if (!loadedApkUsesOriginCache) {
                 restoreVisibleLoadedApkResources(appLoadedApk, patchedApkPath);
-            }
-
-            if (config.injectProvider && providerPath != null) {
-                try {
-                    ClassLoader loader = appLoadedApk.getClassLoader();
-                    Object dexPathList = XposedHelpers.getObjectField(loader, "pathList");
-                    Object dexElements = XposedHelpers.getObjectField(dexPathList, "dexElements");
-                    int length = Array.getLength(dexElements);
-                    Object newElements = Array.newInstance(dexElements.getClass().getComponentType(), length + 1);
-                    System.arraycopy(dexElements, 0, newElements, 0, length);
-
-                    // Use reflection for DexFile to handle deprecation on Android 14+
-                    Class<?> dexFileClass = Class.forName("dalvik.system.DexFile");
-                    Object dexFile = dexFileClass.getConstructor(String.class).newInstance(providerPath.toString());
-                    Class<?> elementClass = Class.forName("dalvik.system.DexPathList$Element");
-                    Object element = elementClass.getConstructor(dexFileClass).newInstance(dexFile);
-                    Array.set(newElements, length, element);
-                    XposedHelpers.setObjectField(dexPathList, "dexElements", newElements);
-                } catch (Throwable e) {
-                    Log.e(TAG, "Failed to inject provider dex: " + e.getMessage(), e);
-                }
-            }
-
-            if (!loadedApkUsesOriginCache) {
                 restoreVisibleApplicationInfo(mBoundApplication, appInfo, patchedApkPath);
             }
             XposedHelpers.setObjectField(mBoundApplication, "info", appLoadedApk);
 
-            var activityClientRecordClass = XposedHelpers.findClass("android.app.ActivityThread$ActivityClientRecord", ActivityThread.class.getClassLoader());
-            var fixActivityClientRecord = (BiConsumer<Object, Object>) (k, v) -> {
-                if (activityClientRecordClass.isInstance(v)) {
-                    var pkgInfo = XposedHelpers.getObjectField(v, "packageInfo");
-                    if (pkgInfo == stubLoadedApk) {
-                        Log.d(TAG, "fix loadedapk from ActivityClientRecord");
-                        XposedHelpers.setObjectField(v, "packageInfo", appLoadedApk);
-                    }
-                }
-            };
-            var mActivities = (Map<?, ?>) XposedHelpers.getObjectField(activityThread, "mActivities");
-            mActivities.forEach(fixActivityClientRecord);
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    var mLaunchingActivities = (Map<?, ?>) XposedHelpers.getObjectField(activityThread, "mLaunchingActivities");
-                    mLaunchingActivities.forEach(fixActivityClientRecord);
-                }
-            } catch (Throwable ignored) {
-            }
+            // The class loader is deliberately NOT built here. Building it runs the app's
+            // AppComponentFactory <clinit>, which a packed app can turn into a native anti-tamper gate;
+            // it must not run until the LoadedApk hooks, modules and signature bypass are armed. onLoad
+            // arms them and then calls realizeLoadedApk().
             Log.i(TAG, "hooked app initialized: " + appLoadedApk);
 
             var context = (Context) XposedHelpers.callStaticMethod(Class.forName("android.app.ContextImpl"), "createAppContext", activityThread, stubLoadedApk);
             if (config.appComponentFactory != null) {
                 try {
-                    appLoadedApk.getClassLoader().loadClass(config.appComponentFactory);
+                    context.getClassLoader().loadClass(config.appComponentFactory);
                 } catch (Throwable e) {
                     Log.w(TAG, "Original AppComponentFactory not found: " + config.appComponentFactory, e);
                     appInfo.appComponentFactory = null;
@@ -576,6 +549,56 @@ public class LSPApplication {
             Log.e(TAG, "createLoadedApkWithContext failed", e);
             XLog.e(TAG, "createLoadedApk", e);
             return null;
+        }
+    }
+
+    /**
+     * Builds the target app's class loader, now that the LoadedApk hooks, modules and signature bypass
+     * are armed. This is the point where the app's AppComponentFactory is instantiated and its
+     * <clinit> runs; the createAppFactory hook fires onPackageLoaded immediately before that, and
+     * the createOrUpdateClassLoaderLocked hook fires onPackageReady and the legacy handleLoadPackage
+     * on return. It then repoints any ActivityClientRecord still holding the stub LoadedApk at the real one.
+     */
+    private static void realizeLoadedApk() {
+        ClassLoader loader = appLoadedApk.getClassLoader();
+
+        if (config.injectProvider && pendingProviderPath != null) {
+            try {
+                Object dexPathList = XposedHelpers.getObjectField(loader, "pathList");
+                Object dexElements = XposedHelpers.getObjectField(dexPathList, "dexElements");
+                int length = Array.getLength(dexElements);
+                Object newElements = Array.newInstance(dexElements.getClass().getComponentType(), length + 1);
+                System.arraycopy(dexElements, 0, newElements, 0, length);
+
+                Class<?> dexFileClass = Class.forName("dalvik.system.DexFile");
+                Object dexFile = dexFileClass.getConstructor(String.class).newInstance(pendingProviderPath.toString());
+                Class<?> elementClass = Class.forName("dalvik.system.DexPathList$Element");
+                Object element = elementClass.getConstructor(dexFileClass).newInstance(dexFile);
+                Array.set(newElements, length, element);
+                XposedHelpers.setObjectField(dexPathList, "dexElements", newElements);
+            } catch (Throwable e) {
+                Log.e(TAG, "Failed to inject provider dex: " + e.getMessage(), e);
+            }
+        }
+
+        var activityClientRecordClass = XposedHelpers.findClass("android.app.ActivityThread$ActivityClientRecord", ActivityThread.class.getClassLoader());
+        var fixActivityClientRecord = (BiConsumer<Object, Object>) (k, v) -> {
+            if (activityClientRecordClass.isInstance(v)) {
+                var pkgInfo = XposedHelpers.getObjectField(v, "packageInfo");
+                if (pkgInfo == stubLoadedApk) {
+                    Log.d(TAG, "fix loadedapk from ActivityClientRecord");
+                    XposedHelpers.setObjectField(v, "packageInfo", appLoadedApk);
+                }
+            }
+        };
+        var mActivities = (Map<?, ?>) XposedHelpers.getObjectField(activityThread, "mActivities");
+        mActivities.forEach(fixActivityClientRecord);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                var mLaunchingActivities = (Map<?, ?>) XposedHelpers.getObjectField(activityThread, "mLaunchingActivities");
+                mLaunchingActivities.forEach(fixActivityClientRecord);
+            }
+        } catch (Throwable ignored) {
         }
     }
 
