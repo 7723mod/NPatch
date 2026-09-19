@@ -561,6 +561,16 @@ public class LSPApplication {
      */
     private static void realizeLoadedApk() {
         ClassLoader loader = appLoadedApk.getClassLoader();
+        try {
+            Thread.currentThread().setContextClassLoader(loader);
+            Class<?> stubClass = Class.forName("top.nkbe.npatch.metaloader.LSPAppComponentFactoryStub");
+            Field runtimeLoaderField = stubClass.getDeclaredField("runtimeClassLoader");
+            runtimeLoaderField.setAccessible(true);
+            runtimeLoaderField.set(null, loader);
+            Log.i(TAG, "Published runtimeClassLoader to metaloader: " + loader);
+        } catch (Throwable t) {
+            Log.w(TAG, "Failed to publish runtimeClassLoader to metaloader", t);
+        }
 
         if (config.injectProvider && pendingProviderPath != null) {
             try {

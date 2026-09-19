@@ -49,9 +49,17 @@ public class LSPAppComponentFactoryStub extends AppComponentFactory {
 
     public static byte[] dex;
     public static boolean hideLibs;
+    public static volatile ClassLoader runtimeClassLoader;
 
-    private static volatile BootstrapState bootstrapState = BootstrapState.NOT_STARTED;
+    private static final int STATE_NOT_STARTED = 0;
+    private static final int STATE_RUNNING = 1;
+    private static final int STATE_SUCCEEDED = 2;
+    private static final int STATE_FAILED = 3;
+    private static final int STATE_SKIPPED_APP_ZYGOTE = 4;
+
+    private static volatile int bootstrapState = STATE_NOT_STARTED;
     private static volatile String bootstrapStage = "not_started";
+    private static volatile Throwable bootstrapError;
     private static volatile Thread bootstrapThread;
     private static volatile String originalFactoryName;
     private static volatile AppComponentFactory originalFactory;
@@ -61,12 +69,19 @@ public class LSPAppComponentFactoryStub extends AppComponentFactory {
         ABI_BY_INSTRUCTION_SET.put("x86_64", "x86_64");
     }
 
-    private enum BootstrapState {
-        NOT_STARTED,
-        RUNNING,
-        SUCCEEDED,
-        FAILED,
-        SKIPPED_APP_ZYGOTE
+    private static String getBootstrapStateName(int state) {
+        switch (state) {
+            case STATE_RUNNING:
+                return "RUNNING";
+            case STATE_SUCCEEDED:
+                return "SUCCEEDED";
+            case STATE_FAILED:
+                return "FAILED";
+            case STATE_SKIPPED_APP_ZYGOTE:
+                return "SKIPPED_APP_ZYGOTE";
+            default:
+                return "NOT_STARTED";
+        }
     }
 
     @Override
@@ -96,20 +111,22 @@ public class LSPAppComponentFactoryStub extends AppComponentFactory {
     public Application instantiateApplication(ClassLoader loader, String name)
             throws InstantiationException, IllegalAccessException, ClassNotFoundException {
         ensureBootstrapped();
-        AppComponentFactory delegate = resolveOriginalFactory(loader, true);
+        ClassLoader targetLoader = resolveTargetClassLoader(loader, name);
+        AppComponentFactory delegate = resolveOriginalFactory(targetLoader, true);
         return delegate == null
-                ? super.instantiateApplication(loader, name)
-                : delegate.instantiateApplication(loader, name);
+                ? super.instantiateApplication(targetLoader, name)
+                : delegate.instantiateApplication(targetLoader, name);
     }
 
     @Override
     public Activity instantiateActivity(ClassLoader loader, String name, Intent intent)
             throws InstantiationException, IllegalAccessException, ClassNotFoundException {
         ensureBootstrapped();
-        AppComponentFactory delegate = resolveOriginalFactory(loader, true);
+        ClassLoader targetLoader = resolveTargetClassLoader(loader, name);
+        AppComponentFactory delegate = resolveOriginalFactory(targetLoader, true);
         return delegate == null
-                ? super.instantiateActivity(loader, name, intent)
-                : delegate.instantiateActivity(loader, name, intent);
+                ? super.instantiateActivity(targetLoader, name, intent)
+                : delegate.instantiateActivity(targetLoader, name, intent);
     }
 
     @Override
@@ -119,40 +136,61 @@ public class LSPAppComponentFactoryStub extends AppComponentFactory {
             Intent intent
     ) throws InstantiationException, IllegalAccessException, ClassNotFoundException {
         ensureBootstrapped();
-        AppComponentFactory delegate = resolveOriginalFactory(loader, true);
+        ClassLoader targetLoader = resolveTargetClassLoader(loader, name);
+        AppComponentFactory delegate = resolveOriginalFactory(targetLoader, true);
         return delegate == null
-                ? super.instantiateReceiver(loader, name, intent)
-                : delegate.instantiateReceiver(loader, name, intent);
+                ? super.instantiateReceiver(targetLoader, name, intent)
+                : delegate.instantiateReceiver(targetLoader, name, intent);
     }
 
     @Override
     public Service instantiateService(ClassLoader loader, String name, Intent intent)
             throws InstantiationException, IllegalAccessException, ClassNotFoundException {
         ensureBootstrapped();
-        AppComponentFactory delegate = resolveOriginalFactory(loader, true);
+        ClassLoader targetLoader = resolveTargetClassLoader(loader, name);
+        AppComponentFactory delegate = resolveOriginalFactory(targetLoader, true);
         return delegate == null
-                ? super.instantiateService(loader, name, intent)
-                : delegate.instantiateService(loader, name, intent);
+                ? super.instantiateService(targetLoader, name, intent)
+                : delegate.instantiateService(targetLoader, name, intent);
     }
 
     @Override
     public ContentProvider instantiateProvider(ClassLoader loader, String name)
             throws InstantiationException, IllegalAccessException, ClassNotFoundException {
         ensureBootstrapped();
-        AppComponentFactory delegate = resolveOriginalFactory(loader, true);
+        ClassLoader targetLoader = resolveTargetClassLoader(loader, name);
+        AppComponentFactory delegate = resolveOriginalFactory(targetLoader, true);
         return delegate == null
-                ? super.instantiateProvider(loader, name)
-                : delegate.instantiateProvider(loader, name);
+                ? super.instantiateProvider(targetLoader, name)
+                : delegate.instantiateProvider(targetLoader, name);
+    }
+
+    private static ClassLoader resolveTargetClassLoader(ClassLoader fallback, String componentName)
+            throws ClassNotFoundException {
+        ClassLoader runtime = resolveRuntimeClassLoader();
+        if (runtime != null) {
+            return runtime;
+        }
+        if (bootstrapState == STATE_FAILED && bootstrapError != null) {
+            Log.e(TAG, "CRITICAL: Bootstrap failed at stage " + bootstrapStage
+                    + "; cannot load component " + componentName + " from runtime ClassLoader", bootstrapError);
+            throw new ClassNotFoundException("Failed to load component " + componentName
+                    + " because NPatch bootstrap failed at stage " + bootstrapStage, bootstrapError);
+        }
+        Log.e(TAG, "CRITICAL: Runtime ClassLoader is null when instantiating "
+                + componentName + "! Falling back to caller loader: " + fallback
+                + ". This will likely cause ClassNotFoundException if the component resides in origin.apk.");
+        return fallback;
     }
 
     private static void ensureBootstrapped() {
-        BootstrapState state = bootstrapState;
-        if (state == BootstrapState.SUCCEEDED
-                || state == BootstrapState.FAILED
-                || state == BootstrapState.SKIPPED_APP_ZYGOTE) {
+        int state = bootstrapState;
+        if (state == STATE_SUCCEEDED
+                || state == STATE_FAILED
+                || state == STATE_SKIPPED_APP_ZYGOTE) {
             return;
         }
-        if (state == BootstrapState.RUNNING) {
+        if (state == STATE_RUNNING) {
             if (Thread.currentThread() == bootstrapThread) {
                 return;
             }
@@ -163,27 +201,28 @@ public class LSPAppComponentFactoryStub extends AppComponentFactory {
         }
 
         synchronized (BOOTSTRAP_LOCK) {
-            if (bootstrapState != BootstrapState.NOT_STARTED) {
+            if (bootstrapState != STATE_NOT_STARTED) {
                 return;
             }
             if (ActivityThread.currentActivityThread() == null) {
                 bootstrapStage = "app_zygote";
-                bootstrapState = BootstrapState.SKIPPED_APP_ZYGOTE;
+                bootstrapState = STATE_SKIPPED_APP_ZYGOTE;
                 Log.i(TAG, "Skip bootstrap in app zygote");
                 writeDiagnostic(null);
                 return;
             }
 
-            bootstrapState = BootstrapState.RUNNING;
+            bootstrapState = STATE_RUNNING;
             bootstrapThread = Thread.currentThread();
             try {
                 bootstrap();
                 bootstrapStage = "complete";
-                bootstrapState = BootstrapState.SUCCEEDED;
+                bootstrapState = STATE_SUCCEEDED;
                 Log.i(TAG, "Bootstrap completed");
                 writeDiagnostic(null);
             } catch (Throwable error) {
-                bootstrapState = BootstrapState.FAILED;
+                bootstrapState = STATE_FAILED;
+                bootstrapError = error;
                 clearDexBuffer();
                 Log.e(TAG, "Bootstrap failed at " + bootstrapStage, error);
                 writeDiagnostic(error);
@@ -361,6 +400,10 @@ public class LSPAppComponentFactoryStub extends AppComponentFactory {
     }
 
     private static ClassLoader resolveRuntimeClassLoader() {
+        ClassLoader direct = runtimeClassLoader;
+        if (direct != null) {
+            return direct;
+        }
         if (Boolean.TRUE.equals(RESOLVING_RUNTIME_LOADER.get())) {
             return null;
         }
@@ -384,7 +427,11 @@ public class LSPAppComponentFactoryStub extends AppComponentFactory {
             }
             Method getClassLoader = loadedApk.getClass().getDeclaredMethod("getClassLoader");
             getClassLoader.setAccessible(true);
-            return (ClassLoader) getClassLoader.invoke(loadedApk);
+            ClassLoader loader = (ClassLoader) getClassLoader.invoke(loadedApk);
+            if (loader != null) {
+                runtimeClassLoader = loader;
+            }
+            return loader;
         } catch (Throwable error) {
             Log.d(TAG, "Runtime class loader is not ready", error);
             return null;
@@ -493,7 +540,7 @@ public class LSPAppComponentFactoryStub extends AppComponentFactory {
             ))) {
                 writer.setIndent("  ");
                 writer.beginObject();
-                writer.name("state").value(bootstrapState.name());
+                writer.name("state").value(getBootstrapStateName(bootstrapState));
                 writer.name("stage").value(bootstrapStage);
                 writer.name("timestamp").value(System.currentTimeMillis());
                 writer.name("pid").value(Process.myPid());

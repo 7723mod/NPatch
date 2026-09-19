@@ -1,8 +1,7 @@
--keep class top.nkbe.npatch.metaloader.LSPAppComponentFactoryStub {
-    public static byte[] dex;
-    public static boolean hideLibs;
-    <init>();
+-keep class top.nkbe.npatch.metaloader.** {
+    *;
 }
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
 -keep class * extends androidx.room.Entity {
     <fields>;
 }
