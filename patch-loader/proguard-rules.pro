@@ -32,12 +32,13 @@
 -keep class org.matrix.vector.legacy.** { *; }
 -keep class org.matrix.vector.nativebridge.ResourcesHook { *; }
 
-# Internal reflection points that still depend on stable names/members.
--keepclassmembers class org.matrix.vector.impl.core.VectorServiceClient {
-    <fields>;
-    <methods>;
-}
--keep class org.matrix.vector.impl.core.VectorModuleManager$EmptyInjectedModuleService { *; }
+# Preserve all Vector framework, IPC, bridge and implementation classes
+-keep class org.matrix.vector.** { *; }
+
+# Preserve NPatch loader, service and utility classes
+-keep class top.nkbe.npatch.loader.** { *; }
+-keep class top.nkbe.npatch.service.** { *; }
+-keep class top.nkbe.npatch.util.** { *; }
 
 -dontwarn android.content.res.Resources
 -dontwarn android.content.res.Resources$Theme
