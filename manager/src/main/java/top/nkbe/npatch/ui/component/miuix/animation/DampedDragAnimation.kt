@@ -10,7 +10,10 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.android.awaitFrame
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import top.nkbe.npatch.ui.component.miuix.modifier.inspectDragGestures
@@ -26,7 +29,10 @@ class DampedDragAnimation(
     val canDrag: (Offset) -> Boolean = { true },
     val onDragStarted: DampedDragAnimation.(position: Offset) -> Unit,
     val onDragStopped: DampedDragAnimation.() -> Unit,
+    val onDragCancelled: DampedDragAnimation.() -> Unit = onDragStopped,
     val onDrag: DampedDragAnimation.(size: IntSize, dragAmount: Offset) -> Unit,
+    val onTap: DampedDragAnimation.() -> Unit = {},
+    val onLongPress: DampedDragAnimation.() -> Boolean = { false },
 ) {
 
     private val valueAnimationSpec =
@@ -63,22 +69,66 @@ class DampedDragAnimation(
     val velocity: Float get() = velocityAnimation.value
 
     val modifier: Modifier = Modifier.pointerInput(Unit) {
+        val touchSlopSquared = viewConfiguration.touchSlop.let { it * it }
+        val longPressTimeoutMillis = viewConfiguration.longPressTimeoutMillis
+        var downPosition = Offset.Zero
+        var movedBeyondTouchSlop = false
+        var longPressTriggered = false
+        var longPressConsumed = false
+        var longPressJob: Job? = null
+
         inspectDragGestures(
             onDragStart = { down ->
+                downPosition = down.position
+                movedBeyondTouchSlop = false
+                longPressTriggered = false
+                longPressConsumed = false
                 onDragStarted(down.position)
                 press()
+                longPressJob = animationScope.launch {
+                    delay(longPressTimeoutMillis)
+                    longPressTriggered = true
+                    if (onLongPress()) {
+                        longPressConsumed = true
+                        onDragCancelled()
+                        release()
+                    }
+                }
             },
             onDragEnd = {
-                onDragStopped()
-                release()
+                longPressJob?.cancel()
+                longPressJob = null
+                if (!longPressConsumed) {
+                    onDragStopped()
+                    release()
+                    if (!longPressTriggered && !movedBeyondTouchSlop) {
+                        onTap()
+                    }
+                }
             },
             onDragCancel = {
-                onDragStopped()
-                release()
+                longPressJob?.cancel()
+                longPressJob = null
+                if (!longPressConsumed) {
+                    onDragCancelled()
+                    release()
+                }
             }
         ) { change, dragAmount ->
+            if (longPressConsumed) return@inspectDragGestures
+
             val position = change.position
             val previousPosition = change.previousPosition
+
+            if (!movedBeyondTouchSlop) {
+                val displacement = position - downPosition
+                movedBeyondTouchSlop = displacement.x * displacement.x +
+                    displacement.y * displacement.y > touchSlopSquared
+                if (movedBeyondTouchSlop) {
+                    longPressJob?.cancel()
+                    longPressJob = null
+                }
+            }
 
             val isInside = canDrag(position)
             val wasInside = canDrag(previousPosition)

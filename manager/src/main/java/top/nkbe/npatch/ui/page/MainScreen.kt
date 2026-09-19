@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -34,6 +35,7 @@ import io.github.suqi8.coui.kmp.theme.COUITheme
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.lsposed.manager.ui.compose.repository.RepositoryScreen
+import top.nkbe.npatch.ui.component.FloatingBottomBarMode
 import top.nkbe.npatch.ui.component.FloatingGlassBottomBar
 import top.nkbe.npatch.ui.component.FloatingGlassBottomBarIcon
 import top.nkbe.npatch.ui.component.FloatingGlassBottomBarItem
@@ -116,42 +118,33 @@ fun MainScreen(
                         contentAlignment = Alignment.BottomCenter,
                     ) {
                         FloatingGlassBottomBar(
+                            items = tabs,
                             selectedIndex = { pagerState.currentPage },
-                            selectedProgress = { pagerState.currentPage + pagerState.currentPageOffsetFraction },
                             onSelected = { index ->
                                 onSelectedTabChange(index)
                                 scope.launch { pagerState.animateScrollToPage(index) }
                             },
-                            tabsCount = tabs.size,
                             backdrop = backdrop,
-                            isBlurEnabled = useFloatingGlassBottomBarBlur,
+                            mode = if (useFloatingGlassBottomBarBlur && backdrop != null) FloatingBottomBarMode.LiquidGlass else FloatingBottomBarMode.None,
                             modifier = Modifier
                                 .onSizeChanged { bottomBarHeightPx = it.height }
                                 .padding(horizontal = 12.dp),
-                        ) {
-                            tabs.forEachIndexed { index, tab ->
-                                val isSelected = settledPage == index
-                                val label = stringResource(tab.labelRes)
-                                FloatingGlassBottomBarItem(
-                                    onClick = {
-                                        onSelectedTabChange(index)
-                                        scope.launch { pagerState.animateScrollToPage(index) }
-                                    },
+                            iconContent = { tab, index, previewSelected ->
+                                val isSelected = previewSelected || settledPage == index
+                                FloatingGlassBottomBarIcon(
                                     selected = isSelected,
-                                    label = label,
-                                ) {
-                                    FloatingGlassBottomBarIcon(
-                                        selected = isSelected,
-                                        selectedIcon = tab.selectedIcon,
-                                        unselectedIcon = tab.unselectedIcon,
-                                    )
-                                    FloatingGlassBottomBarLabel(
-                                        label = label,
-                                        selected = isSelected,
-                                    )
-                                }
-                            }
-                        }
+                                    selectedIcon = tab.selectedIcon,
+                                    unselectedIcon = tab.unselectedIcon,
+                                )
+                            },
+                            labelContent = { tab, index ->
+                                val isSelected = settledPage == index
+                                FloatingGlassBottomBarLabel(
+                                    label = stringResource(tab.labelRes),
+                                    selected = isSelected,
+                                )
+                            },
+                        )
                     }
                 } else {
                     NavigationBar(color = backgroundAwareCardColors().color) {
