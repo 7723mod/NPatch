@@ -8,6 +8,7 @@ import static top.nkbe.npatch.share.Constants.PROXY_APP_COMPONENT_FACTORY;
 
 import com.android.tools.build.apkzlib.sign.SigningExtension;
 import com.android.tools.build.apkzlib.sign.SigningOptions;
+import com.android.tools.build.apkzlib.zip.AlignmentRule;
 import com.android.tools.build.apkzlib.zip.AlignmentRules;
 import com.android.tools.build.apkzlib.zip.NestedZip;
 import com.android.tools.build.apkzlib.zip.StoredEntry;
@@ -45,9 +46,11 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -150,9 +153,19 @@ public class NPatch {
             "x86_64"
     ));
 
+    private static final AlignmentRule ABI_AWARE_SO_RULE = path -> {
+        if (!path.endsWith(".so")) {
+            return AlignmentRule.NO_ALIGNMENT;
+        }
+        if (path.contains("arm64-v8a") || path.contains("x86_64")) {
+            return 16384;
+        }
+        return 4096;
+    };
+
     private static final ZFileOptions Z_FILE_OPTIONS = new ZFileOptions()
             .setAlignmentRule(AlignmentRules.compose(
-                    AlignmentRules.constantForSuffix(".so", 16384),
+                    ABI_AWARE_SO_RULE,
                     AlignmentRules.constantForSuffix(ORIGINAL_APK_ASSET_PATH, 4096),
                     AlignmentRules.constantForSuffix(".arsc", 4)
             ));
@@ -288,7 +301,7 @@ public class NPatch {
         }
 
         final boolean isSplit = apkPaths.size() > 1 && pair.splitName != null && !pair.splitName.isEmpty();
-        final boolean embedOriginal = !isSplit && (sigbypassLevel >= Constants.SIGBYPASS_BASIC);
+        final boolean embedOriginal = !isSplit;
 
         try (ZFile dstZFile = ZFile.openReadWrite(outputFile, Z_FILE_OPTIONS);
              ZFile srcZFile = embedOriginal
@@ -332,7 +345,7 @@ public class NPatch {
                         ? pair.splitName
                         : srcApkFile.getName();
                 logger.i("Packing split apk: " + splitDisplayName + "...");
-                boolean needModifyManifest = !newPackage.equals(pair.packageName) || overrideVersionCode || overrideTargetSdk || minSdkVersion > 0;
+                boolean needModifyManifest = !newPackage.equals(pair.packageName) || overrideVersionCode || overrideTargetSdk;
                 if (needModifyManifest) {
                     ModificationProperty splitProperty = new ModificationProperty();
                     if (overrideVersionCode) {
@@ -340,9 +353,6 @@ public class NPatch {
                     }
                     if (overrideTargetSdk) {
                         splitProperty.addUsesSdkAttribute(new AttributeItem(NodeValue.UsesSDK.TARGET_SDK_VERSION, overrideTargetSdkValue));
-                    }
-                    if (minSdkVersion > 0) {
-                        splitProperty.addUsesSdkAttribute(new AttributeItem(NodeValue.UsesSDK.MIN_SDK_VERSION, minSdkVersion));
                     }
                     if (!newPackage.equals(pair.packageName)) {
                         splitProperty.addManifestAttribute(new AttributeItem(NodeValue.Manifest.PACKAGE, newPackage).setNamespace(null));
@@ -432,6 +442,8 @@ public class NPatch {
                 }
             }
 
+            injectLoader(srcZFile, dstZFile);
+
             // Manager mode controls LoadedModule discovery, not bootstrap ownership. Keep every patched
             // APK independently bootable so its process never needs to read another package's APK.
             logger.i("Adding loader dex...");
@@ -459,7 +471,6 @@ public class NPatch {
             }
 
             if (!useManager) {
-                logger.i("Embedding modules...");
                 embedModules(dstZFile);
             }
 
@@ -469,8 +480,8 @@ public class NPatch {
             for (StoredEntry entry : srcZFile.entries()) {
                 String name = entry.getCentralDirectoryHeader().getName();
                 if (dstZFile.get(name) != null) continue;
-                if (embedOriginal && !injectDex && name.startsWith("classes") && name.endsWith(".dex")) continue;
-                if (name.equals("AndroidManifest.xml")) continue;
+                if (!injectDex && isDexEntry(name)) continue;
+                if (name.equals(ANDROID_MANIFEST_XML)) continue;
 
                 boolean linked = false;
                 if (srcZFile instanceof NestedZip) {
@@ -494,44 +505,43 @@ public class NPatch {
                 }
             }
 
-            logger.i("Adding metaloader dex...");
-            try (var is = getClass().getClassLoader().getResourceAsStream(Constants.META_LOADER_DEX_ASSET_PATH)) {
-                String metaDexName = resolveNextContiguousDexName(dstZFile, srcZFile, false);
-                dstZFile.add(metaDexName, is);
-                logger.i("Metaloader dex injected as " + metaDexName);
-            } catch (Throwable e) {
-                throw new PatchError("Error when adding metaloader dex", e);
-            }
-
             dstZFile.realign();
             logger.i("Writing apk...");
         }
         logger.i("Done. Output APK: " + outputFile.getAbsolutePath());
     }
 
-    private static String resolveNextContiguousDexName(ZFile dstZFile, ZFile srcZFile, boolean checkSrc) {
-        HashSet<Integer> presentIndices = new HashSet<>();
-        if (dstZFile != null) {
-            for (StoredEntry entry : dstZFile.entries()) {
-                int idx = getDexIndex(entry.getCentralDirectoryHeader().getName());
-                if (idx > 0) {
-                    presentIndices.add(idx);
-                }
+    private void injectLoader(ZFile srcZFile, ZFile dstZFile) throws IOException {
+        logger.i("Adding metaloader dex...");
+        try (var is = getClass().getClassLoader().getResourceAsStream(Constants.META_LOADER_DEX_ASSET_PATH)) {
+            if (is == null) {
+                throw new PatchError("The metaloader dex is missing from this build");
             }
-        }
-        if (checkSrc && srcZFile != null) {
-            for (StoredEntry entry : srcZFile.entries()) {
-                int idx = getDexIndex(entry.getCentralDirectoryHeader().getName());
-                if (idx > 0) {
-                    presentIndices.add(idx);
+            if (!injectDex) {
+                dstZFile.add("classes.dex", is);
+                logger.i("Metaloader dex injected as classes.dex");
+            } else {
+                int maxDexIndex = 0;
+                for (StoredEntry entry : srcZFile.entries()) {
+                    int idx = getDexIndex(entry.getCentralDirectoryHeader().getName());
+                    if (idx > maxDexIndex) {
+                        maxDexIndex = idx;
+                    }
                 }
+                int nextIdx = Math.max(1, maxDexIndex) + 1;
+                String metaDexName = "classes" + nextIdx + ".dex";
+                dstZFile.add(metaDexName, is);
+                logger.i("Metaloader dex injected as " + metaDexName);
             }
+        } catch (PatchError e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new PatchError("Error when adding metaloader dex", e);
         }
-        int candidate = 1;
-        while (presentIndices.contains(candidate)) {
-            candidate++;
-        }
-        return candidate == 1 ? "classes.dex" : "classes" + candidate + ".dex";
+    }
+
+    private static boolean isDexEntry(String name) {
+        return name != null && name.startsWith("classes") && name.endsWith(".dex");
     }
 
     private static int getDexIndex(String name) {
@@ -553,11 +563,13 @@ public class NPatch {
         }
     }
 
-
     private void embedModules(ZFile zFile) {
+        if (modules.isEmpty()) return;
+        logger.i("Embedding modules...");
+        Set<String> embedded = new LinkedHashSet<>();
         for (var LoadedModule : modules) {
             File file = new File(LoadedModule);
-            try (var apk = ZFile.openReadOnly(new File(LoadedModule));
+            try (var apk = ZFile.openReadOnly(file);
                  var fileIs = new FileInputStream(file)) {
 
                 var manifestEntry = apk.get(ANDROID_MANIFEST_XML);
@@ -566,6 +578,10 @@ public class NPatch {
                 try (var xmlIs = manifestEntry.open()) {
                     var manifest = Objects.requireNonNull(ManifestParser.parseManifestFile(xmlIs));
                     var packageName = manifest.packageName;
+                    if (!embedded.add(packageName)) {
+                        logger.e("  - " + packageName + " given more than once, keeping the first");
+                        continue;
+                    }
                     logger.i("  - " + packageName);
                     zFile.add(EMBEDDED_MODULES_ASSET_PATH + packageName + ".apk", fileIs);
                 }
@@ -634,7 +650,7 @@ public class NPatch {
         property.addApplicationAttribute(new AttributeItem(NodeValue.Application.DEBUGGABLE, debuggableFlag));
         property.addApplicationAttribute(new AttributeItem("appComponentFactory", PROXY_APP_COMPONENT_FACTORY));
         if (usesCleartextTraffic) {
-            property.addApplicationAttribute(new AttributeItem("usesCleartextTraffic", true));
+            property.addApplicationAttribute(new AttributeItem("usesCleartextTraffic", Boolean.TRUE));
         }
 
         if (!targetPackage.equals(originPackage)) {
@@ -671,9 +687,9 @@ public class NPatch {
             List<AttributeItem> providerAttrs = new ArrayList<>();
             providerAttrs.add(new AttributeItem("name", "bin.mt.file.content.MTDataFilesProvider"));
             providerAttrs.add(new AttributeItem("permission", "android.permission.MANAGE_DOCUMENTS"));
-            providerAttrs.add(new AttributeItem("exported", true));
+            providerAttrs.add(new AttributeItem("exported", Boolean.TRUE));
             providerAttrs.add(new AttributeItem("authorities", injectedAuthority));
-            providerAttrs.add(new AttributeItem("grantUriPermissions", true));
+            providerAttrs.add(new AttributeItem("grantUriPermissions", Boolean.TRUE));
 
             property.addDeleteProviderAuthorities(injectedAuthority);
             property.addProvider(providerAttrs, "android.content.action.DOCUMENTS_PROVIDER");
