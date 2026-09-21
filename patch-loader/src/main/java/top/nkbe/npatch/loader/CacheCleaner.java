@@ -95,6 +95,11 @@ public class CacheCleaner {
         deleteRecursive(new File(appInfo.dataDir, "cache/npatch"));
     }
 
+    public static void sweepLegacyHostNativeCache(ApplicationInfo appInfo) {
+        if (appInfo == null || appInfo.dataDir == null) return;
+        deleteRecursive(new File(appInfo.dataDir, "cache/native/host"));
+    }
+
     public static void sweepModuleNativeCache(ApplicationInfo appInfo, Map<String, String> activeModuleApkPaths) {
         if (appInfo == null || appInfo.dataDir == null) return;
 

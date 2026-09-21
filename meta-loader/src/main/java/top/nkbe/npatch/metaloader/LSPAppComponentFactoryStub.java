@@ -276,6 +276,11 @@ public class LSPAppComponentFactoryStub extends AppComponentFactory {
             output.getFD().sync();
         }
 
+        try {
+            nativeFile.setReadOnly();
+        } catch (Throwable ignored) {
+        }
+
         bootstrapStage = "load_native";
         Log.i(TAG, "Loading native bootstrap: " + nativeFile);
         System.load(nativeFile.getAbsolutePath());

@@ -47,6 +47,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -263,6 +264,7 @@ public class LSPApplication {
             XLog.e(TAG, "Error when creating context");
             return;
         }
+        String installedApkPath = context.getPackageCodePath();
         if (SB.hasConflict(context)) {
             SB.triggerConflict(context);
             return;
@@ -346,7 +348,7 @@ public class LSPApplication {
         // Realize the target's class loader now that hooks, modules and signature bypass are all armed.
         // getClassLoader() -> createOrUpdateClassLoaderLocked -> createAppFactory triggers
         // onPackageLoaded (pre-<clinit>) then, on return, onPackageReady and legacy handleLoadPackage.
-        realizeLoadedApk();
+        realizeLoadedApk(installedApkPath);
 
         if (!config.useManager) {
             for (String modulePkg : VectorModuleManager.INSTANCE.loadedModulePackages()) {
@@ -443,7 +445,7 @@ public class LSPApplication {
                 }
             }
             var baseClassLoader = stubLoadedApk.getClassLoader();
-            String patchedApkPath = appInfo.sourceDir;
+            String installedApkPath = appInfo.sourceDir;
 
             try (var is = baseClassLoader.getResourceAsStream(CONFIG_ASSET_PATH)) {
                 if (is == null) throw new IOException("Config file not found in assets");
@@ -460,28 +462,25 @@ public class LSPApplication {
             Log.i(TAG, "Use manager: " + config.useManager);
             Log.i(TAG, "Signature bypass level: " + config.lspConfig.sigBypassLevel);
 
-            CacheCleaner.handlePatchUpgrade(appInfo, patchedApkPath);
+            CacheCleaner.handlePatchUpgrade(appInfo, installedApkPath);
             CacheCleaner.sweepLibNpatchCache(appInfo);
             CacheCleaner.sweepLegacyNpatchCache(appInfo);
+            CacheCleaner.sweepLegacyHostNativeCache(appInfo);
 
-            String loadedApkSourceDir = patchedApkPath;
+            String loadedApkSourceDir = installedApkPath;
             boolean loadedApkUsesOriginCache = false;
             if (config.lspConfig.sigBypassLevel >= Constants.SIGBYPASS_BASIC) {
                 Path cacheApkPath = OriginApkHelper.prepareOriginApk(appInfo, baseClassLoader);
-                Path nativeLibraryDir = OriginApkHelper.prepareNativeLibraryDir(appInfo, cacheApkPath, patchedApkPath);
-                SigBypass.setPaths(cacheApkPath.toString(), patchedApkPath);
+                SigBypass.setPaths(cacheApkPath.toString(), installedApkPath);
                 SigBypass.setOriginalSignature(config.newPackage, config.originalSignature);
                 loadedApkSourceDir = cacheApkPath.toString();
                 loadedApkUsesOriginCache = true;
                 XLog.i(TAG, "LoadedApk source mode=cache"
-                        + ", patchedApkPath=" + patchedApkPath
+                        + ", installedApkPath=" + installedApkPath
                         + ", cacheApkPath=" + cacheApkPath
                         + ", selected=" + loadedApkSourceDir);
-                if (nativeLibraryDir != null) {
-                    appInfo.nativeLibraryDir = nativeLibraryDir.toString();
-                }
                 try {
-                    long originCrc = OriginApkHelper.getOriginalApkCrc(patchedApkPath);
+                    long originCrc = OriginApkHelper.getOriginalApkCrc(installedApkPath);
                     if (originCrc > 0) {
                         CacheCleaner.sweepOriginApkCache(appInfo, originCrc);
                     }
@@ -523,8 +522,8 @@ public class LSPApplication {
             // with the patched APK mixes its resource table with the original app's IDs and
             // causes Resources$NotFoundException while inflating layouts.
             if (!loadedApkUsesOriginCache) {
-                restoreVisibleLoadedApkResources(appLoadedApk, patchedApkPath);
-                restoreVisibleApplicationInfo(mBoundApplication, appInfo, patchedApkPath);
+                restoreVisibleLoadedApkResources(appLoadedApk, installedApkPath);
+                restoreVisibleApplicationInfo(mBoundApplication, appInfo, installedApkPath);
             }
             XposedHelpers.setObjectField(mBoundApplication, "info", appLoadedApk);
 
@@ -559,7 +558,7 @@ public class LSPApplication {
      * the createOrUpdateClassLoaderLocked hook fires onPackageReady and the legacy handleLoadPackage
      * on return. It then repoints any ActivityClientRecord still holding the stub LoadedApk at the real one.
      */
-    private static void realizeLoadedApk() {
+    private static void realizeLoadedApk(String installedApkPath) {
         ClassLoader loader = appLoadedApk.getClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(loader);
@@ -571,6 +570,8 @@ public class LSPApplication {
         } catch (Throwable t) {
             Log.w(TAG, "Failed to publish runtimeClassLoader to metaloader", t);
         }
+
+        appendHostNativeLibraryPaths(loader, installedApkPath);
 
         if (config.injectProvider && pendingProviderPath != null) {
             try {
@@ -612,41 +613,79 @@ public class LSPApplication {
         }
     }
 
-    public static void disableProfile(Context context) {
-        var appInfo = context.getApplicationInfo();
-        if (appInfo == null) return;
-
-        var codePaths = new ArrayList<String>();
-        if ((appInfo.flags & ApplicationInfo.FLAG_HAS_CODE) != 0) codePaths.add(appInfo.sourceDir);
-        if (appInfo.splitSourceDirs != null) Collections.addAll(codePaths, appInfo.splitSourceDirs);
-        if (codePaths.isEmpty()) return;
-
-        File profileDir = null;
+    private static void appendHostNativeLibraryPaths(ClassLoader loader, String installedApkPath) {
+        if (loader == null || installedApkPath == null || installedApkPath.isEmpty()) return;
+        List<String> libPaths = new ArrayList<>();
         try {
-            profileDir = (File) XposedHelpers.callStaticMethod(
-                    android.os.Environment.class, "getDataProfilesDePackageDirectory",
-                    appInfo.uid / PER_USER_RANGE, context.getPackageName());
-        } catch (Throwable e) {
-            Log.w(TAG, "Failed to get profile dir", e);
-            return;
-        }
-
-        for (int i = codePaths.size() - 1; i >= 0; i--) {
-            String splitName = i == 0 ? null : appInfo.splitNames[i - 1];
-            File profile = new File(profileDir, splitName == null ? "primary.prof" : splitName + ".split.prof");
-
-            try {
-                // 如果已是 0 字節且唯讀，直接跳過
-                if (profile.exists() && profile.length() == 0 && !profile.canWrite()) continue;
-                // 自動將已存在的檔案內容清空或建立新檔
-                try (var ignored = new FileOutputStream(profile)) {
-                }
-                // 設定檔案只讀
-                Os.chmod(profile.getAbsolutePath(), 00444);
-
-            } catch (Throwable e) {
-                Log.e(TAG, "Failed to disable profile: " + profile.getName(), e);
+            String[] abis = Process.is64Bit() ? Build.SUPPORTED_64_BIT_ABIS : Build.SUPPORTED_32_BIT_ABIS;
+            for (String abi : abis) {
+                libPaths.add(installedApkPath + "!/lib/" + abi);
             }
+
+            // Method 1: PathClassLoader/BaseDexClassLoader.addNativePath(Collection<String>)
+            try {
+                Method method = loader.getClass().getMethod("addNativePath", Collection.class);
+                method.setAccessible(true);
+                method.invoke(loader, libPaths);
+                Log.i(TAG, "Appended host native library paths via ClassLoader.addNativePath: " + libPaths);
+                return;
+            } catch (Throwable ignored) {
+            }
+
+            // Method 2: DexPathList.addNativePath(Collection<String>) (AOSP 7.0+)
+            Object dexPathList = XposedHelpers.getObjectField(loader, "pathList");
+            if (dexPathList != null) {
+                Method addNativePathMethod = dexPathList.getClass().getDeclaredMethod("addNativePath", Collection.class);
+                addNativePathMethod.setAccessible(true);
+                addNativePathMethod.invoke(dexPathList, libPaths);
+                Log.i(TAG, "Appended host native library paths via DexPathList.addNativePath: " + libPaths);
+            }
+        } catch (Throwable e) {
+            Log.e(TAG, "Failed to append host native library paths: " + libPaths, e);
+        }
+    }
+
+    public static void disableProfile(Context context) {
+        try {
+            var appInfo = context.getApplicationInfo();
+            if (appInfo == null) return;
+
+            var codePaths = new ArrayList<String>();
+            if ((appInfo.flags & ApplicationInfo.FLAG_HAS_CODE) != 0) codePaths.add(appInfo.sourceDir);
+            if (appInfo.splitSourceDirs != null) Collections.addAll(codePaths, appInfo.splitSourceDirs);
+            if (codePaths.isEmpty()) return;
+
+            File profileDir = null;
+            try {
+                profileDir = (File) XposedHelpers.callStaticMethod(
+                        android.os.Environment.class, "getDataProfilesDePackageDirectory",
+                        appInfo.uid / PER_USER_RANGE, context.getPackageName());
+            } catch (Throwable e) {
+                Log.w(TAG, "Failed to get profile dir", e);
+                return;
+            }
+
+            for (int i = codePaths.size() - 1; i >= 0; i--) {
+                String splitName = (i == 0 || appInfo.splitNames == null || i - 1 >= appInfo.splitNames.length)
+                        ? null
+                        : appInfo.splitNames[i - 1];
+                File profile = new File(profileDir, splitName == null ? "primary.prof" : splitName + ".split.prof");
+
+                try {
+                    // 如果已是 0 字節且唯讀，直接跳過
+                    if (profile.exists() && profile.length() == 0 && !profile.canWrite()) continue;
+                    // 自動將已存在的檔案內容清空或建立新檔
+                    try (var ignored = new FileOutputStream(profile)) {
+                    }
+                    // 設定檔案只讀
+                    Os.chmod(profile.getAbsolutePath(), 00444);
+
+                } catch (Throwable e) {
+                    Log.e(TAG, "Failed to disable profile: " + profile.getName(), e);
+                }
+            }
+        } catch (Throwable e) {
+            Log.w(TAG, "Failed to disable profile completely", e);
         }
     }
 
