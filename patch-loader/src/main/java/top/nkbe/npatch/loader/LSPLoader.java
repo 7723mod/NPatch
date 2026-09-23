@@ -77,7 +77,10 @@ public class LSPLoader {
         Startup.trackLoadedApk(loadedApk);
         XposedInit.loadModules(ActivityThread.currentActivityThread());
 
-        XposedInit.loadedPackagesInProcess.add(loadedApk.getPackageName());
+        // NOTE: loadedPackagesInProcess is deliberately NOT populated here. It used to be added at
+        // module-load time, which claimed the package before anything was actually dispatched and
+        // now collides with LegacyDispatchGate: the package must be claimed at dispatch time, not
+        // when the module list is merely loaded.
         String resDir = null;
         try {
             resDir = (String) XposedHelpers.getObjectField(loadedApk, "mResDir");
@@ -85,6 +88,24 @@ public class LSPLoader {
             Log.w(TAG, "Failed to get mResDir from LoadedApk", e);
         }
         setPackageNameForResDir(loadedApk.getPackageName(), resDir);
+    }
+
+    /**
+     * Retained only as a compatibility no-op.
+     *
+     * <p>The package lifecycle is dispatched exactly once by the framework's
+     * {@code LoadedApkCreateCLHooker} while {@code realizeLoadedApk()} builds the app's class loader.
+     * That is what upstream LSPatch relies on, and its loader has no replay path at all. A second
+     * producer here used to hand the same package over twice, and a native module's
+     * {@code handleLoadPackage} is not re-entrant: the second pass re-installed inline hooks over
+     * instructions that were already hooked and killed the process with a native tombstone.
+     *
+     * <p>Kept as a linkable symbol so code compiled against the old signature still resolves; it
+     * deliberately does nothing.
+     */
+    @Deprecated
+    public static void dispatchPackageLoadedIfNeeded(LoadedApk loadedApk, ApplicationInfo appInfo) {
+        // Intentionally empty: see the javadoc above.
     }
 
     private static void registerModuleRuntimeAppInfos() {
@@ -486,57 +507,6 @@ public class LSPLoader {
                     return new String[0];
                 }
             };
-
-    private static void dispatchModernLifecycle(LoadedApk loadedApk, ApplicationInfo moduleCompatibleAppInfo) {
-        try {
-            String packageName = loadedApk.getPackageName();
-            ApplicationInfo appInfo = moduleCompatibleAppInfo != null
-                    ? moduleCompatibleAppInfo
-                    : loadedApk.getApplicationInfo();
-            ClassLoader classLoader = loadedApk.getClassLoader();
-            ClassLoader defaultClassLoader = null;
-            try {
-                defaultClassLoader = (ClassLoader) XposedHelpers.getObjectField(loadedApk, "mDefaultClassLoader");
-            } catch (Throwable ignored) {
-            }
-            if (defaultClassLoader == null) {
-                defaultClassLoader = classLoader;
-            }
-            Object appComponentFactory = createAppComponentFactory(appInfo, classLoader);
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                VectorLifecycleManager.INSTANCE.dispatchPackageLoaded(
-                        packageName,
-                        appInfo,
-                        true,
-                        defaultClassLoader);
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                VectorLifecycleManager.INSTANCE.dispatchPackageReady(
-                        packageName,
-                        appInfo,
-                        true,
-                        defaultClassLoader,
-                        classLoader,
-                        appComponentFactory);
-            }
-        } catch (Throwable e) {
-            Log.e(TAG, "Failed to dispatch modern Xposed lifecycle", e);
-        }
-    }
-
-    private static Object createAppComponentFactory(ApplicationInfo appInfo, ClassLoader classLoader) {
-        if (appInfo == null || appInfo.appComponentFactory == null || appInfo.appComponentFactory.isEmpty()) {
-            return null;
-        }
-        try {
-            Class<?> factoryClass = classLoader.loadClass(appInfo.appComponentFactory);
-            return factoryClass.getDeclaredConstructor().newInstance();
-        } catch (Throwable e) {
-            Log.w(TAG, "Failed to create AppComponentFactory: " + appInfo.appComponentFactory, e);
-            return null;
-        }
-    }
 
     private static void setPackageNameForResDir(String packageName, String resDir) {
         try {

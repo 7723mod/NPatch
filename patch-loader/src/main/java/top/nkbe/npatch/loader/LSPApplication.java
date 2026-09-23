@@ -1,4 +1,4 @@
-package top.nkbe.npatch.loader;
+ï»¿package top.nkbe.npatch.loader;
 
 import static top.nkbe.npatch.share.Constants.CONFIG_ASSET_PATH;
 import static top.nkbe.npatch.share.Constants.PROVIDER_DEX_ASSET_PATH;
@@ -49,6 +49,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -458,9 +459,14 @@ public class LSPApplication {
             Log.i(TAG, "Signature bypass level: " + config.lspConfig.sigBypassLevel);
 
             CacheCleaner.handlePatchUpgrade(appInfo, installedApkPath);
-            CacheCleaner.sweepLibNpatchCache(appInfo);
-            CacheCleaner.sweepLegacyNpatchCache(appInfo);
-            CacheCleaner.sweepLegacyHostNativeCache(appInfo);
+            final ApplicationInfo appInfoRef = appInfo;
+            Thread sweepThread = new Thread(() -> {
+                CacheCleaner.sweepLibNpatchCache(appInfoRef);
+                CacheCleaner.sweepLegacyNpatchCache(appInfoRef);
+                CacheCleaner.sweepLegacyHostNativeCache(appInfoRef);
+            }, "NPatch-Sweep");
+            sweepThread.setDaemon(true);
+            sweepThread.start();
 
             String loadedApkSourceDir = installedApkPath;
             boolean loadedApkUsesOriginCache = false;
@@ -483,7 +489,11 @@ public class LSPApplication {
                     Log.w(TAG, "Failed to sweep origin apk cache", e);
                 }
             }
-            appInfo.appComponentFactory = config.appComponentFactory;
+            // The patched manifest points appComponentFactory at the metaloader stub. appInfo has to
+            // be handed back whatever the ORIGINAL apk declared, and appLoadedApk is built from it a
+            // few lines below, so that decision has to be made here -- before the app's own class
+            // loader exists and before its factory's <clinit> can run.
+            appInfo.appComponentFactory = resolveOriginalAppComponentFactory(loadedApkSourceDir);
 
             if (config.injectProvider) {
                 Path providerDir = Paths.get(appInfo.dataDir, "cache/code_cache/");
@@ -529,14 +539,6 @@ public class LSPApplication {
             Log.i(TAG, "hooked app initialized: " + appLoadedApk);
 
             var context = (Context) XposedHelpers.callStaticMethod(Class.forName("android.app.ContextImpl"), "createAppContext", activityThread, stubLoadedApk);
-            if (config.appComponentFactory != null) {
-                try {
-                    context.getClassLoader().loadClass(config.appComponentFactory);
-                } catch (Throwable e) {
-                    Log.w(TAG, "Original AppComponentFactory not found: " + config.appComponentFactory, e);
-                    appInfo.appComponentFactory = null;
-                }
-            }
             Log.i(TAG, "createLoadedApkWithContext cost: " + (System.currentTimeMillis() - timeStart) + "ms");
             return context;
         } catch (Throwable e) {
@@ -555,16 +557,6 @@ public class LSPApplication {
      */
     private static void realizeLoadedApk(String installedApkPath) {
         ClassLoader loader = appLoadedApk.getClassLoader();
-        try {
-            Thread.currentThread().setContextClassLoader(loader);
-            Class<?> stubClass = Class.forName("top.nkbe.npatch.metaloader.LSPAppComponentFactoryStub");
-            Field runtimeLoaderField = stubClass.getDeclaredField("runtimeClassLoader");
-            runtimeLoaderField.setAccessible(true);
-            runtimeLoaderField.set(null, loader);
-            Log.i(TAG, "Published runtimeClassLoader to metaloader: " + loader);
-        } catch (Throwable t) {
-            Log.w(TAG, "Failed to publish runtimeClassLoader to metaloader", t);
-        }
 
         appendHostNativeLibraryPaths(loader, installedApkPath);
 
@@ -606,6 +598,113 @@ public class LSPApplication {
             }
         } catch (Throwable ignored) {
         }
+    }
+
+
+    /**
+     * Decides what {@code ApplicationInfo.appComponentFactory} must be for the app's own class loader.
+     *
+     * <p>The patched manifest replaces the app's factory with the metaloader stub, so this has to put
+     * back whatever the original declared. Two things make that less obvious than it looks:
+     *
+     * <ul>
+     *   <li>The declaration must be <b>probed in the apk that actually holds the app's code</b>. The
+     *       stub's own class loader can never resolve a class belonging to the app, so probing there
+     *       reported every declaration as missing and silently stripped the factory from every app
+     *       that declared one -- the framework then fell back to its default factory.
+     *   <li>The probe must not build the app's class loader. A throwaway loader is used, and
+     *       {@code loadClass} resolves a class <i>without</i> running its static initializer, so a
+     *       factory whose {@code <clinit>} is an anti-tamper gate still waits for
+     *       {@link #realizeLoadedApk()}.
+     * </ul>
+     *
+     * @param apkPath the apk the app's class loader will be built from: the cached original in
+     *     signature-bypass mode, otherwise the patched apk itself.
+     * @return the original factory's name, or {@code null} when the app declared none -- or declared
+     *     one it does not ship, which is dropped the same way so the manifest's stub is never left in
+     *     place.
+     */
+    private static String resolveOriginalAppComponentFactory(String apkPath) {
+        String declared = config.appComponentFactory;
+        if (declared == null || declared.isEmpty()) {
+            Log.i(TAG, "Original app declared no AppComponentFactory; clearing the stub");
+            return null;
+        }
+        if (appApkHasClass(apkPath, declared)) {
+            Log.i(TAG, "Restored original AppComponentFactory: " + declared);
+            return declared;
+        }
+        Log.w(TAG, "Original AppComponentFactory not found in " + apkPath + ": " + declared);
+        return null;
+    }
+
+    /**
+     * Whether {@code apkPath} ships {@code className}, without building the app's class loader.
+     *
+     * <p>The check reads the apk's dex headers directly instead of building a class loader over it.
+     * On Android 16 a {@code PathClassLoader} over an apk in app-private storage is refused outright
+     * -- ART answers "Writable dex file ... is not allowed" -- so a loader-based probe could never
+     * answer on that platform and every declaration would take the conservative branch below.
+     *
+     * <p>A throwaway loader also had to be avoided for a second reason: it resolves real classes,
+     * which would drag in whatever the factory references. Reading the dex string pool touches no
+     * class at all, so a factory whose {@code <clinit>} is an anti-tamper gate still waits for
+     * {@link #realizeLoadedApk()}.
+     *
+     * <p>A probe that cannot answer reports {@code true}, keeping the declaration and leaving the
+     * decision to the framework, which falls back to its default factory by itself when the class
+     * proves unusable.
+     */
+    private static boolean appApkHasClass(String apkPath, String className) {
+        if (apkPath == null || apkPath.isEmpty()) {
+            return false;
+        }
+        // ART resolves a class through its type descriptor, so that is what the pool holds.
+        String descriptor = "L" + className.replace('.', '/') + ";";
+        try (java.util.zip.ZipFile zip = new java.util.zip.ZipFile(apkPath)) {
+            Enumeration<? extends java.util.zip.ZipEntry> entries = zip.entries();
+            while (entries.hasMoreElements()) {
+                java.util.zip.ZipEntry entry = entries.nextElement();
+                String name = entry.getName();
+                if (!name.endsWith(".dex")) {
+                    continue;
+                }
+                try (InputStream is = zip.getInputStream(entry)) {
+                    java.io.ByteArrayOutputStream buffer = new java.io.ByteArrayOutputStream();
+                    byte[] chunk = new byte[64 * 1024];
+                    int read;
+                    while ((read = is.read(chunk)) != -1) {
+                        buffer.write(chunk, 0, read);
+                    }
+                    if (containsBytes(buffer.toByteArray(), descriptor)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        } catch (Throwable t) {
+            Log.w(TAG, "AppComponentFactory probe failed: " + className, t);
+            return true;
+        }
+    }
+
+    /** Whether {@code needle}'s bytes appear in {@code haystack} as UTF-8/MUTF-8 text. */
+    private static boolean containsBytes(byte[] haystack, String needle) {
+        byte[] pattern = needle.getBytes(StandardCharsets.UTF_8);
+        if (pattern.length == 0 || haystack.length < pattern.length) {
+            return false;
+        }
+        int limit = haystack.length - pattern.length;
+        outer:
+        for (int i = 0; i <= limit; i++) {
+            for (int j = 0; j < pattern.length; j++) {
+                if (haystack[i + j] != pattern[j]) {
+                    continue outer;
+                }
+            }
+            return true;
+        }
+        return false;
     }
 
     private static void appendHostNativeLibraryPaths(ClassLoader loader, String installedApkPath) {
@@ -667,12 +766,12 @@ public class LSPApplication {
                 File profile = new File(profileDir, splitName == null ? "primary.prof" : splitName + ".split.prof");
 
                 try {
-                    // Èç¹ûÒÑÊÇ 0 ×Ö¹ÇÒÎ¨×x£¬Ö±½ÓÌøß^
+                    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 0 ï¿½Ö¹ï¿½ï¿½ï¿½Î¨ï¿½xï¿½ï¿½Ö±ï¿½ï¿½ï¿½ï¿½ï¿½^
                     if (profile.exists() && profile.length() == 0 && !profile.canWrite()) continue;
-                    // ×Ô„ÓŒ¢ÒÑ´æÔÚµÄ™n°¸ƒÈÈÝÇå¿Õ»ò½¨Á¢ÐÂ™n
+                    // ï¿½Ô„ÓŒï¿½ï¿½Ñ´ï¿½ï¿½ÚµÄ™nï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ»ï¿½ï¿½ï¿½ï¿½Â™n
                     try (var ignored = new FileOutputStream(profile)) {
                     }
-                    // ÔO¶¨™n°¸Ö»×x
+                    // ï¿½Oï¿½ï¿½ï¿½nï¿½ï¿½Ö»ï¿½x
                     Os.chmod(profile.getAbsolutePath(), 00444);
 
                 } catch (Throwable e) {
