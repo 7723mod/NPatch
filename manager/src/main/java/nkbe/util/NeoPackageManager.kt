@@ -122,16 +122,36 @@ object NeoPackageManager {
         return try {
             val pm = context.packageManager
             val packages = pm.getInstalledPackages(0)
-            packages.isNotEmpty() && (packages.size > 1 || packages.any { it.packageName != context.packageName })
+            if (packages.isNotEmpty() && (packages.size > 1 || packages.any { it.packageName != context.packageName })) {
+                return true
+            }
+            val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+            val activities = pm.queryIntentActivities(intent, 0)
+            activities.isNotEmpty() && (activities.size > 1 || activities.any { it.activityInfo?.packageName != context.packageName })
         } catch (e: Throwable) {
             false
         }
     }
 
+    private fun queryLauncherPackagesFallback(pm: PackageManager): List<android.content.pm.PackageInfo> {
+        return runCatching {
+            val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+            val resolveInfos = pm.queryIntentActivities(intent, 0)
+            val seenPackages = mutableSetOf<String>()
+            resolveInfos.mapNotNull { resolveInfo ->
+                val pkgName = resolveInfo.activityInfo?.packageName ?: return@mapNotNull null
+                if (!seenPackages.add(pkgName)) return@mapNotNull null
+                runCatching {
+                    pm.getPackageInfo(pkgName, PackageManager.GET_META_DATA)
+                }.getOrNull()
+            }
+        }.getOrDefault(emptyList())
+    }
+
     suspend fun fetchAppList() {
         val result = withContext(Dispatchers.IO) {
             val pm = lspApp.packageManager
-            val packages: List<android.content.pm.PackageInfo>
+            var packages: List<android.content.pm.PackageInfo>
 
             if (ShizukuApi.isReady) {
                 Log.i(TAG, "Fetching app list using Shizuku API")
@@ -143,7 +163,17 @@ object NeoPackageManager {
                 }
             } else {
                 Log.i(TAG, "Fetching app list using standard PackageManager")
-                packages = pm.getInstalledPackages(PackageManager.GET_META_DATA)
+                packages = runCatching {
+                    pm.getInstalledPackages(PackageManager.GET_META_DATA)
+                }.getOrDefault(emptyList())
+            }
+
+            if (packages.isEmpty() || (packages.size == 1 && packages[0].packageName == lspApp.packageName)) {
+                Log.i(TAG, "Standard package list is restricted, using intent query fallback")
+                val fallbackPackages = queryLauncherPackagesFallback(pm)
+                if (fallbackPackages.isNotEmpty()) {
+                    packages = fallbackPackages
+                }
             }
 
             val collection = coroutineScope {
