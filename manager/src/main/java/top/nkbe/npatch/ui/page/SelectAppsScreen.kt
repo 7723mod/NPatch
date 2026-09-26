@@ -153,21 +153,8 @@ fun SelectAppsScreen(
                 searchBarTopPadding = dynamicTopPadding,
                 expandBar = { status, padding ->
                     SearchBar(status, padding)
-                },
-                defaultResult = {
-                    val contentPadding = PaddingValues(top = dynamicTopPadding, bottom = 0.dp)
-                    SelectAppsList(
-                        multiSelect = multiSelect,
-                        viewModel = viewModel,
-                        contentPadding = contentPadding,
-                        hazeState = hazeState,
-                        onRefresh = { viewModel.filterAppList(true, filter) },
-                        onSingleSelect = {
-                            navigator.setResultAndBack(SelectAppsResult.SingleApp(it))
-                        }
-                    )
                 }
-            ) {}
+            )
         }
     ) { innerPadding ->
         searchStatus.SearchBox(

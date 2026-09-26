@@ -207,36 +207,20 @@ fun SearchStatus.SearchBox(
         collapseBar(searchStatus, searchBarTopPadding, contentPadding)
     }
     Box {
-        AnimatedVisibility(
-            visible = searchStatus.shouldCollapsed(),
-            enter = fadeIn(tween(300, easing = LinearOutSlowInEasing)) + slideInVertically(
-                tween(
-                    300,
-                    easing = LinearOutSlowInEasing
-                )
-            ) { -offsetY.intValue },
-            exit = fadeOut(tween(300, easing = LinearOutSlowInEasing)) + slideOutVertically(
-                tween(
-                    300,
-                    easing = LinearOutSlowInEasing
-                )
-            ) { -offsetY.intValue }
-        ) {
-            content(boxHeight)
-        }
+        content(boxHeight)
     }
 }
 
 // Search Pager Composable
 @Composable
 fun SearchStatus.SearchPager(
-    defaultResult: @Composable () -> Unit,
+    defaultResult: @Composable () -> Unit = {},
     expandBar: @Composable (SearchStatus, Dp) -> Unit = { searchStatus, padding ->
         SearchBar(searchStatus, padding)
     },
     belowExpandBar: @Composable () -> Unit = {},
     searchBarTopPadding: Dp = 12.dp,
-    result: LazyListScope.() -> Unit
+    result: LazyListScope.() -> Unit = {}
 ) {
     val searchStatus = this
     val systemBarsPadding = WindowInsets.systemBars.asPaddingValues().calculateTopPadding()
@@ -260,12 +244,10 @@ fun SearchStatus.SearchPager(
         modifier = Modifier
             .fillMaxSize()
             .zIndex(5f)
-            .background(colorScheme.surface.copy(alpha = surfaceAlpha))
     ) {
-        Row(
-            Modifier
+        Column(
+            modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = topPadding)
                 .then(
                     if (!searchStatus.isCollapsed()) {
                         if (hasBackgroundImage) {
@@ -274,67 +256,65 @@ fun SearchStatus.SearchPager(
                             Modifier.background(colorScheme.surface)
                         }
                     } else Modifier
-                ),
-            horizontalArrangement = Arrangement.Start,
-            verticalAlignment = Alignment.CenterVertically
+                )
         ) {
-            if (!searchStatus.isCollapsed()) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .then(
-                            if (hasBackgroundImage) {
-                                Modifier.background(colorScheme.surface.copy(alpha = BG_SURFACE_ALPHA))
-                            } else {
-                                Modifier.background(colorScheme.surface)
-                            }
-                        )
-                ) {
-                    expandBar(searchStatus, searchBarTopPadding)
-                }
-            }
-            AnimatedVisibility(
-                visible = searchStatus.isExpand() || searchStatus.isAnimatingExpand(),
-                enter = expandHorizontally() + slideInHorizontally(initialOffsetX = { it }),
-                exit = shrinkHorizontally() + slideOutHorizontally(targetOffsetX = { it })
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = topPadding),
+                horizontalArrangement = Arrangement.Start,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .padding(top = searchBarTopPadding, bottom = 6.dp)
-                        .padding(start = 4.dp, end = 16.dp),
-                    contentAlignment = Alignment.Center
+                if (!searchStatus.isCollapsed()) {
+                    Box(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        expandBar(searchStatus, searchBarTopPadding)
+                    }
+                }
+                AnimatedVisibility(
+                    visible = searchStatus.isExpand() || searchStatus.isAnimatingExpand(),
+                    enter = expandHorizontally() + slideInHorizontally(initialOffsetX = { it }),
+                    exit = shrinkHorizontally() + slideOutHorizontally(targetOffsetX = { it })
                 ) {
-                    Text(
-                        text = stringResource(R.string.cancel),
-                        fontWeight = FontWeight.Bold,
-                        color = colorScheme.primary,
+                    Box(
                         modifier = Modifier
-                            .semantics { role = Role.Button }
-                            .clickable(
-                                interactionSource = null,
-                                enabled = searchStatus.isExpand(),
-                                indication = null
-                            ) {
+                            .padding(top = searchBarTopPadding, bottom = 6.dp)
+                            .padding(start = 4.dp, end = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = stringResource(R.string.cancel),
+                            fontWeight = FontWeight.Bold,
+                            color = colorScheme.primary,
+                            modifier = Modifier
+                                .semantics { role = Role.Button }
+                                .clickable(
+                                    interactionSource = null,
+                                    enabled = searchStatus.isExpand(),
+                                    indication = null
+                                ) {
+                                    searchStatus.searchText = ""
+                                    searchStatus.current = SearchStatus.Status.COLLAPSING
+                                }
+                        )
+                    }
+                    run {
+                        val navEventState = rememberNavigationEventState(NavigationEventInfo.None)
+                        NavigationBackHandler(
+                            state = navEventState,
+                            isBackEnabled = true,
+                            onBackCompleted = {
                                 searchStatus.searchText = ""
                                 searchStatus.current = SearchStatus.Status.COLLAPSING
                             }
-                    )
-                }
-                run {
-                    val navEventState = rememberNavigationEventState(NavigationEventInfo.None)
-                    NavigationBackHandler(
-                        state = navEventState,
-                        isBackEnabled = true,
-                        onBackCompleted = {
-                            searchStatus.searchText = ""
-                            searchStatus.current = SearchStatus.Status.COLLAPSING
-                        }
-                    )
+                        )
+                    }
                 }
             }
-        }
-        if (!searchStatus.isCollapsed()) {
-            belowExpandBar()
+            if (!searchStatus.isCollapsed()) {
+                belowExpandBar()
+            }
         }
         AnimatedVisibility(
             visible = searchStatus.isExpand(),

@@ -221,14 +221,21 @@ private fun DnsPreference() {
         }
     )
 
-    if (showCustomDialog) {
-        var customUrl by rememberSaveable { mutableStateOf(NetworkDns.customUrl()) }
-        var invalidUrl by rememberSaveable { mutableStateOf(false) }
-        OverlayDialog(
-            title = stringResource(R.string.settings_dns_custom),
-            show = true,
-            onDismissRequest = { showCustomDialog = false },
-        ) {
+    var customUrl by rememberSaveable { mutableStateOf(NetworkDns.customUrl()) }
+    var invalidUrl by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(showCustomDialog) {
+        if (showCustomDialog) {
+            customUrl = NetworkDns.customUrl()
+            invalidUrl = false
+        }
+    }
+
+    OverlayDialog(
+        title = stringResource(R.string.settings_dns_custom),
+        show = showCustomDialog,
+        onDismissRequest = { showCustomDialog = false },
+    ) {
             Column {
                 Text(
                     text = stringResource(
@@ -269,7 +276,6 @@ private fun DnsPreference() {
                 )
             }
         }
-    }
 }
 
 @Composable
@@ -331,26 +337,36 @@ fun InstallationSettings() {
         onClick = { showInstallerDialog = true },
     )
 
-    if (showInstallerDialog) {
-        val discoveredInstallers = remember {
-            ThirdPartyPackageInstaller.getDiscoveredInstallers(context)
-        }
-        var customPkgText by rememberSaveable {
-            mutableStateOf(
-                if (thirdPartyInstallerPackage.isNotBlank() && discoveredInstallers.none { it.packageName == thirdPartyInstallerPackage }) {
-                    thirdPartyInstallerPackage
-                } else {
-                    ""
-                }
-            )
-        }
-        var isCustomError by rememberSaveable { mutableStateOf(false) }
+    val discoveredInstallers = remember {
+        ThirdPartyPackageInstaller.getDiscoveredInstallers(context)
+    }
+    var customPkgText by rememberSaveable {
+        mutableStateOf(
+            if (thirdPartyInstallerPackage.isNotBlank() && discoveredInstallers.none { it.packageName == thirdPartyInstallerPackage }) {
+                thirdPartyInstallerPackage
+            } else {
+                ""
+            }
+        )
+    }
+    var isCustomError by rememberSaveable { mutableStateOf(false) }
 
-        OverlayDialog(
-            title = stringResource(R.string.settings_third_party_installer_dialog_title),
-            show = true,
-            onDismissRequest = { showInstallerDialog = false },
-        ) {
+    LaunchedEffect(showInstallerDialog) {
+        if (showInstallerDialog) {
+            customPkgText = if (thirdPartyInstallerPackage.isNotBlank() && discoveredInstallers.none { it.packageName == thirdPartyInstallerPackage }) {
+                thirdPartyInstallerPackage
+            } else {
+                ""
+            }
+            isCustomError = false
+        }
+    }
+
+    OverlayDialog(
+        title = stringResource(R.string.settings_third_party_installer_dialog_title),
+        show = showInstallerDialog,
+        onDismissRequest = { showInstallerDialog = false },
+    ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -475,7 +491,6 @@ fun InstallationSettings() {
             }
         }
     }
-}
 
 @Composable
 fun AppearanceSettings() {
@@ -1118,35 +1133,33 @@ fun ClearManagerCache() {
         onClick = { showDialog.value = true }
     )
 
-    if (showDialog.value) {
-        OverlayDialog(
-            title = clearText,
-            summary = dialogText,
-            show = showDialog.value,
-            onDismissRequest = { showDialog.value = false },
-        ) {
-            DialogButtonBar(
-                negative = DialogButtonBarAction(
-                    text = stringResource(android.R.string.cancel),
-                    onClick = { showDialog.value = false }
-                ),
-                positive = DialogButtonBarAction(
-                    text = stringResource(android.R.string.ok),
-                    onClick = {
-                        showDialog.value = false
-                        scope.launch {
-                            runCatching {
-                                ManagerCacheCleaner.clear()
-                            }.onSuccess {
-                                snackbarHost.showSnackbar(successText)
-                            }.onFailure {
-                                Log.e(TAG, "Failed to clear manager cache", it)
-                                snackbarHost.showSnackbar(failedText)
-                            }
+    OverlayDialog(
+        title = clearText,
+        summary = dialogText,
+        show = showDialog.value,
+        onDismissRequest = { showDialog.value = false },
+    ) {
+        DialogButtonBar(
+            negative = DialogButtonBarAction(
+                text = stringResource(android.R.string.cancel),
+                onClick = { showDialog.value = false }
+            ),
+            positive = DialogButtonBarAction(
+                text = stringResource(android.R.string.ok),
+                onClick = {
+                    showDialog.value = false
+                    scope.launch {
+                        runCatching {
+                            ManagerCacheCleaner.clear()
+                        }.onSuccess {
+                            snackbarHost.showSnackbar(successText)
+                        }.onFailure {
+                            Log.e(TAG, "Failed to clear manager cache", it)
+                            snackbarHost.showSnackbar(failedText)
                         }
                     }
-                )
+                }
             )
-        }
+        )
     }
 }

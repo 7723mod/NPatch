@@ -82,23 +82,17 @@ fun AboutScreen(onBack: () -> Unit) {
     val scrollBehavior = COUIScrollBehavior()
     val hazeState = rememberHazeState()
     val hazeStyle = backgroundAwareHazeStyle()
-    val showTopBarContent by remember {
-        derivedStateOf { scrollBehavior.state.collapsedFraction == 0f }
-    }
-
     NPatchScaffold(
         topBar = {
             NPatchTopAppBar(
-                title = if (showTopBarContent) stringResource(R.string.home_about) else "",
+                title = stringResource(R.string.home_about),
                 navigationIcon = {
-                    if (showTopBarContent) {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = COUIIcons.Regular.Back,
-                                contentDescription = stringResource(R.string.nav_back),
-                                tint = COUITheme.colorScheme.onSurface
-                            )
-                        }
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = COUIIcons.Regular.Back,
+                            contentDescription = stringResource(R.string.nav_back),
+                            tint = COUITheme.colorScheme.onSurface
+                        )
                     }
                 },
                 scrollBehavior = scrollBehavior,

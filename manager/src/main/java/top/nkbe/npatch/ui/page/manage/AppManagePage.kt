@@ -517,56 +517,52 @@ fun AppManageFab(
         }
     }
 
-    if (shouldSelectDirectory.value) {
-        OverlayDialog(
-            title = stringResource(R.string.patch_select_dir_title),
-            summary = stringResource(R.string.patch_select_dir_text),
-            show = shouldSelectDirectory.value,
-            onDismissRequest = { shouldSelectDirectory.value = false },
-        ) {
-            DialogButtonBar(
-                negative = DialogButtonBarAction(
-                    text = stringResource(android.R.string.cancel),
-                    onClick = { shouldSelectDirectory.value = false },
-                ),
-                positive = DialogButtonBarAction(
-                    text = stringResource(android.R.string.ok),
-                    onClick = {
-                        launcher.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE))
-                        shouldSelectDirectory.value = false
-                    },
-                ),
-            )
-        }
+    OverlayDialog(
+        title = stringResource(R.string.patch_select_dir_title),
+        summary = stringResource(R.string.patch_select_dir_text),
+        show = shouldSelectDirectory.value,
+        onDismissRequest = { shouldSelectDirectory.value = false },
+    ) {
+        DialogButtonBar(
+            negative = DialogButtonBarAction(
+                text = stringResource(android.R.string.cancel),
+                onClick = { shouldSelectDirectory.value = false },
+            ),
+            positive = DialogButtonBarAction(
+                text = stringResource(android.R.string.ok),
+                onClick = {
+                    launcher.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE))
+                    shouldSelectDirectory.value = false
+                },
+            ),
+        )
     }
 
-    if (showNewPatchDialog.value) {
-        OverlayDialog(
-            title = stringResource(R.string.screen_new_patch),
-            show = showNewPatchDialog.value,
-            onDismissRequest = { showNewPatchDialog.value = false },
-        ) {
-            DialogButtonBar(
-                neutral = DialogButtonBarAction(
-                    text = stringResource(R.string.patch_from_storage),
-                    onClick = {
-                        navigator.navigate(Route.NewPatch(id = ACTION_STORAGE))
-                        showNewPatchDialog.value = false
-                    },
-                ),
-                positive = DialogButtonBarAction(
-                    text = stringResource(R.string.patch_from_applist),
-                    onClick = {
-                        navigator.navigate(Route.NewPatch(id = ACTION_APPLIST))
-                        showNewPatchDialog.value = false
-                    },
-                ),
-                negative = DialogButtonBarAction(
-                    text = stringResource(android.R.string.cancel),
-                    onClick = { showNewPatchDialog.value = false },
-                ),
-            )
-        }
+    OverlayDialog(
+        title = stringResource(R.string.screen_new_patch),
+        show = showNewPatchDialog.value,
+        onDismissRequest = { showNewPatchDialog.value = false },
+    ) {
+        DialogButtonBar(
+            neutral = DialogButtonBarAction(
+                text = stringResource(R.string.patch_from_storage),
+                onClick = {
+                    navigator.navigate(Route.NewPatch(id = ACTION_STORAGE))
+                    showNewPatchDialog.value = false
+                },
+            ),
+            positive = DialogButtonBarAction(
+                text = stringResource(R.string.patch_from_applist),
+                onClick = {
+                    navigator.navigate(Route.NewPatch(id = ACTION_APPLIST))
+                    showNewPatchDialog.value = false
+                },
+            ),
+            negative = DialogButtonBarAction(
+                text = stringResource(android.R.string.cancel),
+                onClick = { showNewPatchDialog.value = false },
+            ),
+        )
     }
 
     val addLabel = stringResource(R.string.add)

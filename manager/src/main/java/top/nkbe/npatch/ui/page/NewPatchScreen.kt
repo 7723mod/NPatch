@@ -264,7 +264,11 @@ fun NewPatchScreen(
                 )
             }
 
-            pendingPatchedApp?.let { app ->
+            var lastPendingPatchedApp by remember { mutableStateOf<nkbe.util.NeoPackageManager.AppInfo?>(null) }
+            if (pendingPatchedApp != null) {
+                lastPendingPatchedApp = pendingPatchedApp
+            }
+            lastPendingPatchedApp?.let { app ->
                 val patchedType = NeoPackageManager.detectPatchedTypeDeep(app)
                 val typeName = when (patchedType) {
                     NeoPackageManager.PatchedType.EMBEDDED -> stringResource(R.string.patch_type_embedded_apk)
@@ -341,15 +345,17 @@ fun NewPatchScreen(
                 }
             }
 
-            if (isExtracting) {
-                OverlayLoadingDialog(
-                    text = stringResource(R.string.patch_extract_original_extracting),
-                    show = isExtracting,
-                    onDismissRequest = { isExtracting = false }
-                )
-            }
+            OverlayLoadingDialog(
+                text = stringResource(R.string.patch_extract_original_extracting),
+                show = isExtracting,
+                onDismissRequest = { isExtracting = false }
+            )
 
-            missingOriginalDialog?.let { app ->
+            var lastMissingOriginalDialog by remember { mutableStateOf<nkbe.util.NeoPackageManager.AppInfo?>(null) }
+            if (missingOriginalDialog != null) {
+                lastMissingOriginalDialog = missingOriginalDialog
+            }
+            lastMissingOriginalDialog?.let { app ->
                 OverlayDialog(
                     title = stringResource(R.string.patch_extract_original_title, app.label),
                     summary = stringResource(R.string.patch_extract_original_missing),
@@ -381,7 +387,11 @@ fun NewPatchScreen(
                 }
             }
 
-            packageMismatchDialog?.let { (app, mismatch) ->
+            var lastPackageMismatchDialog by remember { mutableStateOf<Pair<nkbe.util.NeoPackageManager.AppInfo, nkbe.util.NeoPackageManager.ExtractResult.PackageMismatch>?>(null) }
+            if (packageMismatchDialog != null) {
+                lastPackageMismatchDialog = packageMismatchDialog
+            }
+            lastPackageMismatchDialog?.let { (app, mismatch) ->
                 OverlayDialog(
                     title = stringResource(R.string.patch_extract_original_title, app.label),
                     summary = stringResource(R.string.patch_extract_package_mismatch, mismatch.outerPkg, mismatch.innerPkg),

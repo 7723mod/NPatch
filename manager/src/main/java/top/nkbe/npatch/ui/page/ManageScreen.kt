@@ -149,26 +149,8 @@ fun ManageScreen(
                         modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 6.dp),
                         colors = TabRowDefaults.tabRowColors(backgroundColor = Color.Transparent)
                     )
-                },
-                defaultResult = {
-                    HorizontalPager(
-                        state = pagerState,
-                        modifier = Modifier.fillMaxSize()
-                    ) { page ->
-                        val contentPadding = PaddingValues(top = dynamicTopPadding + 8.dp, bottom = 0.dp)
-                        when (page) {
-                            0 -> AppManageBody(navigator, searchStatus.searchText, contentPadding, scrollBehavior, hazeState)
-                            1 -> ModuleManageBody(
-                                searchStatus.searchText,
-                                contentPadding,
-                                scrollBehavior,
-                                hazeState,
-                                moduleManageViewModel
-                            )
-                        }
-                    }
                 }
-            ) {}
+            )
         }
     ) { innerPadding ->
         searchStatus.SearchBox(

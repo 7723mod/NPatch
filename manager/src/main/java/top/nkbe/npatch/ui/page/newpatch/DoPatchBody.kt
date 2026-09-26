@@ -338,30 +338,30 @@ fun DoPatchBody(modifier: Modifier, navigator: Navigator) {
 
 @Composable
 fun UninstallConfirmationDialog(
+    show: Boolean,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
     onIgnoreAndInstall: () -> Unit,
 ) {
-    val show = remember { mutableStateOf(true) }
     OverlayDialog(
         title = stringResource(R.string.uninstall),
         summary = stringResource(R.string.patch_uninstall_text),
-        show = show.value,
-        onDismissRequest = { show.value = false; onDismiss() },
+        show = show,
+        onDismissRequest = onDismiss,
         renderInRootScaffold = false,
     ) {
         DialogButtonBar(
             positive = DialogButtonBarAction(
                 text = stringResource(android.R.string.ok),
-                onClick = { show.value = false; onConfirm() },
+                onClick = onConfirm,
             ),
             neutral = DialogButtonBarAction(
                 text = stringResource(R.string.patch_ignore_risk_install),
-                onClick = { show.value = false; onIgnoreAndInstall() },
+                onClick = onIgnoreAndInstall,
             ),
             negative = DialogButtonBarAction(
                 text = stringResource(android.R.string.cancel),
-                onClick = { show.value = false; onDismiss() },
+                onClick = onDismiss,
             ),
         )
     }
@@ -440,56 +440,52 @@ fun InstallDialog(
         }
     }
 
-    if (uninstallFirst) {
-        UninstallConfirmationDialog(
-            onDismiss = { onFinish(NeoPackageManager.STATUS_USER_CANCELLED, "User cancelled") },
-            onIgnoreAndInstall = {
-                uninstallFirst = false
-                if (!installStarted) {
-                    scope.launch {
-                        doInstall()
-                    }
-                }
-            },
-            onConfirm = {
-                if (method == NeoPackageManager.InstallMethod.SHIZUKU) {
-                    scope.launch {
-                        Log.i(TAG, "Uninstalling app ${patchApp.app.packageName}")
-                        installing = 2
-                        val (status, message) = NeoPackageManager.uninstall(patchApp.app.packageName)
-                        installing = 0
-                        Log.i(TAG, "Uninstallation end: $status, $message")
-                        if (status == PackageInstaller.STATUS_SUCCESS) {
-                            uninstallFirst = false
-                            if (!installStarted) {
-                                doInstall()
-                            }
-                        } else {
-                            uninstallLauncher.launch(
-                                Intent(Intent.ACTION_DELETE).apply {
-                                    data = "package:${patchApp.app.packageName}".toUri()
-                                },
-                            )
-                        }
-                    }
-                } else {
-                    uninstallLauncher.launch(
-                        Intent(Intent.ACTION_DELETE).apply {
-                            data = "package:${patchApp.app.packageName}".toUri()
-                        },
-                    )
+    UninstallConfirmationDialog(
+        show = uninstallFirst,
+        onDismiss = { onFinish(NeoPackageManager.STATUS_USER_CANCELLED, "User cancelled") },
+        onIgnoreAndInstall = {
+            uninstallFirst = false
+            if (!installStarted) {
+                scope.launch {
+                    doInstall()
                 }
             }
-        )
-    }
+        },
+        onConfirm = {
+            if (method == NeoPackageManager.InstallMethod.SHIZUKU) {
+                scope.launch {
+                    Log.i(TAG, "Uninstalling app ${patchApp.app.packageName}")
+                    installing = 2
+                    val (status, message) = NeoPackageManager.uninstall(patchApp.app.packageName)
+                    installing = 0
+                    Log.i(TAG, "Uninstallation end: $status, $message")
+                    if (status == PackageInstaller.STATUS_SUCCESS) {
+                        uninstallFirst = false
+                        if (!installStarted) {
+                            doInstall()
+                        }
+                    } else {
+                        uninstallLauncher.launch(
+                            Intent(Intent.ACTION_DELETE).apply {
+                                data = "package:${patchApp.app.packageName}".toUri()
+                            },
+                        )
+                    }
+                }
+            } else {
+                uninstallLauncher.launch(
+                    Intent(Intent.ACTION_DELETE).apply {
+                        data = "package:${patchApp.app.packageName}".toUri()
+                    },
+                )
+            }
+        }
+    )
 
-    if (installing != 0) {
-        val showInstalling = remember { mutableStateOf(true) }
-        OverlayLoadingDialog(
-            text = stringResource(if (installing == 1) R.string.installing else R.string.uninstalling),
-            show = showInstalling.value,
-            onDismissRequest = {},
-            renderInRootScaffold = false,
-        )
-    }
+    OverlayLoadingDialog(
+        text = stringResource(if (installing == 1) R.string.installing else R.string.uninstalling),
+        show = installing != 0,
+        onDismissRequest = {},
+        renderInRootScaffold = false,
+    )
 }
