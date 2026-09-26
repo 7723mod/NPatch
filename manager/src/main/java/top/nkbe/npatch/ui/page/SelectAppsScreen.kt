@@ -22,6 +22,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.toLowerCase
 import androidx.compose.ui.unit.LayoutDirection
@@ -199,12 +204,17 @@ fun SelectAppsScreen(
 
 @Composable
 private fun MultiSelectFab(onClick: () -> Unit) {
+    val addLabel = stringResource(R.string.add)
     FloatingActionButton(
+        modifier = Modifier.semantics(mergeDescendants = true) {
+            role = Role.Button
+            this.contentDescription = addLabel
+        },
         onClick = onClick,
     ) {
         Icon(
             imageVector = Icons.Outlined.Done,
-            contentDescription = stringResource(R.string.add),
+            contentDescription = null,
             tint = COUITheme.colorScheme.onPrimary
         )
     }
@@ -248,7 +258,16 @@ private fun SelectAppsList(
                 }
 
                 AppItem(
-                    modifier = Modifier.animateItem(spring(stiffness = Spring.StiffnessLow)),
+                    modifier = Modifier
+                        .animateItem(spring(stiffness = Spring.StiffnessLow))
+                        .then(
+                            if (multiSelect) {
+                                Modifier.semantics(mergeDescendants = true) {
+                                    role = Role.Checkbox
+                                    this.selected = checked
+                                }
+                            } else Modifier
+                        ),
                     onClick = {
                         if (multiSelect) {
                             if (checked) viewModel.multiSelected.removeAll { it.app.packageName == appInfo.app.packageName }

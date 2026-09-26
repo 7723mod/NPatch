@@ -1,5 +1,6 @@
 package top.nkbe.npatch.ui.page
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -77,9 +78,15 @@ fun ManageScreen(
     }
     val floatingBottomBarPadding = LocalFloatingBottomBarPadding.current
 
+    BackHandler(enabled = !searchStatus.isExpand() && pagerState.currentPage != 0) {
+        scope.launch {
+            pagerState.animateScrollToPage(0)
+        }
+    }
+
     LaunchedEffect(safeSelectedPage) {
-        if (pagerState.currentPage != safeSelectedPage) {
-            pagerState.scrollToPage(safeSelectedPage)
+        if (!pagerState.isScrollInProgress && pagerState.targetPage != safeSelectedPage) {
+            pagerState.animateScrollToPage(safeSelectedPage)
         }
     }
 

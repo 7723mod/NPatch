@@ -14,6 +14,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -47,7 +51,12 @@ fun ConfiguringTopBar(scrollBehavior: ScrollBehavior, onBackClick: () -> Unit) {
 @Composable
 fun ConfiguringFab() {
     val viewModel = viewModel<NewPatchViewModel>()
+    val patchStartText = stringResource(R.string.patch_start)
     FloatingActionButton(
+        modifier = Modifier.semantics(mergeDescendants = true) {
+            role = Role.Button
+            contentDescription = patchStartText
+        },
         onClick = { viewModel.dispatch(ViewAction.SubmitPatch) }
     ) {
         Row(
@@ -61,7 +70,7 @@ fun ConfiguringFab() {
                 tint = COUITheme.colorScheme.onPrimary
             )
             Text(
-                text = stringResource(R.string.patch_start),
+                text = patchStartText,
                 color = COUITheme.colorScheme.onPrimary
             )
         }

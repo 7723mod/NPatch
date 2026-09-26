@@ -427,11 +427,6 @@ fun SearchBar(
             expanded = true
         }
     }
-    LaunchedEffect(searchStatus.shouldExpand(), imeBottomPadding) {
-        if (searchStatus.shouldExpand() && imeBottomPadding == 0.dp) {
-            focusManager.clearFocus(force = true)
-        }
-    }
 }
 
 @Composable
@@ -452,6 +447,20 @@ fun SearchBarFake(
                 end = innerPadding.calculateEndPadding(layoutDirection)
             )
             .padding(top = searchBarTopPadding, bottom = 6.dp)
+            .then(
+                if (onClick != null) {
+                    Modifier
+                        .semantics(mergeDescendants = true) {
+                            role = Role.Button
+                            contentDescription = label
+                        }
+                        .clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null,
+                            onClick = onClick
+                        )
+                } else Modifier
+            )
     ) {
         InputField(
             query = "",
@@ -469,22 +478,11 @@ fun SearchBarFake(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .clearAndSetSemantics {
-                    contentDescription = label
-                },
+                .clearAndSetSemantics {},
             onSearch = { },
             enabled = false,
             expanded = false,
             onExpandedChange = { }
         )
-        if (onClick != null) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .pointerInput(onClick) {
-                        detectTapGestures { onClick() }
-                    }
-            )
-        }
     }
 }

@@ -29,6 +29,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -565,8 +569,12 @@ fun AppManageFab(
         }
     }
 
+    val addLabel = stringResource(R.string.add)
     FloatingActionButton(
-        modifier = modifier,
+        modifier = modifier.semantics(mergeDescendants = true) {
+            role = Role.Button
+            this.contentDescription = addLabel
+        },
         onClick = {
             val uri = Configs.storageDirectory?.toUri()
             if (uri == null) {
@@ -588,7 +596,7 @@ fun AppManageFab(
     ) {
         Icon(
             imageVector = Icons.Filled.Add,
-            contentDescription = stringResource(R.string.add),
+            contentDescription = null,
             tint = COUITheme.colorScheme.onPrimary
         )
     }

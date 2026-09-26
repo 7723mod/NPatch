@@ -28,7 +28,7 @@ fun AccessibleMenuItem(
     text: String,
     modifier: Modifier = Modifier,
     summary: String? = null,
-    selected: Boolean = false,
+    selected: Boolean? = null,
     onClick: () -> Unit,
 ) {
     Row(
@@ -37,10 +37,14 @@ fun AccessibleMenuItem(
             .clip(RoundedCornerShape(18.dp))
             .clickable(onClick = onClick)
             .semantics(mergeDescendants = true) {
-                role = Role.Button
-                this.selected = selected
+                if (selected != null) {
+                    role = Role.RadioButton
+                    this.selected = selected
+                } else {
+                    role = Role.Button
+                }
             }
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+        .padding(horizontal = 16.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -62,7 +66,7 @@ fun AccessibleMenuItem(
             }
         }
 
-        if (selected) {
+        if (selected == true) {
             Icon(
                 imageVector = COUIIcons.Regular.Ok,
                 contentDescription = null,

@@ -1,5 +1,6 @@
 package top.nkbe.npatch.ui.page
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -91,9 +92,15 @@ fun MainScreen(
         null
     }
 
+    BackHandler(enabled = pagerState.currentPage != MainTab.Home.ordinal) {
+        scope.launch {
+            pagerState.animateScrollToPage(MainTab.Home.ordinal)
+        }
+    }
+
     LaunchedEffect(safeSelectedTab) {
-        if (pagerState.currentPage != safeSelectedTab) {
-            pagerState.scrollToPage(safeSelectedTab)
+        if (!pagerState.isScrollInProgress && pagerState.targetPage != safeSelectedTab) {
+            pagerState.animateScrollToPage(safeSelectedTab)
         }
     }
 

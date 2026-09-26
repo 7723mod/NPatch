@@ -9,6 +9,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import io.github.suqi8.coui.kmp.basic.Checkbox
 
@@ -23,7 +27,17 @@ fun SettingsCheckBox(
     extraContent: (@Composable ColumnScope.() -> Unit)? = null
 ) {
     @Suppress("DEPRECATION")
-    SettingsSlot(modifier, enabled, icon, title, desc, extraContent) {
+    SettingsSlot(
+        modifier = modifier.semantics(mergeDescendants = true) {
+            role = Role.Checkbox
+            this.toggleableState = ToggleableState(checked)
+        },
+        enabled = enabled,
+        icon = icon,
+        title = title,
+        desc = desc,
+        extraContent = extraContent
+    ) {
         Checkbox(
             state = if (checked) ToggleableState.On else ToggleableState.Off,
             onClick = null
