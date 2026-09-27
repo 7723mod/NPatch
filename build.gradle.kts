@@ -41,7 +41,7 @@ val coreCommitCount = runCatching {
 val defaultManagerPackageName by extra("top.nkbe.npatch")
 val apiCode by extra(102)
 val verCode by extra(commitCount)
-val verName by extra("1.0.7")
+val verName by extra("1.0.8")
 val coreVerCode by extra(coreCommitCount)
 val coreVerName by extra("v2.2-core")
 val androidMinSdkVersion by extra(28)
