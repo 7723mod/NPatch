@@ -121,7 +121,7 @@ public class SigBypass {
             var entries = apk.entries();
             while (entries.hasMoreElements()) {
                 ZipEntry entry = entries.nextElement();
-                String name = entry.getName().toLowerCase();
+                String name = entry.getName().toLowerCase(java.util.Locale.ROOT);
                 if (name.contains("qihoo")
                         || name.contains("qihu")
                         || name.contains("360")
