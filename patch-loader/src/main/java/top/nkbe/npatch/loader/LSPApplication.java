@@ -287,6 +287,7 @@ public class LSPApplication {
         }
 
         registerModuleCallerPrefixes(service);
+        SigBypass.registerModuleNativeLibraryRoots(context);
         SigBypass.doSigBypass(context, config.lspConfig.sigBypassLevel, config.hideLibs);
         disableProfile(context);
 

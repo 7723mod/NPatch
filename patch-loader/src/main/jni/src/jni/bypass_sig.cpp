@@ -1,4 +1,4 @@
-﻿//
+//
 // Created by VIP on 2021/4/25.
 // Modified  by HSSkyBoy on 2025/12/15
 //
@@ -35,6 +35,7 @@
 #include <cstring>
 #include <memory>
 #include <mutex>
+#include <vector>
 
 using lsplant::operator""_sym;
 
@@ -64,6 +65,7 @@ namespace lspd {
     static std::string targetApkPath;
     static std::string redirectApkPath;
     static std::string currentPackageName;
+    static std::vector<std::string> moduleNativeLibraryRoots;
     static void *openat_target = nullptr;
     static void *openat64_target = nullptr;
     static void *open_target = nullptr;
@@ -693,11 +695,18 @@ namespace lspd {
         return sanitized;
     }
 
+    static int open_read_only_native(const char* pathname) {
+        return static_cast<int>(syscall(__NR_openat,
+                                        AT_FDCWD,
+                                        pathname,
+                                        O_RDONLY | O_CLOEXEC));
+    }
+
     static bool create_lib_snapshot_from_maps(const char* soname, char* out_path) {
         if (soname == nullptr || out_path == nullptr) {
             return false;
         }
-        int maps_fd = open("/proc/self/maps", O_RDONLY | O_CLOEXEC);
+        int maps_fd = open_read_only_native("/proc/self/maps");
         if (maps_fd < 0) {
             return false;
         }
@@ -714,21 +723,24 @@ namespace lspd {
             std::string line = maps.substr(pos, end - pos);
             pos = end < maps.size() ? end + 1 : end;
 
-            MapEntry entry;
-            if (!parse_maps_entry(line.c_str(), &entry)
-                    || entry.path[0] == '\0'
-                    || strstr(entry.path, soname) == nullptr) {
+            if (line.find(soname) == std::string::npos) {
                 continue;
             }
-            copy_path(source_path, entry.path);
-            break;
+            MapEntry entry;
+            if (!parse_maps_entry(line.c_str(), &entry) || entry.path[0] == '\0') {
+                continue;
+            }
+            if (entry.path[0] == '/') {
+                copy_path(source_path, entry.path);
+                break;
+            }
         }
 
         if (source_path[0] == '\0') {
             return false;
         }
 
-        int source_fd = open(source_path, O_RDONLY | O_CLOEXEC);
+        int source_fd = open_read_only_native(source_path);
         if (source_fd < 0) {
             return false;
         }
@@ -866,22 +878,50 @@ namespace lspd {
                || caller_path.find("360") != std::string::npos;
     }
 
-    static bool should_redirect_apk_contents(const void*) {
-        // Redirect decisions below are already restricted to the patched host APK path.
-        // Native module libraries must see the original APK as well so they can inspect
-        // the host's DEX structure and method bodies. Module APK paths are not affected.
-        return true;
+    static bool path_is_under_root(const std::string& path, const std::string& root) {
+        if (root.empty() || path.size() < root.size() || path.compare(0, root.size(), root) != 0) {
+            return false;
+        }
+        return path.size() == root.size() || path[root.size()] == '/';
     }
 
-    static int open_sanitized_proc_file(const char* pathname, const void* caller_pc) {
-        if (pathname == nullptr) {
+    static bool is_npatch_module_native_caller(const void* caller_pc) {
+        if (caller_pc == nullptr) return false;
+        Dl_info info = {};
+        if (dladdr(caller_pc, &info) == 0 || info.dli_fname == nullptr || info.dli_fname[0] == '\0') {
+            return false;
+        }
+        std::string caller_path(info.dli_fname);
+        static constexpr char deleted_suffix[] = " (deleted)";
+        if (caller_path.size() >= sizeof(deleted_suffix) - 1
+            && caller_path.compare(caller_path.size() - (sizeof(deleted_suffix) - 1),
+                                   sizeof(deleted_suffix) - 1, deleted_suffix) == 0) {
+            caller_path.resize(caller_path.size() - (sizeof(deleted_suffix) - 1));
+        }
+        std::scoped_lock lock(g_path_mutex);
+        for (const auto& root : moduleNativeLibraryRoots) {
+            if (path_is_under_root(caller_path, root)) return true;
+        }
+        return false;
+    }
+
+    static bool should_redirect_apk_contents(const void* caller_pc) {
+        // 【重要】这里必须按调用方分流。targetApkPath 是外层修补 APK，而 redirectApkPath
+        // （origin.apk）不含 NPatch 注入的模块/加固资源。若把加固模块 JNI_OnLoad 对 APK 的
+        // 读取重定向到 origin.apk，会导致 JNI_OnLoad/UnsatisfiedLinkError、模块无法加载。
+        // 禁止将这里简化为无条件返回 true。
+        return !is_npatch_module_native_caller(caller_pc);
+    }
+
+    int open_sanitized_proc_file(const char* pathname, const void* caller_pc) {
+        if (pathname == nullptr || strncmp(pathname, "/proc/", 6) != 0) {
             return -1;
         }
         if (minimal_file_hook_mode) {
             if (!is_maps_path(pathname) && !is_smaps_path(pathname)) {
                 return -1;
             }
-            int fd = open(pathname, O_RDONLY | O_CLOEXEC);
+            int fd = open_read_only_native(pathname);
             if (fd < 0) {
                 return -1;
             }
@@ -905,11 +945,11 @@ namespace lspd {
             return -1;
         }
 
-        if (!g_lib_hide_enabled && !minimal_file_hook_mode) {
+        if (!g_lib_hide_enabled) {
             return -1;
         }
 
-        int fd = open(pathname, O_RDONLY | O_CLOEXEC);
+        int fd = open_read_only_native(pathname);
         if (fd < 0) {
             return -1;
         }
@@ -923,8 +963,8 @@ namespace lspd {
     }
 
     static const char* resolve_redirect_path(const char* pathname) {
-        if (pathname == nullptr) {
-            return nullptr;
+        if (pathname == nullptr || pathname[0] != '/') {
+            return pathname;
         }
 
         {
@@ -1666,6 +1706,26 @@ namespace lspd {
         }
     }
 
+    static void set_module_native_library_roots_impl(JNIEnv* env, jobjectArray jRoots) {
+        std::scoped_lock lock(g_path_mutex);
+        moduleNativeLibraryRoots.clear();
+        if (jRoots == nullptr) return;
+        const jsize count = env->GetArrayLength(jRoots);
+        for (jsize i = 0; i < count; ++i) {
+            auto root = static_cast<jstring>(env->GetObjectArrayElement(jRoots, i));
+            if (root == nullptr) continue;
+            lsplant::JUTFString root_string(env, root);
+            std::string value(root_string.get());
+            env->DeleteLocalRef(root);
+            if (!value.empty()
+                && std::find(moduleNativeLibraryRoots.begin(), moduleNativeLibraryRoots.end(), value)
+                       == moduleNativeLibraryRoots.end()) {
+                moduleNativeLibraryRoots.push_back(std::move(value));
+            }
+        }
+        LOGI("SigBypass: registered {} module native library roots", moduleNativeLibraryRoots.size());
+    }
+
     LSP_DEF_NATIVE_METHOD(void, SigBypass, enableOpenatHook,
                           jstring jOrigApkPath,
                           jstring jCacheApkPath,
@@ -1682,6 +1742,10 @@ namespace lspd {
         enable_openat_hook_impl(env, jOrigApkPath, jCacheApkPath, jPkgName, true, jHide);
     }
 
+    LSP_DEF_NATIVE_METHOD(void, SigBypass, setModuleNativeLibraryRoots, jobjectArray jRoots) {
+        set_module_native_library_roots_impl(env, jRoots);
+    }
+
     LSP_DEF_NATIVE_METHOD(void, SigBypass, disableOpenatHook) {
         LOGI("Disable OpenAt Hook requested");
         std::scoped_lock lock(g_path_mutex);
@@ -1693,6 +1757,7 @@ namespace lspd {
     static JNINativeMethod gMethods[] = {
             LSP_NATIVE_METHOD(SigBypass, enableOpenatHook, "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Z)V"),
             LSP_NATIVE_METHOD(SigBypass, enableOpenatHookMinimal, "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Z)V"),
+            LSP_NATIVE_METHOD(SigBypass, setModuleNativeLibraryRoots, "([Ljava/lang/String;)V"),
             LSP_NATIVE_METHOD(SigBypass, disableOpenatHook, "()V")
     };
 

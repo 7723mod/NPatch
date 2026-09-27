@@ -1,4 +1,4 @@
-package top.nkbe.npatch.loader;
+﻿package top.nkbe.npatch.loader;
 
 import static top.nkbe.npatch.share.Constants.ORIGINAL_APK_ASSET_PATH;
 
@@ -31,6 +31,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -84,6 +85,20 @@ public class SigBypass {
 
     public static boolean isModuleCallerForCompat() {
         return isModuleCaller();
+    }
+
+    static void registerModuleNativeLibraryRoots(Context context) {
+        if (context == null) return;
+        File cacheDir = context.getCacheDir();
+        if (cacheDir == null) return;
+        try {
+            org.lsposed.lspd.nativebridge.SigBypass.setModuleNativeLibraryRoots(new String[]{
+                    new File(new File(cacheDir, "native"), "modules").getAbsolutePath(),
+                    new File(new File(cacheDir, "code_cache"), "mods").getAbsolutePath()
+            });
+        } catch (Throwable e) {
+            Log.w(TAG, "Unable to register module native library roots", e);
+        }
     }
 
     public static void setOriginalSignature(String packageName, String signatureBase64) {
@@ -223,16 +238,12 @@ public class SigBypass {
     }
 
     private static void replaceModuleApplicationInfoPaths(Context context, ApplicationInfo applicationInfo) {
-        if (applicationInfo == null || redirectApkPath == null) return;
-        if (!matchesTargetApplicationInfo(context, applicationInfo)) return;
-
-        applicationInfo.sourceDir = redirectApkPath;
-        applicationInfo.publicSourceDir = redirectApkPath;
-        setReflectivePathField(applicationInfo, "scanSourceDir", redirectApkPath);
-        setReflectivePathField(applicationInfo, "scanPublicSourceDir", redirectApkPath);
-        setReflectivePathField(applicationInfo, "baseCodePath", redirectApkPath);
-        setReflectivePathField(applicationInfo, "baseResourcePath", redirectApkPath);
-        replaceSplitPaths(applicationInfo, visibleApkPath, redirectApkPath);
+        // 【重要】模块调用方不能在此重新映射到 redirectApkPath。
+        // origin.apk 是供宿主签名绕过使用的干净原包副本，不包含 NPatch 注入的模块、加固壳
+        // payload 等资源。加固模块可能在 JNI_OnLoad 中取得 sourceDir/getPackageCodePath 后直接
+        // 打开该路径；若返回 origin.apk，壳会因找不到资源而在模块初始化前失败。模块必须始终
+        // 看到外层修补后的 base.apk；native I/O 侧必须与此保持一致，见 should_redirect_apk_contents。
+        replaceApplicationInfoPaths(context, applicationInfo);
     }
 
     private static String mapToVisiblePath(String path) {
@@ -279,10 +290,9 @@ public class SigBypass {
         XC_MethodHook stringPathHook = new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
-                boolean moduleCaller = isModuleCaller();
                 Object result = param.getResult();
                 if (!(result instanceof String path)) return;
-                String mappedPath = moduleCaller ? mapToRedirectPath(path) : mapToVisiblePath(path);
+                String mappedPath = mapToVisiblePath(path);
                 if (!path.equals(mappedPath)) {
                     param.setResult(mappedPath);
                 }
@@ -291,11 +301,10 @@ public class SigBypass {
         XC_MethodHook filePathHook = new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
-                boolean moduleCaller = isModuleCaller();
                 Object result = param.getResult();
                 if (!(result instanceof File file)) return;
                 String filePath = file.getPath();
-                String mappedPath = moduleCaller ? mapToRedirectPath(filePath) : mapToVisiblePath(filePath);
+                String mappedPath = mapToVisiblePath(filePath);
                 if (!filePath.equals(mappedPath)) {
                     param.setResult(new File(mappedPath));
                 }
@@ -786,6 +795,9 @@ public class SigBypass {
                     isPatchedApkPath = file.getPath().equals(patchedApkPath);
                 }
                 if (!isPatchedApkPath) return;
+                // 必须与 replaceModuleApplicationInfoPaths 保持一致：模块的 ZIP/File 读取需要
+                // 外层 APK 内的 NPatch/加固资源，不能被重定向到 origin.apk。
+                if (isModuleCaller()) return;
 
                 if (arg0 instanceof String) {
                     param.args[0] = originalApkPath;
