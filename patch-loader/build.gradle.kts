@@ -42,6 +42,9 @@ extensions.configure<com.android.build.api.dsl.ApplicationExtension> {
             useLegacyPackaging = true
         }
     }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
     namespace = "top.nkbe.npatch.loader"
 }
 
@@ -98,4 +101,5 @@ dependencies {
     implementation(npatch.hiddenapibypass)
 
     implementation(libs.gson)
+    testImplementation("junit:junit:4.13.2")
 }
