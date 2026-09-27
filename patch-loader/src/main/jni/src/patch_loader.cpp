@@ -27,7 +27,6 @@
 #include "art/runtime/oat_file_manager.h"
 #include "native_util.h"
 #include "jni/bypass_sig.h"
-#include "jni/funpatch_seccomp.h"
 #include "elf/symbol_cache.h"
 #include "utils/jni_helper.hpp"
 
