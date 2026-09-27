@@ -1,4 +1,4 @@
-﻿package top.nkbe.npatch.loader;
+package top.nkbe.npatch.loader;
 
 import static top.nkbe.npatch.share.Constants.CONFIG_ASSET_PATH;
 import static top.nkbe.npatch.share.Constants.PROVIDER_DEX_ASSET_PATH;
@@ -32,7 +32,6 @@ import top.nkbe.npatch.service.NeoLocalApplicationService;
 import top.nkbe.npatch.service.RemoteApplicationService;
 import top.nkbe.npatch.share.Constants;
 import top.nkbe.npatch.share.PatchConfig;
-import top.nkbe.npatch.util.SB;
 
 import java.io.BufferedReader;
 import java.io.File;

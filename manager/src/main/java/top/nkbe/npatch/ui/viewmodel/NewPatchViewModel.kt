@@ -1,4 +1,4 @@
-﻿package top.nkbe.npatch.ui.viewmodel
+package top.nkbe.npatch.ui.viewmodel
 
 import android.util.Log
 import androidx.compose.runtime.getValue

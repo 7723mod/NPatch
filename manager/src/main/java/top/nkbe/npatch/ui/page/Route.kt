@@ -32,14 +32,4 @@ sealed interface Route : NavKey {
         val multiSelect: Boolean, 
         val initialSelected: List<String>? = null
     ) : Route
-
-    @Serializable
-    data class RepoDetail(
-        val packageName: String
-    ) : Route
-
-    @Serializable
-    data class RepoScopeFilter(
-        val selectedPackageName: String? = null
-    ) : Route
 }

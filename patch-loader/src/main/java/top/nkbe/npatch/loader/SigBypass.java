@@ -1,4 +1,4 @@
-﻿package top.nkbe.npatch.loader;
+package top.nkbe.npatch.loader;
 
 import static top.nkbe.npatch.share.Constants.ORIGINAL_APK_ASSET_PATH;
 

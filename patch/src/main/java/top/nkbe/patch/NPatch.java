@@ -1,4 +1,4 @@
-﻿package top.nkbe.npatch.patch;
+package top.nkbe.npatch.patch;
 
 import static top.nkbe.npatch.share.Constants.CONFIG_ASSET_PATH;
 import static top.nkbe.npatch.share.Constants.EMBEDDED_MODULES_ASSET_PATH;

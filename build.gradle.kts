@@ -199,8 +199,9 @@ fun Project.configureApplicationExtension(extension: ApplicationExtension) {
             val androidKeyPassword = System.getenv("ANDROID_KEY_PASSWORD")
                 ?: project.findProperty("androidKeyPassword")?.toString()
 
-            if (androidStoreFile != null && androidStorePassword != null && androidKeyAlias != null && androidKeyPassword != null) {
-                storeFile = rootProject.file(androidStoreFile)
+            val configuredStoreFile = androidStoreFile?.let { rootProject.file(it) }?.takeIf { it.exists() }
+            if (configuredStoreFile != null && androidStorePassword != null && androidKeyAlias != null && androidKeyPassword != null) {
+                storeFile = configuredStoreFile
                 storePassword = androidStorePassword
                 keyAlias = androidKeyAlias
                 keyPassword = androidKeyPassword

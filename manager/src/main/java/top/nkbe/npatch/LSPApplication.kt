@@ -1,4 +1,4 @@
-﻿package top.nkbe.npatch
+package top.nkbe.npatch
 
 import android.app.Application
 import android.content.Context
@@ -17,7 +17,6 @@ import top.nkbe.npatch.manager.ManagerIntegrity
 import top.nkbe.npatch.manager.ModuleScopeSyncStore
 import nkbe.util.NeoPackageManager
 import nkbe.util.ShizukuApi
-import top.nkbe.npatch.util.SB
 import java.io.File
 
 lateinit var lspApp: LSPApplication

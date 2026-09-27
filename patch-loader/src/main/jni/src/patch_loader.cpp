@@ -47,7 +47,7 @@ namespace lspd {
         std::mt19937 gen(rd());
         std::uniform_int_distribution<size_t> pick(0, sizeof(kAlphabet) - 2);
 
-        std::string name = "jit-cache-";
+        std::string name = "npatch-cache-";
         for (int i = 0; i < 12; ++i) {
             name += kAlphabet[pick(gen)];
         }
@@ -126,7 +126,6 @@ namespace lspd {
     void PatchLoader::InitHooks(JNIEnv* env) {
         Context::InitHooks(env);
         RegisterBypass(env);
-        RegisterFunPatchSeccomp(env);
     }
 
     void PatchLoader::SetupEntryClass(JNIEnv* env) {

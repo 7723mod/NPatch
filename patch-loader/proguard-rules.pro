@@ -38,7 +38,7 @@
 # Preserve all Vector framework, IPC, bridge and implementation classes
 -keep class org.matrix.vector.** { *; }
 
-# Preserve NPatch loader, service and specific utility classes (SB is obfuscated)
+# Preserve NPatch loader, service and specific utility classes
 -keep class top.nkbe.npatch.loader.** { *; }
 -keep class top.nkbe.npatch.service.** { *; }
 -keep class top.nkbe.npatch.util.LocalInjectedModuleService { *; }

@@ -1,4 +1,4 @@
-﻿package top.nkbe.npatch.share;
+package top.nkbe.npatch.share;
 
 public class Constants {
 

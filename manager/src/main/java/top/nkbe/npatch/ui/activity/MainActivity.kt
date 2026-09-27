@@ -42,8 +42,6 @@ import top.nkbe.npatch.ui.page.MainTab
 import top.nkbe.npatch.ui.page.MainScreen
 import top.nkbe.npatch.ui.page.Navigator
 import top.nkbe.npatch.ui.page.NewPatchScreen
-import top.nkbe.npatch.ui.page.RepositoryDetailScreen
-import top.nkbe.npatch.ui.page.RepositoryScopeFilterScreen
 import top.nkbe.npatch.ui.page.Route
 import top.nkbe.npatch.ui.page.SelectAppsScreen
 import top.nkbe.npatch.ui.page.WelcomeScreen
@@ -246,20 +244,6 @@ class MainActivity : ComponentActivity() {
                                         SelectAppsScreen(
                                             multiSelect = route.multiSelect,
                                             initialSelected = route.initialSelected
-                                        )
-                                    }
-
-                                    entry<Route.RepoDetail> { route ->
-                                        RepositoryDetailScreen(
-                                            packageName = route.packageName,
-                                            onBack = { navigator.pop() }
-                                        )
-                                    }
-
-                                    entry<Route.RepoScopeFilter> { route ->
-                                        RepositoryScopeFilterScreen(
-                                            selectedPackageName = route.selectedPackageName,
-                                            onBack = { navigator.pop() }
                                         )
                                     }
                                 }
