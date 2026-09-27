@@ -166,6 +166,10 @@
     <string name="welcome_permission_storage_summary">Used to select local APK files for patching and save output results to external storage.</string>
     <string name="welcome_permission_applist_title">Read App List</string>
     <string name="welcome_permission_applist_summary">Used to read installed apps so you can choose patch targets accurately.</string>
+    <string name="permission_applist_required_title">App List Permission Required</string>
+    <string name="permission_applist_required_summary">NPatch requires permission to read installed apps for module management and security integrity checks. Please grant \"Get installed apps\" in system settings.</string>
+    <string name="dialog_exit_app">Exit</string>
+    <string name="dialog_open_settings">Go to settings</string>
     <string name="welcome_optional_title">Optional extension: Shizuku</string>
     <string name="welcome_optional_summary">Optional extension only. Even without Shizuku, NPatch core features still work normally.</string>
     <string name="welcome_permission_granted">Granted</string>

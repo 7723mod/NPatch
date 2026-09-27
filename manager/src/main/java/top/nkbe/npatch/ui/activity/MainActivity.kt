@@ -55,8 +55,21 @@ import top.nkbe.npatch.ui.util.LocalCardBackgroundAlpha
 import top.nkbe.npatch.ui.util.LocalFloatingGlassBottomBar
 import top.nkbe.npatch.ui.util.LocalFloatingGlassBottomBarBlur
 import top.nkbe.npatch.ui.util.LocalSnackbarHost
+import android.content.Intent
+import android.net.Uri
+import android.os.Process
+import android.provider.Settings
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.res.stringResource
 import io.github.suqi8.coui.kmp.basic.SnackbarHostState
+import io.github.suqi8.coui.kmp.layout.DialogButtonBar
+import io.github.suqi8.coui.kmp.layout.DialogButtonBarAction
+import io.github.suqi8.coui.kmp.overlay.OverlayDialog
 import io.github.suqi8.coui.kmp.theme.COUITheme
+import nkbe.util.NeoPackageManager
+import nkbe.util.ShizukuApi
+import top.nkbe.npatch.R
+import kotlin.system.exitProcess
 
 class MainActivity : ComponentActivity() {
 
@@ -157,9 +170,30 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
+                        var appListGranted by remember {
+                            mutableStateOf(NeoPackageManager.hasRealAppListAccess(context))
+                        }
+
+                        DisposableEffect(context) {
+                            val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                                if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                                    appListGranted = NeoPackageManager.hasRealAppListAccess(context)
+                                }
+                            }
+                            val lifecycle = (context as? androidx.lifecycle.LifecycleOwner)?.lifecycle
+                            lifecycle?.addObserver(observer)
+                            onDispose {
+                                lifecycle?.removeObserver(observer)
+                            }
+                        }
+
                         val snackbarHostState = remember { SnackbarHostState() }
                         val startRoute = remember {
-                            if (Configs.welcomeSeen) Route.Main() else Route.Welcome()
+                            if (Configs.welcomeSeen && (NeoPackageManager.hasRealAppListAccess(context) || ShizukuApi.isReady)) {
+                                Route.Main()
+                            } else {
+                                Route.Welcome()
+                            }
                         }
                         val backStack = remember { mutableStateListOf<NavKey>(startRoute) }
                         val navigator = remember { Navigator(backStack) }
@@ -230,6 +264,35 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                             )
+                        }
+
+                        if (Configs.welcomeSeen && !appListGranted && !ShizukuApi.isReady) {
+                            OverlayDialog(
+                                title = stringResource(R.string.permission_applist_required_title),
+                                summary = stringResource(R.string.permission_applist_required_summary),
+                                show = true,
+                                onDismissRequest = {},
+                            ) {
+                                DialogButtonBar(
+                                    negative = DialogButtonBarAction(
+                                        text = stringResource(R.string.dialog_exit_app),
+                                        onClick = {
+                                            finishAffinity()
+                                            Process.killProcess(Process.myPid())
+                                            exitProcess(0)
+                                        },
+                                    ),
+                                    positive = DialogButtonBarAction(
+                                        text = stringResource(R.string.dialog_open_settings),
+                                        onClick = {
+                                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                                data = Uri.parse("package:$packageName")
+                                            }
+                                            startActivity(intent)
+                                        },
+                                    ),
+                                )
+                            }
                         }
                     }
                 }

@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.Settings
+import nkbe.util.NeoPackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -95,7 +96,21 @@ fun WelcomeScreen(
     val scope = rememberCoroutineScope()
     val pagerState = rememberPagerState(pageCount = { 3 })
     var storageGranted by remember { mutableStateOf(context.hasStorageAccess()) }
-    var appListGranted by remember { mutableStateOf(context.hasAppListAccessDeclaration()) }
+    var appListGranted by remember { mutableStateOf(NeoPackageManager.hasRealAppListAccess(context)) }
+
+    DisposableEffect(context) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                storageGranted = context.hasStorageAccess()
+                appListGranted = NeoPackageManager.hasRealAppListAccess(context)
+            }
+        }
+        val lifecycle = (context as? androidx.lifecycle.LifecycleOwner)?.lifecycle
+        lifecycle?.addObserver(observer)
+        onDispose {
+            lifecycle?.removeObserver(observer)
+        }
+    }
 
     val legacyStorageLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -106,7 +121,7 @@ fun WelcomeScreen(
         ActivityResultContracts.StartActivityForResult()
     ) {
         storageGranted = context.hasStorageAccess()
-        appListGranted = context.hasAppListAccessDeclaration()
+        appListGranted = NeoPackageManager.hasRealAppListAccess(context)
     }
 
     fun requestStorageAccess() {
@@ -551,10 +566,12 @@ private fun WelcomeBottomBar(
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TextButton(
-            text = stringResource(if (reviewMode) R.string.welcome_btn_return else R.string.welcome_btn_skip),
-            onClick = onBackOrSkip
-        )
+        if (reviewMode) {
+            TextButton(
+                text = stringResource(R.string.welcome_btn_return),
+                onClick = onBackOrSkip
+            )
+        }
         Spacer(Modifier.weight(1f))
         Button(
             onClick = onNext,
@@ -577,12 +594,4 @@ private fun Context.hasStorageAccess(): Boolean {
         checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED &&
             checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
     }
-}
-
-private fun Context.hasAppListAccessDeclaration(): Boolean {
-    val permissions = packageManager
-        .getPackageInfo(packageName, PackageManager.GET_PERMISSIONS)
-        .requestedPermissions
-        .orEmpty()
-    return Manifest.permission.QUERY_ALL_PACKAGES in permissions
 }

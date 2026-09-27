@@ -265,11 +265,6 @@ public class LSPApplication {
             return;
         }
         String installedApkPath = context.getPackageCodePath();
-        if (SB.hasConflict(context)) {
-            SB.triggerConflict(context);
-            return;
-        }
-
         logInfo("Initialize service client");
         IFrameworkService service = null;
 
@@ -672,12 +667,12 @@ public class LSPApplication {
                 File profile = new File(profileDir, splitName == null ? "primary.prof" : splitName + ".split.prof");
 
                 try {
-                    // å¦‚æœå·²æ˜¯ 0 å­—ç¯€ä¸”å”¯è®€ï¼Œç›´æ¥è·³é
+                    // Èç¹ûÒÑÊÇ 0 ×Ö¹ÇÒÎ¨×x£¬Ö±½ÓÌøß^
                     if (profile.exists() && profile.length() == 0 && !profile.canWrite()) continue;
-                    // è‡ªå‹•å°‡å·²å­˜åœ¨çš„æª”æ¡ˆå…§å®¹æ¸…ç©ºæˆ–å»ºç«‹æ–°æª”
+                    // ×Ô„ÓŒ¢ÒÑ´æÔÚµÄ™n°¸ƒÈÈİÇå¿Õ»ò½¨Á¢ĞÂ™n
                     try (var ignored = new FileOutputStream(profile)) {
                     }
-                    // è¨­å®šæª”æ¡ˆåªè®€
+                    // ÔO¶¨™n°¸Ö»×x
                     Os.chmod(profile.getAbsolutePath(), 00444);
 
                 } catch (Throwable e) {

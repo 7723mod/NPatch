@@ -35,10 +35,13 @@
 # Preserve all Vector framework, IPC, bridge and implementation classes
 -keep class org.matrix.vector.** { *; }
 
-# Preserve NPatch loader, service and utility classes
+# Preserve NPatch loader, service and specific utility classes (SB is obfuscated)
 -keep class top.nkbe.npatch.loader.** { *; }
 -keep class top.nkbe.npatch.service.** { *; }
--keep class top.nkbe.npatch.util.** { *; }
+-keep class top.nkbe.npatch.util.LocalInjectedModuleService { *; }
+-keep class top.nkbe.npatch.util.ManagerRemoteServiceBridge { *; }
+-keep class top.nkbe.npatch.util.ModuleLoader { *; }
+-keep class top.nkbe.npatch.util.NPatchRemoteStore { *; }
 
 -dontwarn android.content.res.Resources
 -dontwarn android.content.res.Resources$Theme

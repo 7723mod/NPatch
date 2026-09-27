@@ -118,6 +118,16 @@ object NeoPackageManager {
     private val appIcon = Collections.synchronizedMap(mutableMapOf<String, ImageBitmap>())
 
 
+    fun hasRealAppListAccess(context: android.content.Context = lspApp): Boolean {
+        return try {
+            val pm = context.packageManager
+            val packages = pm.getInstalledPackages(0)
+            packages.isNotEmpty() && (packages.size > 1 || packages.any { it.packageName != context.packageName })
+        } catch (e: Throwable) {
+            false
+        }
+    }
+
     suspend fun fetchAppList() {
         val result = withContext(Dispatchers.IO) {
             val pm = lspApp.packageManager

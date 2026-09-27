@@ -163,6 +163,10 @@
     <string name="welcome_permission_storage_summary">用于选取本机 APK 文件进行修补，并将输出结果保存至外部存储空间。</string>
     <string name="welcome_permission_applist_title">读取应用程序列表</string>
     <string name="welcome_permission_applist_summary">用于获取已安装的应用程序，以便您精确选取修补目标。</string>
+    <string name="permission_applist_required_title">需要读取应用列表权限</string>
+    <string name="permission_applist_required_summary">NPatch 需要读取已安装应用列表以进行模块管理与安全性冲突检查。请前往系统设置开启「读取已安装应用列表」权限。</string>
+    <string name="dialog_exit_app">退出应用</string>
+    <string name="dialog_open_settings">前往设置</string>
     <string name="welcome_optional_title">可选扩展：Shizuku</string>
     <string name="welcome_optional_summary">仅为可选扩展，未连接也不影响 NPatch 核心功能。</string>
     <string name="welcome_permission_granted">已授予</string>

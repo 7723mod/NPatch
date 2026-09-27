@@ -1,4 +1,4 @@
-package top.nkbe.npatch
+﻿package top.nkbe.npatch
 
 import android.app.Application
 import android.content.Context
@@ -70,11 +70,7 @@ class LSPApplication : Application() {
         }
         AppBroadcastReceiver.register(this)
         globalScope.launch { 
-            NeoPackageManager.fetchAppList() 
-            
-            if (SB.hasConflict(this@LSPApplication)) {
-                SB.triggerConflict(this@LSPApplication)
-            }
+            NeoPackageManager.fetchAppList()
         }
     }
 
