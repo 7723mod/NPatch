@@ -1,37 +1,21 @@
 package top.nkbe.npatch.ui.component
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import io.github.suqi8.coui.kmp.basic.CircularProgressIndicator
-import io.github.suqi8.coui.kmp.overlay.OverlayDialog
+import io.github.suqi8.coui.kmp.overlay.OverlayLoadingDialog
 
 @Composable
 fun LoadingDialog(
     show: MutableState<Boolean> = mutableStateOf(true),
     title: String = ""
 ) {
-    OverlayDialog(
-        title = title,
+    OverlayLoadingDialog(
+        text = title,
         show = show.value,
         onDismissRequest = {},
-    ) {
-        Box(
-            modifier = Modifier.padding(vertical = 16.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(48.dp),
-            )
-        }
-    }
+    )
 }
 
 @Preview

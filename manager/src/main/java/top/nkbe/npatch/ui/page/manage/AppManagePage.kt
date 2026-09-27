@@ -76,8 +76,11 @@ import io.github.suqi8.coui.kmp.basic.ScrollBehavior
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.basic.TextButton
 import io.github.suqi8.coui.kmp.basic.rememberPullToRefreshState
+import io.github.suqi8.coui.kmp.layout.DialogButtonBar
+import io.github.suqi8.coui.kmp.layout.DialogButtonBarAction
 import io.github.suqi8.coui.kmp.overlay.OverlayDialog
 import io.github.suqi8.coui.kmp.overlay.OverlayListPopup
+import io.github.suqi8.coui.kmp.overlay.OverlayLoadingDialog
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
@@ -124,18 +127,11 @@ fun AppManageBody(
             || viewModel.forceRestartState is ProcessingState.Processing
     if (isProcessing) {
         val showLoading = remember { mutableStateOf(true) }
-        OverlayDialog(
-            title = stringResource(R.string.manage_loading),
+        OverlayLoadingDialog(
+            text = stringResource(R.string.manage_loading),
             show = showLoading.value,
             onDismissRequest = { /* 阻断取消，等待处理完成 */ }
-        ) {
-            Box(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                InfiniteProgressIndicator()
-            }
-        }
+        )
     }
 
     when (viewModel.updateLoaderState) {
@@ -512,35 +508,23 @@ fun AppManageFab(
     if (shouldSelectDirectory.value) {
         OverlayDialog(
             title = stringResource(R.string.patch_select_dir_title),
+            summary = stringResource(R.string.patch_select_dir_text),
             show = shouldSelectDirectory.value,
             onDismissRequest = { shouldSelectDirectory.value = false },
-            titleColor = COUITheme.colorScheme.onSurfaceContainer,
-            summaryColor = COUITheme.colorScheme.onSurfaceVariantSummary,
-            backgroundColor = COUITheme.colorScheme.surfaceContainer,
         ) {
-            Column {
-                Text(
-                    text = stringResource(R.string.patch_select_dir_text),
-                    modifier = Modifier.padding(bottom = 16.dp),
-                )
-                Row(horizontalArrangement = Arrangement.SpaceBetween) {
-                    TextButton(
-                        text = stringResource(android.R.string.cancel),
-                        onClick = { shouldSelectDirectory.value = false },
-                        modifier = Modifier.weight(1f),
-                    )
-                    Spacer(Modifier.width(20.dp))
-                    TextButton(
-                        text = stringResource(android.R.string.ok),
-                        onClick = {
-                            launcher.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE))
-                            shouldSelectDirectory.value = false
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                    )
-                }
-            }
+            DialogButtonBar(
+                negative = DialogButtonBarAction(
+                    text = stringResource(android.R.string.cancel),
+                    onClick = { shouldSelectDirectory.value = false },
+                ),
+                positive = DialogButtonBarAction(
+                    text = stringResource(android.R.string.ok),
+                    onClick = {
+                        launcher.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE))
+                        shouldSelectDirectory.value = false
+                    },
+                ),
+            )
         }
     }
 
@@ -549,34 +533,27 @@ fun AppManageFab(
             title = stringResource(R.string.screen_new_patch),
             show = showNewPatchDialog.value,
             onDismissRequest = { showNewPatchDialog.value = false },
-            titleColor = COUITheme.colorScheme.onSurfaceContainer,
-            summaryColor = COUITheme.colorScheme.onSurfaceVariantSummary,
-            backgroundColor = COUITheme.colorScheme.surfaceContainer,
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(
+            DialogButtonBar(
+                neutral = DialogButtonBarAction(
                     text = stringResource(R.string.patch_from_storage),
-                    modifier = Modifier.fillMaxWidth(),
                     onClick = {
                         navigator.navigate(Route.NewPatch(id = ACTION_STORAGE))
                         showNewPatchDialog.value = false
                     },
-                )
-                TextButton(
+                ),
+                positive = DialogButtonBarAction(
                     text = stringResource(R.string.patch_from_applist),
-                    modifier = Modifier.fillMaxWidth(),
                     onClick = {
                         navigator.navigate(Route.NewPatch(id = ACTION_APPLIST))
                         showNewPatchDialog.value = false
                     },
-                )
-                Spacer(Modifier.height(4.dp))
-                TextButton(
+                ),
+                negative = DialogButtonBarAction(
                     text = stringResource(android.R.string.cancel),
-                    modifier = Modifier.fillMaxWidth(),
                     onClick = { showNewPatchDialog.value = false },
-                )
-            }
+                ),
+            )
         }
     }
 

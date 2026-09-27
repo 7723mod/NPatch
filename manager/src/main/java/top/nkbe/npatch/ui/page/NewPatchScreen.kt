@@ -29,7 +29,8 @@ import top.nkbe.npatch.ui.viewmodel.NewPatchViewModel.PatchState
 import top.nkbe.npatch.ui.viewmodel.NewPatchViewModel.ViewAction
 import top.nkbe.npatch.ui.page.SelectAppsResult
 import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
-import io.github.suqi8.coui.kmp.basic.TextButton
+import io.github.suqi8.coui.kmp.layout.DialogButtonBar
+import io.github.suqi8.coui.kmp.layout.DialogButtonBarAction
 import io.github.suqi8.coui.kmp.overlay.OverlayDialog
 
 const val ACTION_STORAGE = 0
@@ -172,10 +173,9 @@ fun NewPatchScreen(
                 onDismissRequest = { showSelectModuleDialog.value = false },
                 renderInRootScaffold = false,
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(
+                DialogButtonBar(
+                    positive = DialogButtonBarAction(
                         text = stringResource(R.string.patch_from_installed_modules),
-                        modifier = Modifier.fillMaxWidth(),
                         onClick = {
                             showSelectModuleDialog.value = false
                             activityScope.launch {
@@ -187,14 +187,12 @@ fun NewPatchScreen(
                                 }
                             }
                         },
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    TextButton(
+                    ),
+                    negative = DialogButtonBarAction(
                         text = stringResource(android.R.string.cancel),
-                        modifier = Modifier.fillMaxWidth(),
                         onClick = { showSelectModuleDialog.value = false },
-                    )
-                }
+                    ),
+                )
             }
         }
     }

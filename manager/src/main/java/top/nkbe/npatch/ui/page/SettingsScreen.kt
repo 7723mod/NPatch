@@ -90,7 +90,8 @@ import io.github.suqi8.coui.kmp.basic.TextField
 import io.github.suqi8.coui.kmp.basic.TopAppBar
 import io.github.suqi8.coui.kmp.preference.ArrowPreference
 import io.github.suqi8.coui.kmp.preference.OverlayDropdownPreference
-import io.github.suqi8.coui.kmp.preference.SwitchPreference
+import io.github.suqi8.coui.kmp.layout.DialogButtonBar
+import io.github.suqi8.coui.kmp.layout.DialogButtonBarAction
 import io.github.suqi8.coui.kmp.overlay.OverlayDialog
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
@@ -228,14 +229,12 @@ private fun DnsPreference() {
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(16.dp))
-                Row(horizontalArrangement = Arrangement.SpaceBetween) {
-                    TextButton(
+                DialogButtonBar(
+                    negative = DialogButtonBarAction(
                         text = stringResource(android.R.string.cancel),
-                        onClick = { showCustomDialog = false },
-                        modifier = Modifier.weight(1f),
-                    )
-                    Spacer(Modifier.width(20.dp))
-                    TextButton(
+                        onClick = { showCustomDialog = false }
+                    ),
+                    positive = DialogButtonBarAction(
                         text = stringResource(android.R.string.ok),
                         onClick = {
                             if (NetworkDns.setCustomUrl(customUrl)) {
@@ -244,11 +243,9 @@ private fun DnsPreference() {
                             } else {
                                 invalidUrl = true
                             }
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                        }
                     )
-                }
+                )
             }
         }
     }
@@ -747,16 +744,12 @@ private fun KeyStore() {
 
                 Spacer(Modifier.height(8.dp))
 
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    TextButton(
+                DialogButtonBar(
+                    negative = DialogButtonBarAction(
                         text = stringResource(android.R.string.cancel),
-                        onClick = dismissDialog,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Spacer(Modifier.width(20.dp))
-                    TextButton(
+                        onClick = dismissDialog
+                    ),
+                    positive = DialogButtonBarAction(
                         text = stringResource(android.R.string.ok),
                         onClick = {
                             wrongKeystore = false
@@ -766,7 +759,7 @@ private fun KeyStore() {
 
                             if (path.isEmpty()) {
                                 wrongKeystore = true
-                                return@TextButton
+                                return@DialogButtonBarAction
                             }
                             val keyStore = KeyStore.getInstance("BKS")
                             try {
@@ -778,26 +771,24 @@ private fun KeyStore() {
                                 if (e.message == "KeyStore integrity check failed.") {
                                     wrongPassword = true
                                 }
-                                return@TextButton
+                                return@DialogButtonBarAction
                             }
                             if (!keyStore.containsAlias(alias)) {
                                 wrongAliasName = true
-                                return@TextButton
+                                return@DialogButtonBarAction
                             }
                             try {
                                 keyStore.getKey(alias, aliasPassword.toCharArray())
                             } catch (e: GeneralSecurityException) {
                                 wrongAliasPassword = true
-                                return@TextButton
+                                return@DialogButtonBarAction
                             }
 
                             scope.launch { MyKeyStore.setCustom(password, alias, aliasPassword) }
                             showDialog.value = false
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                        }
                     )
-                }
+                )
             }
         }
     }
@@ -904,46 +895,32 @@ fun ClearManagerCache() {
     if (showDialog.value) {
         OverlayDialog(
             title = clearText,
+            summary = dialogText,
             show = showDialog.value,
             onDismissRequest = { showDialog.value = false },
-            titleColor = COUITheme.colorScheme.onSurfaceContainer,
-            summaryColor = COUITheme.colorScheme.onSurfaceVariantSummary,
-            backgroundColor = COUITheme.colorScheme.surfaceContainer,
-            insideMargin = DpSize(24.dp, 24.dp),
         ) {
-            Column {
-                Text(
-                    text = dialogText,
-                    modifier = Modifier.padding(bottom = 16.dp),
-                    color = COUITheme.colorScheme.onSurfaceContainer,
-                )
-                Row(horizontalArrangement = Arrangement.SpaceBetween) {
-                    TextButton(
-                        text = stringResource(android.R.string.cancel),
-                        onClick = { showDialog.value = false },
-                        modifier = Modifier.weight(1f),
-                    )
-                    Spacer(Modifier.width(20.dp))
-                    TextButton(
-                        text = stringResource(android.R.string.ok),
-                        onClick = {
-                            showDialog.value = false
-                            scope.launch {
-                                runCatching {
-                                    ManagerCacheCleaner.clear()
-                                }.onSuccess {
-                                    snackbarHost.showSnackbar(successText)
-                                }.onFailure {
-                                    Log.e(TAG, "Failed to clear manager cache", it)
-                                    snackbarHost.showSnackbar(failedText)
-                                }
+            DialogButtonBar(
+                negative = DialogButtonBarAction(
+                    text = stringResource(android.R.string.cancel),
+                    onClick = { showDialog.value = false }
+                ),
+                positive = DialogButtonBarAction(
+                    text = stringResource(android.R.string.ok),
+                    onClick = {
+                        showDialog.value = false
+                        scope.launch {
+                            runCatching {
+                                ManagerCacheCleaner.clear()
+                            }.onSuccess {
+                                snackbarHost.showSnackbar(successText)
+                            }.onFailure {
+                                Log.e(TAG, "Failed to clear manager cache", it)
+                                snackbarHost.showSnackbar(failedText)
                             }
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                    )
-                }
-            }
+                        }
+                    }
+                )
+            )
         }
     }
 }

@@ -59,8 +59,10 @@ import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.basic.SmallTitle
 import io.github.suqi8.coui.kmp.basic.SnackbarResult
 import io.github.suqi8.coui.kmp.basic.Text
-import io.github.suqi8.coui.kmp.basic.TextButton
+import io.github.suqi8.coui.kmp.layout.DialogButtonBar
+import io.github.suqi8.coui.kmp.layout.DialogButtonBarAction
 import io.github.suqi8.coui.kmp.overlay.OverlayDialog
+import io.github.suqi8.coui.kmp.overlay.OverlayLoadingDialog
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.utils.overScrollVertical
 import io.github.suqi8.coui.kmp.utils.scrollEndHaptic
@@ -339,31 +341,20 @@ fun UninstallConfirmationDialog(
     val show = remember { mutableStateOf(true) }
     OverlayDialog(
         title = stringResource(R.string.uninstall),
+        summary = stringResource(R.string.patch_uninstall_text),
         show = show.value,
         onDismissRequest = { show.value = false; onDismiss() },
     ) {
-        Column {
-            Text(
-                text = stringResource(R.string.patch_uninstall_text),
-                modifier = Modifier.padding(bottom = 16.dp),
-            )
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                TextButton(
-                    text = stringResource(android.R.string.cancel),
-                    onClick = { show.value = false; onDismiss() },
-                    modifier = Modifier.weight(1f),
-                )
-                Spacer(Modifier.width(20.dp))
-                TextButton(
-                    text = stringResource(android.R.string.ok),
-                    onClick = { show.value = false; onConfirm() },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                )
-            }
-        }
+        DialogButtonBar(
+            negative = DialogButtonBarAction(
+                text = stringResource(android.R.string.cancel),
+                onClick = { show.value = false; onDismiss() },
+            ),
+            positive = DialogButtonBarAction(
+                text = stringResource(android.R.string.ok),
+                onClick = { show.value = false; onConfirm() },
+            ),
+        )
     }
 }
 
@@ -477,18 +468,10 @@ fun InstallDialog(
 
     if (installing != 0) {
         val showInstalling = remember { mutableStateOf(true) }
-        OverlayDialog(
-            title = stringResource(if (installing == 1) R.string.installing else R.string.uninstalling),
+        OverlayLoadingDialog(
+            text = stringResource(if (installing == 1) R.string.installing else R.string.uninstalling),
             show = showInstalling.value,
             onDismissRequest = {},
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                CircularProgressIndicator(modifier = Modifier.padding(16.dp).size(48.dp))
-            }
-        }
+        )
     }
 }
