@@ -28,6 +28,7 @@ androidComponents.onVariants { variant ->
         buildDirProvider.dir("intermediates/dex/$variantLowered/mergeDex$variantCapped")
     }
     val copyDestination = rootProject.layout.projectDirectory.dir("out/assets/${variant.name}/npatch")
+    val outDirLabel = rootProject.layout.projectDirectory.dir("out").asFile.path
 
     val copyDexTask = tasks.register<Copy>("copyDex$variantCapped") {
         dependsOn("assemble$variantCapped")
@@ -39,7 +40,7 @@ androidComponents.onVariants { variant ->
     tasks.register("copy$variantCapped") {
         dependsOn(copyDexTask)
         doLast {
-            println("Loader dex has been copied to ${rootProject.projectDir}${File.separator}out")
+            println("Loader dex has been copied to $outDirLabel")
         }
     }
 }

@@ -57,15 +57,18 @@ androidComponents.onVariants { variant ->
         layout.buildDirectory.dir("intermediates/dex/$variantLowered/mergeDex$variantCapped")
     }
 
+    val assetsDir = rootProject.layout.projectDirectory.dir("out/assets/${variant.name}/npatch").asFile
+    val outDirLabel = rootProject.layout.projectDirectory.dir("out").asFile.path
+
     val copyDexTask = tasks.register<Copy>("copyDex$variantCapped") {
         dependsOn("assemble$variantCapped")
         doFirst {
-            delete("${rootProject.projectDir}/out/assets/${variant.name}/npatch/loader.dex")
-            delete("${rootProject.projectDir}/out/assets/${variant.name}/npatch/loader.bin")
+            File(assetsDir, "loader.dex").delete()
+            File(assetsDir, "loader.bin").delete()
         }
         from(dexDirProvider)
         rename("classes.dex", "loader.bin")
-        into("${rootProject.projectDir}/out/assets/${variant.name}/npatch")
+        into(assetsDir)
     }
 
     val copySoTask = tasks.register<Copy>("copySo$variantCapped") {
@@ -77,7 +80,7 @@ androidComponents.onVariants { variant ->
                 "include" to listOf("**/libnpatch.so")
             )
         )
-        into("${rootProject.projectDir}/out/assets/${variant.name}/npatch/so")
+        into(File(assetsDir, "so"))
     }
 
     tasks.register("copy$variantCapped") {
@@ -85,7 +88,7 @@ androidComponents.onVariants { variant ->
         dependsOn(copyDexTask)
 
         doLast {
-            println("Dex and so files has been copied to ${rootProject.projectDir}${File.separator}out")
+            println("Dex and so files have been copied to $outDirLabel")
         }
     }
 }

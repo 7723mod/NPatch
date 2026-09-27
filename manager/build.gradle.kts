@@ -101,17 +101,20 @@ androidComponents {
         val variantLowered = variant.name.lowercase()
         val variantCapped = variant.name.replaceFirstChar { it.uppercase() }
 
+        val assetsSourceDir = rootProject.layout.projectDirectory.dir("out/assets/${variant.name}").asFile
+        val mergedAssetsDir = layout.buildDirectory.dir("intermediates/assets/$variantLowered/merge${variantCapped}Assets")
+        val staleLoaderDex = mergedAssetsDir.map { it.file("npatch/loader.dex") }.get().asFile
+
         val copyAssetsTaskProvider = tasks.register<Copy>("copy${variantCapped}Assets") {
             dependsOn(":meta-loader:copy$variantCapped")
             dependsOn(":patch-loader:copy$variantCapped")
 
-            val targetDir = layout.buildDirectory.dir("intermediates/assets/$variantLowered/merge${variantCapped}Assets")
             doFirst {
-                delete(targetDir.map { it.file("npatch/loader.dex") })
+                staleLoaderDex.delete()
             }
-            into(targetDir)
+            into(mergedAssetsDir)
 
-            from("${rootProject.projectDir}/out/assets/${variant.name}")
+            from(assetsSourceDir)
         }
 
         tasks.configureEach {

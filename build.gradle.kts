@@ -1,9 +1,13 @@
 import com.android.build.api.dsl.ApplicationExtension
 import com.android.build.api.variant.ApplicationAndroidComponentsExtension
 import com.android.build.gradle.BaseExtension
-import org.eclipse.jgit.api.Git
-import org.eclipse.jgit.internal.storage.file.FileRepository
-import org.eclipse.jgit.storage.file.FileRepositoryBuilder
+import java.io.ByteArrayOutputStream
+import javax.inject.Inject
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.provider.ValueSource
+import org.gradle.api.provider.ValueSourceParameters
+import org.gradle.process.ExecOperations
 import org.gradle.kotlin.dsl.extra
 
 plugins {
@@ -13,30 +17,49 @@ plugins {
     alias(npatch.plugins.kotlin.android) apply false
 }
 
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
+abstract class GitCommitCountValueSource : ValueSource<Int, GitCommitCountValueSource.Parameters> {
+    interface Parameters : ValueSourceParameters {
+        val workingDirectory: Property<String>
+        val candidateRefs: ListProperty<String>
+        val fallback: Property<Int>
     }
-    dependencies {
-        classpath("org.eclipse.jgit:org.eclipse.jgit:7.3.0.202506031305-r")
+
+    @get:Inject abstract val execOperations: ExecOperations
+
+    override fun obtain(): Int {
+        for (ref in parameters.candidateRefs.get()) {
+            val output = ByteArrayOutputStream()
+            val result = execOperations.exec {
+                commandLine("git", "-C", parameters.workingDirectory.get(), "rev-list", "--count", ref)
+                standardOutput = output
+                errorOutput = ByteArrayOutputStream()
+                isIgnoreExitValue = true
+            }
+            if (result.exitValue == 0) {
+                output.toString().trim().toIntOrNull()?.let { return it }
+            }
+        }
+        return parameters.fallback.get()
     }
 }
 
-val commitCount = runCatching {
-    val repo = FileRepository(rootProject.file(".git"))
-    val refId = repo.refDatabase.exactRef("refs/remotes/origin/miuix")?.objectId
-    if (refId != null) Git(repo).log().add(refId).call().count() else 0
-}.getOrElse {0}
+val commitCount = providers.of(GitCommitCountValueSource::class) {
+    parameters.workingDirectory.set(rootDir.absolutePath)
+    parameters.candidateRefs.set(
+        listOf(
+            "refs/remotes/origin/miuix",
+            "refs/heads/miuix",
+            "HEAD",
+        )
+    )
+    parameters.fallback.set(1)
+}.get().coerceAtLeast(1)
 
-val coreCommitCount = runCatching {
-    FileRepositoryBuilder().setGitDir(rootProject.file("core/.git"))
-        .setWorkTree(rootProject.file("core"))
-        .build().use { repo ->
-            val git = Git(repo)
-            git.log().add(repo.resolve("HEAD")).call().count()
-        }
-}.getOrDefault(3111)
+val coreCommitCount = providers.of(GitCommitCountValueSource::class) {
+    parameters.workingDirectory.set(File(rootDir, "core").absolutePath)
+    parameters.candidateRefs.set(listOf("HEAD"))
+    parameters.fallback.set(3111)
+}.get()
 
 val defaultManagerPackageName by extra("top.nkbe.npatch")
 val apiCode by extra(102)
@@ -220,36 +243,32 @@ fun Project.configureApplicationExtension(extension: ApplicationExtension) {
     }
 
     extensions.findByType(ApplicationAndroidComponentsExtension::class)?.let { androidComponents ->
+        val isWindows = providers.systemProperty("os.name").get().lowercase().contains("windows")
+        val aapt2Name = if (isWindows) "aapt2.exe" else "aapt2"
+        val aapt2File = File(
+            androidComponents.sdkComponents.sdkDirectory.get().asFile,
+            "build-tools/$androidBuildToolsVersion/$aapt2Name"
+        )
+        val archive = layout.buildDirectory.get().asFile.resolve(
+            "intermediates/optimized_processed_res/release/optimizeReleaseResources/resources-release-optimize.ap_"
+        )
         val optimizeReleaseRes = tasks.register("optimizeReleaseRes") {
             doLast {
-                val isWindows = System.getProperty("os.name").lowercase().contains("windows")
-                val aapt2Name = if (isWindows) "aapt2.exe" else "aapt2"
-
-                val aapt2 = File(
-                    androidComponents.sdkComponents.sdkDirectory.get().asFile,
-                    "build-tools/${androidBuildToolsVersion}/$aapt2Name"
-                )
-                val zip = project.layout.buildDirectory.get().asFile.toPath()
-                    .resolve("intermediates")
-                    .resolve("optimized_processed_res")
-                    .resolve("release")
-                    .resolve("optimizeReleaseResources")
-                    .resolve("resources-release-optimize.ap_")
-                val optimized = File("${zip}.opt")
-                val cmd = providers.exec {
-                    commandLine(
-                        aapt2, "optimize",
-                        "--collapse-resource-names",
-                        "--enable-sparse-encoding",
-                        "-o", optimized,
-                        zip
-                    )
-                    isIgnoreExitValue = false
-                }.result.get()
-                if (cmd.exitValue == 0) {
-                    delete(zip)
-                    optimized.renameTo(zip.toFile())
-                }
+                if (!archive.isFile) return@doLast
+                val optimized = File(archive.parentFile, "${archive.name}.opt")
+                optimized.delete()
+                val process = ProcessBuilder(
+                    aapt2File.absolutePath,
+                    "optimize",
+                    "--collapse-resource-names",
+                    "--enable-sparse-encoding",
+                    "-o", optimized.absolutePath,
+                    archive.absolutePath,
+                ).redirectErrorStream(true).start()
+                val output = process.inputStream.bufferedReader().readText()
+                check(process.waitFor() == 0) { "aapt2 optimize failed for ${archive.name}: $output" }
+                archive.delete()
+                check(optimized.renameTo(archive)) { "Could not replace ${archive.name} with its optimized copy" }
             }
         }
 
