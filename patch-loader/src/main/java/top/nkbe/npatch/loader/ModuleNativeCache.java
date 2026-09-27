@@ -54,7 +54,7 @@ final class ModuleNativeCache {
         }
 
         File staging = new File(moduleRoot,
-                stamp + ".tmp-" + Process.myPid() + "-" + Thread.currentThread().getId());
+                stamp + ".tmp-" + Process.myPid() + "-" + Process.myTid());
         deleteRecursive(staging);
         if (!staging.mkdirs() && !staging.isDirectory()) {
             Log.e(TAG, "Unable to create native staging directory: " + staging);
