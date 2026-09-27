@@ -211,10 +211,12 @@ fun Project.configureApplicationExtension(extension: ApplicationExtension) {
         }
 
         val config = signingConfigs.create("config") {
-            val androidStoreFile = (
-                System.getenv("ANDROID_STORE_FILE")
-                    ?: project.findProperty("androidStoreFile")?.toString()
-                )?.takeIf { it.isNotBlank() }
+            val candidatePaths = listOfNotNull(
+                System.getenv("ANDROID_STORE_FILE"),
+                project.findProperty("androidStoreFile")?.toString()
+            ).filter { it.isNotBlank() }
+            val androidStoreFile = candidatePaths.firstOrNull { rootProject.file(it).exists() }
+                ?: candidatePaths.firstOrNull()
             val androidStorePassword = System.getenv("ANDROID_STORE_PASSWORD")
                 ?: project.findProperty("androidStorePassword")?.toString()
             val androidKeyAlias = System.getenv("ANDROID_KEY_ALIAS")
@@ -222,9 +224,9 @@ fun Project.configureApplicationExtension(extension: ApplicationExtension) {
             val androidKeyPassword = System.getenv("ANDROID_KEY_PASSWORD")
                 ?: project.findProperty("androidKeyPassword")?.toString()
 
-            val configuredStoreFile = androidStoreFile?.let { rootProject.file(it) }?.takeIf { it.exists() }
-            if (configuredStoreFile != null && androidStorePassword != null && androidKeyAlias != null && androidKeyPassword != null) {
-                storeFile = configuredStoreFile
+            val storeFileObj = androidStoreFile?.let { rootProject.file(it) }
+            if (storeFileObj != null && storeFileObj.exists() && androidStorePassword != null && androidKeyAlias != null && androidKeyPassword != null) {
+                storeFile = storeFileObj
                 storePassword = androidStorePassword
                 keyAlias = androidKeyAlias
                 keyPassword = androidKeyPassword
@@ -232,7 +234,14 @@ fun Project.configureApplicationExtension(extension: ApplicationExtension) {
             enableV2Signing = true
             enableV3Signing = true
         }
-        val selectedSigningConfig = if (config.storeFile != null) config else signingConfigs["debug"]
+        val selectedSigningConfig = if (config.storeFile?.exists() == true) {
+            config
+        } else {
+            if (candidatePaths.isNotEmpty()) {
+                logger.warn("WARNING: Custom signingConfig path(s) specified ($candidatePaths) but keystore file was not found or credentials incomplete. Falling back to debug signing config.")
+            }
+            signingConfigs["debug"]
+        }
         buildTypes.configureEach {
             signingConfig = selectedSigningConfig
         }
