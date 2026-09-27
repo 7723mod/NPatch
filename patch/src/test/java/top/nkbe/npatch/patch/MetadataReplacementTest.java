@@ -44,6 +44,33 @@ public class MetadataReplacementTest {
         assertEquals("keep", metadata.get(0).get("name"));
     }
 
+    @Test public void testOverrideLabelAndExtractNativeLibs() throws Exception {
+        ModificationProperty changes = new ModificationProperty();
+        changes.addApplicationAttribute(new com.wind.meditor.property.AttributeItem(com.wind.meditor.utils.NodeValue.Application.LABEL, "MyCustomAppName"));
+        changes.addApplicationAttribute(new com.wind.meditor.property.AttributeItem(com.wind.meditor.utils.NodeValue.Application.EXTRACTNATIVELIBS, Boolean.TRUE));
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        new ManifestEditor(new ByteArrayInputStream(manifest()), output, changes).processManifest();
+
+        AxmlParser parser = new AxmlParser(output.toByteArray());
+        int event;
+        String label = null;
+        Object extractNativeLibs = null;
+        while ((event = parser.next()) != AxmlParser.END_FILE) {
+            if (event == AxmlParser.START_TAG && "application".equals(parser.getName())) {
+                for (int i = 0; i < parser.getAttrCount(); i++) {
+                    if ("label".equals(parser.getAttrName(i))) {
+                        label = (String) parser.getAttrValue(i);
+                    }
+                    if ("extractNativeLibs".equals(parser.getAttrName(i))) {
+                        extractNativeLibs = parser.getAttrValue(i);
+                    }
+                }
+            }
+        }
+        assertEquals("MyCustomAppName", label);
+        assertEquals(Boolean.TRUE, extractNativeLibs);
+    }
+
     private static byte[] manifest() throws Exception {
         AxmlWriter writer = new AxmlWriter();
         writer.ns("android", ANDROID, 1);

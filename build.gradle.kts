@@ -210,11 +210,12 @@ fun Project.configureApplicationExtension(extension: ApplicationExtension) {
             versionName = verName
         }
 
+        val candidatePaths = listOfNotNull(
+            System.getenv("ANDROID_STORE_FILE"),
+            project.findProperty("androidStoreFile")?.toString()
+        ).filter { it.isNotBlank() }
+
         val config = signingConfigs.create("config") {
-            val candidatePaths = listOfNotNull(
-                System.getenv("ANDROID_STORE_FILE"),
-                project.findProperty("androidStoreFile")?.toString()
-            ).filter { it.isNotBlank() }
             val androidStoreFile = candidatePaths.firstOrNull { rootProject.file(it).exists() }
                 ?: candidatePaths.firstOrNull()
             val androidStorePassword = System.getenv("ANDROID_STORE_PASSWORD")

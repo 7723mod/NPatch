@@ -184,6 +184,7 @@
     <!-- Settings Screen -->
     <string name="screen_settings">設定</string>
     <string name="settings_language">語言</string>
+    <string name="settings_language_system">跟隨系統</string>
     <string name="settings_keystore">簽名金鑰庫</string>
     <string name="settings_keystore_custom">自訂</string>
     <string name="settings_keystore_dialog_title">自訂金鑰庫</string>
@@ -318,4 +319,8 @@
     <string name="settings_third_party_installer_invalid_pkg">所選或輸入的安裝器未安裝或無效</string>
     <string name="install_notification_title">%s 安裝成功</string>
     <string name="install_notification_text">點擊啟動應用程式</string>
+    <string name="patch_override_label">應用程式名稱</string>
+    <string name="patch_override_label_hint">留空則保持原名</string>
+    <string name="patch_extract_native_libs">解壓原生程式庫</string>
+    <string name="patch_extract_native_libs_desc">強制安裝器解壓應用程式的原生程式庫，讓需要讀取應用程式原生代碼的模組能夠直接讀取到檔案。</string>
 </resources>

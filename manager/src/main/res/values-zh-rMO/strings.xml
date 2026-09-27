@@ -251,4 +251,8 @@
     <string name="time_minutes_ago">%d 分钟前喵</string>
     <string name="time_hours_ago">%d 小时前喵</string>
     <string name="time_days_ago">%d 天前喵</string>
+    <string name="patch_override_label">猫猫名称</string>
+    <string name="patch_override_label_hint">留空则保持原名喵</string>
+    <string name="patch_extract_native_libs">解压原生库</string>
+    <string name="patch_extract_native_libs_desc">强制把应用的原生库拆出来塞进窝里，方便挂件直接翻找底层代码喵。</string>
 </resources>

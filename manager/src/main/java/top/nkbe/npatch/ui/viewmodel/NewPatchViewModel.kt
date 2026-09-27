@@ -45,6 +45,8 @@ class NewPatchViewModel : ViewModel() {
     var useManager by mutableStateOf(true)
         private set
     var newPackageName by mutableStateOf("")
+    var overrideLabel by mutableStateOf("")
+    var extractNativeLibs by mutableStateOf(false)
     var debuggable by mutableStateOf(false)
     var overrideVersionCode by mutableStateOf(false)
     var overrideVersionCodeValue by mutableStateOf("1")
@@ -103,6 +105,8 @@ class NewPatchViewModel : ViewModel() {
         patchState = PatchState.INIT
         useManager = true
         newPackageName = ""
+        overrideLabel = ""
+        extractNativeLibs = false
         debuggable = false
         overrideVersionCode = false
         overrideVersionCodeValue = "1"
@@ -139,6 +143,8 @@ class NewPatchViewModel : ViewModel() {
         patchApp = app
         patchState = PatchState.CONFIGURING
         newPackageName = app.app.packageName
+        overrideLabel = ""
+        extractNativeLibs = false
         try {
             val pair = ManifestParser.parseManifestFile(app.app.sourceDir)
             if (pair != null) {
@@ -193,7 +199,9 @@ class NewPatchViewModel : ViewModel() {
             embeddedModules = embeddedModules.flatMap { listOf(it.app.sourceDir) + (it.app.splitSourceDirs ?: emptyArray()) },
             targetPackageName = patchApp.app.packageName,
             embeddedModulePackages = embeddedModules.map { it.app.packageName },
-            injectDex = injectDex
+            injectDex = injectDex,
+            labelOverride = overrideLabel.trim().ifEmpty { null },
+            extractNativeLibs = extractNativeLibs
         )
         patchState = PatchState.PATCHING
     }

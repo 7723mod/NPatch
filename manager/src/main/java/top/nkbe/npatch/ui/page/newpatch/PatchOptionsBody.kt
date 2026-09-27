@@ -224,6 +224,12 @@ fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
                     viewModel.newPackageName,
                     onValueChange = { viewModel.newPackageName = it },
                 )
+                SettingsEditor(
+                    Modifier.padding(horizontal = 12.dp),
+                    stringResource(R.string.patch_override_label),
+                    viewModel.overrideLabel,
+                    onValueChange = { viewModel.overrideLabel = it },
+                )
                 SwitchPreference(
                     title = stringResource(R.string.patch_debuggable),
                     startAction = { Icon(Icons.Outlined.BugReport, null) },
@@ -300,6 +306,13 @@ fun PatchOptionsBody(modifier: Modifier, onAddEmbed: () -> Unit) {
                     startAction = { Icon(Icons.Outlined.Http, null) },
                     checked = viewModel.usesCleartextTraffic,
                     onCheckedChange = { viewModel.usesCleartextTraffic = it }
+                )
+                SwitchPreference(
+                    title = stringResource(R.string.patch_extract_native_libs),
+                    summary = stringResource(R.string.patch_extract_native_libs_desc),
+                    startAction = { Icon(Icons.Outlined.Unarchive, null) },
+                    checked = viewModel.extractNativeLibs,
+                    onCheckedChange = { viewModel.extractNativeLibs = it }
                 )
                 SwitchPreference(
                     title = stringResource(R.string.patch_hide_libs),

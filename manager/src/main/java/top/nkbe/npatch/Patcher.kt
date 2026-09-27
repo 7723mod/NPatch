@@ -29,7 +29,9 @@ object Patcher {
         private val embeddedModules: List<String>?,
         val targetPackageName: String? = null,
         val embeddedModulePackages: List<String>? = null,
-        private val injectDex: Boolean = false
+        private val injectDex: Boolean = false,
+        private val labelOverride: String? = null,
+        private val extractNativeLibs: Boolean = false
     ) {
         internal val inputApks: List<File>
             get() = resolveActualApkPaths().map { File(it).absoluteFile }
@@ -117,6 +119,13 @@ object Patcher {
                 if (config.useMicroG) add("--useMicroG")
                 if (config.hideLibs) add("--hidelibs")
                 if (config.usesCleartextTraffic) add("--cleartext")
+                if (!labelOverride.isNullOrBlank()) {
+                    add("--name")
+                    add(labelOverride.trim())
+                }
+                if (extractNativeLibs) {
+                    add("--extract-libs")
+                }
                 when (Configs.keyStorePreset) {
                     KeystorePreset.NPATCH -> add("-npa")
                     KeystorePreset.FPA -> add("-fpa")

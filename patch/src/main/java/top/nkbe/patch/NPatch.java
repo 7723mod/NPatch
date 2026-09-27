@@ -111,6 +111,12 @@ public class NPatch {
     @Parameter(names = {"--cleartext", "--usesCleartextTraffic"}, description = "Force android:usesCleartextTraffic=\"true\" in manifest to allow plain HTTP traffic")
     private boolean usesCleartextTraffic = false;
 
+    @Parameter(names = {"--name"}, description = "Override the patched app's launcher label")
+    private String labelOverride = null;
+
+    @Parameter(names = {"--extract-libs"}, description = "Force android:extractNativeLibs=\"true\" in the manifest so the installer unpacks the app's native libraries")
+    private boolean extractNativeLibs = false;
+
     @Parameter(names = {"-k", "--keystore"}, arity = 4, description = "Set custom signature keystore. Followed by 4 arguments: keystore path, keystore password, keystore alias, keystore alias password")
     private List<String> keystoreArgs = null;
 
@@ -345,7 +351,7 @@ public class NPatch {
                         ? pair.splitName
                         : srcApkFile.getName();
                 logger.i("Packing split apk: " + splitDisplayName + "...");
-                boolean needModifyManifest = !newPackage.equals(pair.packageName) || overrideVersionCode || overrideTargetSdk;
+                boolean needModifyManifest = !newPackage.equals(pair.packageName) || overrideVersionCode || overrideTargetSdk || extractNativeLibs;
                 if (needModifyManifest) {
                     ModificationProperty splitProperty = new ModificationProperty();
                     if (overrideVersionCode) {
@@ -353,6 +359,9 @@ public class NPatch {
                     }
                     if (overrideTargetSdk) {
                         splitProperty.addUsesSdkAttribute(new AttributeItem(NodeValue.UsesSDK.TARGET_SDK_VERSION, overrideTargetSdkValue));
+                    }
+                    if (extractNativeLibs) {
+                        splitProperty.addApplicationAttribute(new AttributeItem(NodeValue.Application.EXTRACTNATIVELIBS, Boolean.TRUE));
                     }
                     if (!newPackage.equals(pair.packageName)) {
                         splitProperty.addManifestAttribute(new AttributeItem(NodeValue.Manifest.PACKAGE, newPackage).setNamespace(null));
@@ -651,6 +660,16 @@ public class NPatch {
         property.addApplicationAttribute(new AttributeItem("appComponentFactory", PROXY_APP_COMPONENT_FACTORY));
         if (usesCleartextTraffic) {
             property.addApplicationAttribute(new AttributeItem("usesCleartextTraffic", Boolean.TRUE));
+        }
+
+        if (labelOverride != null && !labelOverride.trim().isEmpty()) {
+            logger.i("Override label: " + labelOverride.trim());
+            property.addApplicationAttribute(new AttributeItem(NodeValue.Application.LABEL, labelOverride.trim()));
+        }
+
+        if (extractNativeLibs) {
+            logger.i("Override extractNativeLibs: true");
+            property.addApplicationAttribute(new AttributeItem(NodeValue.Application.EXTRACTNATIVELIBS, Boolean.TRUE));
         }
 
         if (!targetPackage.equals(originPackage)) {
