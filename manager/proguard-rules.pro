@@ -2,9 +2,6 @@
  public static void check*(...);
  public static void throw*(...);
 }
--obfuscationdictionary ../proguard/obfuscation-dictionary.txt
--classobfuscationdictionary ../proguard/obfuscation-dictionary.txt
--packageobfuscationdictionary ../proguard/obfuscation-dictionary.txt
 -assumenosideeffects class java.util.Objects {
     public static ** requireNonNull(...);
 }
