@@ -14,6 +14,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Parcel;
@@ -168,6 +169,10 @@ public class RemoteApplicationService implements IFrameworkService {
                 cacheModuleScope(true, active.getLegacyModules());
                 cacheModuleScope(false, active.getModules());
                 updateModulesCache(this.context);
+                // The manager's module set replaces the local preload; release the dex shared
+                // memory it opened so those fds are not leaked for the process lifetime.
+                closePreloadedDexes(localLegacy);
+                closePreloadedDexes(localModern);
             } catch (Throwable t) {
                 Log.w(TAG, "Failed to read initial modules from manager, fallback to local cache", t);
                 applyLocalCachedModules(localLegacy, localModern);
@@ -250,6 +255,21 @@ public class RemoteApplicationService implements IFrameworkService {
             Log.i(TAG, "Successfully synced remote modules and services after reconnection");
         } catch (Throwable t) {
             Log.w(TAG, "Failed to sync remote modules on reconnect", t);
+        }
+    }
+
+    private static void closePreloadedDexes(List<LoadedModule> modules) {
+        if (modules == null) return;
+        for (LoadedModule m : modules) {
+            if (m == null || m.code == null || m.code.preLoadedDexes == null) continue;
+            for (android.os.SharedMemory dex : m.code.preLoadedDexes) {
+                if (dex != null) {
+                    try {
+                        dex.close();
+                    } catch (Throwable ignored) {
+                    }
+                }
+            }
         }
     }
 
@@ -462,15 +482,29 @@ public class RemoteApplicationService implements IFrameworkService {
                 Handler.class,
                 UserHandle.class
         );
+        // Dispatch connection callbacks off the main thread: the constructor blocks the main
+        // thread on bindLatch, so a main-looper Handler would force the full startup timeout.
         Object result = bindServiceAsUserMethod.invoke(
                 context,
                 intent,
                 candidate,
                 Context.BIND_AUTO_CREATE,
-                new Handler(Looper.getMainLooper()),
+                new Handler(bindCallbackLooper()),
                 userHandle
         );
         return !(result instanceof Boolean) || (Boolean) result;
+    }
+
+    private static volatile Looper bindCallbackLooper;
+
+    private static synchronized Looper bindCallbackLooper() {
+        if (bindCallbackLooper == null) {
+            HandlerThread thread = new HandlerThread("NPatch-ManagerBindCb");
+            thread.setDaemon(true);
+            thread.start();
+            bindCallbackLooper = thread.getLooper();
+        }
+        return bindCallbackLooper;
     }
 
     private void safeUnbind(ServiceConnection candidate) {

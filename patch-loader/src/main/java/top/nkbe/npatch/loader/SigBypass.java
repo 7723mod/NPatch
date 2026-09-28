@@ -15,9 +15,6 @@ import android.os.Process;
 import android.util.Base64;
 import android.util.Log;
 
-import com.google.gson.JsonSyntaxException;
-
-import org.json.JSONException;
 import org.json.JSONObject;
 import org.lsposed.lspd.nativebridge.FunPatch;
 import top.nkbe.npatch.loader.util.XLog;
@@ -48,6 +45,7 @@ public class SigBypass {
     private static final int CERT_INPUT_RAW_X509 = 0;
     private static final int CERT_INPUT_SHA256 = 1;
     private static final Map<String, Signature[]> signatureCache = new ConcurrentHashMap<>();
+    private static final Set<String> signatureMisses = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private static final Set<String> moduleCallerPrefixes = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     private static String redirectApkPath;
@@ -105,6 +103,7 @@ public class SigBypass {
         if (packageName == null || signatureBase64 == null) return;
         try {
             signatureCache.put(packageName, new Signature[]{new Signature(signatureBase64)});
+            signatureMisses.remove(packageName);
         } catch (Throwable e) {
             Log.w(TAG, "Failed to cache original signature for " + packageName, e);
         }
@@ -412,6 +411,9 @@ public class SigBypass {
         if (packageName == null) return null;
         Signature[] cached = signatureCache.get(packageName);
         if (cached != null) return cached;
+        // Avoid re-running the metadata lookup + Base64/JSON parse for every PackageInfo of a
+        // package that has no NPatch signature: package enumeration would repeat it constantly.
+        if (signatureMisses.contains(packageName)) return null;
 
         String replacementStr = null;
         try {
@@ -421,14 +423,11 @@ public class SigBypass {
             String encoded = metaData == null ? null : metaData.getString("npatch");
             if (encoded != null) {
                 var json = new String(Base64.decode(encoded, Base64.DEFAULT), StandardCharsets.UTF_8);
-                try {
-                    var patchConfig = new JSONObject(json);
-                    replacementStr = patchConfig.getString("originalSignature");
-                } catch (JSONException e) {
-                    Log.w(TAG, "fail to get originalSignature from metadata", e);
-                }
+                var patchConfig = new JSONObject(json);
+                replacementStr = patchConfig.getString("originalSignature");
             }
-        } catch (PackageManager.NameNotFoundException | JsonSyntaxException ignored) {
+        } catch (Throwable ignored) {
+            // NameNotFound, malformed Base64/JSON, or a missing key: no spoof for this package.
         }
 
         if (replacementStr != null) {
@@ -440,6 +439,7 @@ public class SigBypass {
                 Log.w(TAG, "fail to construct original signature for " + packageName, e);
             }
         }
+        signatureMisses.add(packageName);
         return null;
     }
 

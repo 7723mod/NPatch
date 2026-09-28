@@ -70,8 +70,18 @@ final class ModuleNativeCache {
 
             Files.write(new File(staging, READY_FILE).toPath(),
                     stamp.getBytes(StandardCharsets.UTF_8));
+            // Another process may have published the same stamp meanwhile and be about to load
+            // from it; never delete a ready target, reuse it instead.
+            if (isReady(target)) {
+                deleteRecursive(staging);
+                return target;
+            }
             deleteRecursive(target);
             if (!staging.renameTo(target)) {
+                if (isReady(target)) {
+                    deleteRecursive(staging);
+                    return target;
+                }
                 throw new IOException("Unable to publish native cache: " + target);
             }
             Log.i(TAG, "Prepared LoadedModule native cache: " + target);

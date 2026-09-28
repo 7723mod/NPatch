@@ -15,6 +15,9 @@ public class CacheCleaner {
 
     private static final String TAG = "NPatch-Cache";
     private static final String STAMP_FILE_NAME = ".npatch_patch_stamp";
+    // A concurrently starting process may have just written its libnpatch-*.so but not yet
+    // System.load()ed it. Never delete files younger than this grace window.
+    private static final long LIB_NPATCH_GRACE_MS = 60_000L;
 
     public static boolean handlePatchUpgrade(ApplicationInfo appInfo, String patchedApkPath) {
         if (appInfo == null || appInfo.dataDir == null || patchedApkPath == null) {
@@ -71,7 +74,7 @@ public class CacheCleaner {
     public static void sweepLibNpatchCache(ApplicationInfo appInfo) {
         if (appInfo == null || appInfo.dataDir == null) return;
 
-        File cacheDir = new File(appInfo.dataDir, "cache");
+        File cacheDir = new File(appInfo.dataDir, "cache/npatch");
         File[] children = cacheDir.listFiles((dir, name) ->
                 name.startsWith("libnpatch-") && name.endsWith(".so"));
         if (children == null || children.length <= 1) return;
@@ -81,8 +84,10 @@ public class CacheCleaner {
             if (f.lastModified() > newest.lastModified()) newest = f;
         }
         final File keep = newest;
+        final long now = System.currentTimeMillis();
         Arrays.stream(children)
                 .filter(f -> !f.equals(keep))
+                .filter(f -> now - f.lastModified() > LIB_NPATCH_GRACE_MS)
                 .forEach(f -> {
                     if (!f.delete()) {
                         Log.w(TAG, "Failed to delete stale libnpatch: " + f);
@@ -91,8 +96,9 @@ public class CacheCleaner {
     }
 
     public static void sweepLegacyNpatchCache(ApplicationInfo appInfo) {
-        if (appInfo == null || appInfo.dataDir == null) return;
-        deleteRecursive(new File(appInfo.dataDir, "cache/npatch"));
+        // cache/npatch holds the live libnpatch-*.so each process System.load()s; it is swept
+        // per-file by sweepLibNpatchCache, never wiped wholesale (a concurrent process may be
+        // mid-load).
     }
 
     public static void sweepLegacyHostNativeCache(ApplicationInfo appInfo) {
@@ -139,8 +145,12 @@ public class CacheCleaner {
 
             File[] stampDirs = moduleDir.listFiles();
             if (stampDirs != null) {
+                final long now = System.currentTimeMillis();
                 Arrays.stream(stampDirs)
                         .filter(s -> !s.getName().equals(activeStamp))
+                        // A sibling process may be extracting into a fresh ".tmp-" staging dir.
+                        .filter(s -> !s.getName().contains(".tmp-")
+                                || now - s.lastModified() > LIB_NPATCH_GRACE_MS)
                         .forEach(CacheCleaner::deleteRecursive);
             }
         }
@@ -172,18 +182,20 @@ public class CacheCleaner {
         deleteRecursive(new File(codeCache, "native"));
         deleteRecursive(new File(codeCache, "mods"));
         deleteRecursive(new File(cacheRoot, "native"));
-        deleteRecursive(new File(cacheRoot, "npatch"));
 
-        // Sweep all but the newest libnpatch-*.so (current process has it mmaped).
-        File[] libs = cacheRoot.listFiles((dir, name) ->
+        // cache/npatch is not wiped wholesale: a concurrently starting process may have written
+        // its libnpatch-*.so there but not yet System.load()ed it. Sweep it per-file, keeping the
+        // newest and anything within the grace window.
+        File[] libs = new File(cacheRoot, "npatch").listFiles((dir, name) ->
                 name.startsWith("libnpatch-") && name.endsWith(".so"));
         if (libs != null && libs.length > 1) {
             File newest = libs[0];
             for (File f : libs) {
                 if (f.lastModified() > newest.lastModified()) newest = f;
             }
+            long now = System.currentTimeMillis();
             for (File f : libs) {
-                if (!f.equals(newest)) f.delete();
+                if (!f.equals(newest) && now - f.lastModified() > LIB_NPATCH_GRACE_MS) f.delete();
             }
         }
     }

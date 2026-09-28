@@ -22,7 +22,9 @@ public class NPatchProcessChannel extends IProcessChannel.Stub {
 
     private static final String TAG = "NPatch-HotReload";
 
-    private final ExecutorService worker =
+    // Shared across instances: a new channel is created on every manager reconnect, so a
+    // per-instance executor would leak a worker thread each time.
+    private static final ExecutorService worker =
             Executors.newSingleThreadExecutor(r -> {
                 Thread t = new Thread(r, "npatch-hot-reload-host");
                 t.setDaemon(true);

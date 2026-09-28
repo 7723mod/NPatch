@@ -61,10 +61,12 @@ public class XposedLogPrinter extends LogPrinter {
         log(priority, tag, x, null);
     }
 
-    private static final SimpleDateFormat FILE_DATE_FORMAT =
-            new SimpleDateFormat("yyyyMMdd", Locale.ROOT);
-    private static final SimpleDateFormat LOG_TIME_FORMAT =
-            new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS", Locale.ROOT);
+    // SimpleDateFormat is not thread-safe and log() runs on arbitrary threads; give each thread
+    // its own formatter.
+    private static final ThreadLocal<SimpleDateFormat> FILE_DATE_FORMAT =
+            ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyyMMdd", Locale.ROOT));
+    private static final ThreadLocal<SimpleDateFormat> LOG_TIME_FORMAT =
+            ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS", Locale.ROOT));
 
     public static void log(
             int priority,
@@ -96,7 +98,7 @@ public class XposedLogPrinter extends LogPrinter {
                 break;
         }
         StringBuilder line = new StringBuilder()
-                .append('[').append(LOG_TIME_FORMAT.format(new Date())).append(']')
+                .append('[').append(LOG_TIME_FORMAT.get().format(new Date())).append(']')
                 .append('[').append(ActivityThread.currentProcessName())
                 .append(':').append(Process.myPid())
                 .append(';').append(Thread.currentThread().getName())
@@ -136,7 +138,7 @@ public class XposedLogPrinter extends LogPrinter {
                 }
 
                 if (!batch.isEmpty()) {
-                    String currentDate = FILE_DATE_FORMAT.format(new Date());
+                    String currentDate = FILE_DATE_FORMAT.get().format(new Date());
                     if (writer == null || !currentDate.equals(openedDate)) {
                         if (writer != null) {
                             try {

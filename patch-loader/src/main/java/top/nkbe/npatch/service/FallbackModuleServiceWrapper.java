@@ -36,23 +36,30 @@ public class FallbackModuleServiceWrapper extends IModuleService.Stub {
     }
 
     private IModuleService getActiveRemote() {
-        synchronized (switchLock) {
-            if (activeRemoteService != null && activeRemoteService.asBinder().isBinderAlive()) {
-                return activeRemoteService;
-            }
-            if (context != null) {
-                try {
-                    IModuleService bridge = top.nkbe.npatch.util.ManagerRemoteServiceBridge.connect(context, modulePackageName);
-                    if (bridge != null && bridge.asBinder().isBinderAlive()) {
-                        this.activeRemoteService = bridge;
-                        Log.i(TAG, "Lazily connected remote service via Provider bridge for " + modulePackageName);
-                        return activeRemoteService;
-                    }
-                } catch (Throwable t) {
-                    // Manager Provider not available or target app not yet in scope
-                }
-            }
+        IModuleService current = activeRemoteService;
+        if (current != null && current.asBinder().isBinderAlive()) {
+            return current;
+        }
+        if (context == null) {
             return null;
+        }
+        // Perform the synchronous Provider bridge call outside switchLock: it is a cross-process
+        // IPC that can block, and holding the lock would stall setRemoteService/markRemoteDead.
+        IModuleService bridge = null;
+        try {
+            bridge = top.nkbe.npatch.util.ManagerRemoteServiceBridge.connect(context, modulePackageName);
+        } catch (Throwable t) {
+            // Manager Provider not available or target app not yet in scope
+        }
+        if (bridge == null || !bridge.asBinder().isBinderAlive()) {
+            return null;
+        }
+        synchronized (switchLock) {
+            if (activeRemoteService == null || !activeRemoteService.asBinder().isBinderAlive()) {
+                activeRemoteService = bridge;
+                Log.i(TAG, "Lazily connected remote service via Provider bridge for " + modulePackageName);
+            }
+            return activeRemoteService;
         }
     }
 

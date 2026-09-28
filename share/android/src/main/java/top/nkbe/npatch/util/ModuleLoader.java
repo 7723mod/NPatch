@@ -192,6 +192,13 @@ public class ModuleLoader {
         return ModulePipeline.UNSUPPORTED;
     }
 
+    private static void closeAll(List<SharedMemory> memories) {
+        for (SharedMemory memory : memories) {
+            memory.close();
+        }
+        memories.clear();
+    }
+
     public static LoadedModule loadModule(String path) {
         return loadModule(path, 0);
     }
@@ -224,10 +231,14 @@ public class ModuleLoader {
             }
         } catch (IOException e) {
             Log.e(TAG, "Can not open " + path, e);
+            closeAll(preLoadedDexes);
             return null;
         }
-        if (preLoadedDexes.isEmpty() && moduleLibraryNames.isEmpty()) return null;
-        if (moduleClassNames.isEmpty() && moduleLibraryNames.isEmpty()) return null;
+        if ((preLoadedDexes.isEmpty() && moduleLibraryNames.isEmpty())
+                || (moduleClassNames.isEmpty() && moduleLibraryNames.isEmpty())) {
+            closeAll(preLoadedDexes);
+            return null;
+        }
         file.code = new org.matrix.vector.ipc.ModuleCode();
         file.code.preLoadedDexes = preLoadedDexes;
         file.code.moduleClassNames = moduleClassNames;

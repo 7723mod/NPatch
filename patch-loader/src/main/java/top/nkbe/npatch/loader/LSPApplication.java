@@ -669,13 +669,7 @@ public class LSPApplication {
                     continue;
                 }
                 try (InputStream is = zip.getInputStream(entry)) {
-                    java.io.ByteArrayOutputStream buffer = new java.io.ByteArrayOutputStream();
-                    byte[] chunk = new byte[64 * 1024];
-                    int read;
-                    while ((read = is.read(chunk)) != -1) {
-                        buffer.write(chunk, 0, read);
-                    }
-                    if (containsBytes(buffer.toByteArray(), descriptor)) {
+                    if (streamContainsBytes(is, descriptor.getBytes(StandardCharsets.UTF_8))) {
                         return true;
                     }
                 }
@@ -687,21 +681,35 @@ public class LSPApplication {
         }
     }
 
-    /** Whether {@code needle}'s bytes appear in {@code haystack} as UTF-8/MUTF-8 text. */
-    private static boolean containsBytes(byte[] haystack, String needle) {
-        byte[] pattern = needle.getBytes(StandardCharsets.UTF_8);
-        if (pattern.length == 0 || haystack.length < pattern.length) {
+    /**
+     * Whether {@code pattern} appears in the stream, scanning with a sliding window so a large dex
+     * is never held in memory in full.
+     */
+    private static boolean streamContainsBytes(InputStream is, byte[] pattern) throws IOException {
+        int patternLen = pattern.length;
+        if (patternLen == 0) {
             return false;
         }
-        int limit = haystack.length - pattern.length;
-        outer:
-        for (int i = 0; i <= limit; i++) {
-            for (int j = 0; j < pattern.length; j++) {
-                if (haystack[i + j] != pattern[j]) {
-                    continue outer;
+        byte[] buffer = new byte[64 * 1024];
+        int carry = 0;
+        int read;
+        while ((read = is.read(buffer, carry, buffer.length - carry)) != -1) {
+            int available = carry + read;
+            int limit = available - patternLen;
+            for (int i = 0; i <= limit; i++) {
+                int j = 0;
+                while (j < patternLen && buffer[i + j] == pattern[j]) {
+                    j++;
+                }
+                if (j == patternLen) {
+                    return true;
                 }
             }
-            return true;
+            // Keep the last patternLen-1 bytes so a match straddling reads is not missed.
+            carry = Math.min(patternLen - 1, available);
+            if (carry > 0) {
+                System.arraycopy(buffer, available - carry, buffer, 0, carry);
+            }
         }
         return false;
     }

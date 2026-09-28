@@ -31,6 +31,7 @@
 #include <sys/vfs.h>
 #include <unistd.h>
 #include <cstdarg>
+#include <cstdlib>
 #include <string>
 #include <cstring>
 #include <memory>
@@ -120,6 +121,7 @@ namespace lspd {
     static bool minimal_file_hook_mode = false;
     static bool g_lib_hide_enabled = false;
     static std::mutex g_path_mutex;
+    static std::mutex g_snapshot_mutex;
     static thread_local bool g_openat_reentry = false;
     static thread_local bool g_fopen_reentry = false;
     static thread_local std::string g_redirect_buffer;
@@ -145,7 +147,9 @@ namespace lspd {
             {"libart.so", "", ""},
             {"libbinder.so", "", ""},
             {"libselinux.so", "", ""},
-            {"libnpatch.so", "", ""},
+            // The bootstrap library is created as libnpatch-<random>.so; match by prefix so the
+            // snapshot actually resolves instead of re-scanning /proc/self/maps on every pass.
+            {"libnpatch-", "", ""},
             {"libandroid_runtime.so", "", ""},
             {"libc.so", "", ""},
     };
@@ -820,6 +824,11 @@ namespace lspd {
                     continue;
                 }
 
+                // A PROT_NONE guard/alignment gap has no readable content; touching it faults.
+                if (entry.perms[0] != 'r') {
+                    continue;
+                }
+
                 for (int i = 0; i < ehdr->e_phnum; ++i) {
                     if (phdr[i].p_type != PT_LOAD
                             || phdr[i].p_offset != static_cast<ElfW(Off)>(entry.offset)
@@ -827,7 +836,9 @@ namespace lspd {
                         continue;
                     }
                     size_t map_size = entry.end > entry.start ? entry.end - entry.start : 0;
-                    size_t copy_size = std::min(static_cast<size_t>(phdr[i].p_memsz), map_size);
+                    // Only p_filesz bytes are backed by the file; the rest is .bss (zero-filled),
+                    // already zero in the mapped file copy.
+                    size_t copy_size = std::min(static_cast<size_t>(phdr[i].p_filesz), map_size);
                     copy_size = std::min(copy_size, static_cast<size_t>(st.st_size - phdr[i].p_offset));
                     memcpy(reinterpret_cast<char*>(file_data) + phdr[i].p_offset,
                            reinterpret_cast<void*>(entry.start), copy_size);
@@ -868,6 +879,7 @@ namespace lspd {
     }
 
     static void ensure_lib_snapshots() {
+        std::scoped_lock lock(g_snapshot_mutex);
         for (auto& snapshot : g_lib_snapshots) {
             if (snapshot.path[0] == '\0') {
                 create_lib_snapshot_from_maps(snapshot.soname, snapshot.path);
@@ -884,6 +896,7 @@ namespace lspd {
         if (!g_lib_hide_enabled) {
             return;
         }
+        std::scoped_lock lock(g_snapshot_mutex);
         for (auto& snapshot : g_lib_snapshots) {
             if (snapshot.fd >= 0) {
                 syscall(__NR_close, snapshot.fd);
@@ -1065,12 +1078,14 @@ namespace lspd {
                     return sanitized_fd;
                 }
             }
-            if (should_redirect_apk_contents(caller_pc)) {
-                redirected_path = resolve_redirect_path(pathname);
-                if (redirected_path != pathname && redirected_path != nullptr) {
-                    LOGD("SigBypass: Redirecting {}('{}') -> '{}'",
-                         symbol_name, pathname, redirected_path);
-                }
+            // Resolve the path first: only pay the dladdr caller check when a redirect target
+            // actually matches, not on every read-only open.
+            const char* candidate = resolve_redirect_path(pathname);
+            if (candidate != pathname && candidate != nullptr
+                    && should_redirect_apk_contents(caller_pc)) {
+                redirected_path = candidate;
+                LOGD("SigBypass: Redirecting {}('{}') -> '{}'",
+                     symbol_name, pathname, redirected_path);
             }
             g_openat_reentry = false;
         }
@@ -1114,12 +1129,12 @@ namespace lspd {
                     return sanitized_fd;
                 }
             }
-            if (should_redirect_apk_contents(caller_pc)) {
-                redirected_path = resolve_redirect_path(pathname);
-                if (redirected_path != pathname && redirected_path != nullptr) {
-                    LOGD("SigBypass: Redirecting {}('{}') -> '{}'",
-                         symbol_name, pathname, redirected_path);
-                }
+            const char* candidate = resolve_redirect_path(pathname);
+            if (candidate != pathname && candidate != nullptr
+                    && should_redirect_apk_contents(caller_pc)) {
+                redirected_path = candidate;
+                LOGD("SigBypass: Redirecting {}('{}') -> '{}'",
+                     symbol_name, pathname, redirected_path);
             }
             g_openat_reentry = false;
         }
@@ -1156,11 +1171,11 @@ namespace lspd {
                     close(sanitized_fd);
                 }
             }
-            if (should_redirect_apk_contents(caller_pc)) {
-                redirected_path = resolve_redirect_path(pathname);
-                if (redirected_path != pathname && redirected_path != nullptr) {
-                    LOGD("SigBypass: Redirecting fopen('%s') -> '%s'", pathname, redirected_path);
-                }
+            const char* candidate = resolve_redirect_path(pathname);
+            if (candidate != pathname && candidate != nullptr
+                    && should_redirect_apk_contents(caller_pc)) {
+                redirected_path = candidate;
+                LOGD("SigBypass: Redirecting fopen('%s') -> '%s'", pathname, redirected_path);
             }
             g_fopen_reentry = false;
         }
@@ -1337,6 +1352,7 @@ namespace lspd {
                 return resolved_path;
             }
             char* duplicated = strdup(visible);
+            free(result);
             return duplicated;
         }
         return result;
