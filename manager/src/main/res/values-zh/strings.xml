@@ -323,4 +323,5 @@
     <string name="patch_override_label_hint">留空则保持原名</string>
     <string name="patch_extract_native_libs">解压原生库</string>
     <string name="patch_extract_native_libs_desc">强制安装器解压应用的原生库，让需要读取应用原生代码的模块能够直接读到文件。</string>
+    <string name="patch_more_options">更多选项</string>
 </resources>

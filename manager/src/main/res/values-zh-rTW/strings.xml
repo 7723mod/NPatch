@@ -323,4 +323,5 @@
     <string name="patch_override_label_hint">留空則保持原名</string>
     <string name="patch_extract_native_libs">解壓原生程式庫</string>
     <string name="patch_extract_native_libs_desc">強制安裝器解壓應用程式的原生程式庫，讓需要讀取應用程式原生代碼的模組能夠直接讀取到檔案。</string>
+    <string name="patch_more_options">更多選項</string>
 </resources>

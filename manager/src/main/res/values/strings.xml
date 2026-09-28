@@ -331,4 +331,5 @@
     <string name="patch_override_label_hint">Leave blank to keep the original name</string>
     <string name="patch_extract_native_libs">Extract native libraries</string>
     <string name="patch_extract_native_libs_desc">Force the installer to unpack the app\'s native libraries, so a module that needs the app\'s own native code on disk can read them.</string>
+    <string name="patch_more_options">More options</string>
 </resources>
