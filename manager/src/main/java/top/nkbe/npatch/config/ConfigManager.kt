@@ -118,6 +118,11 @@ object ConfigManager {
             loadModule(LoadedModule, useCache = false)
         }
 
+    suspend fun isModuleConfigured(pkgName: String): Boolean =
+        withContext(readDispatcher) {
+            moduleDao.getModule(pkgName) != null
+        }
+
     suspend fun getInstalledModuleVersion(pkgName: String): Long? =
         withContext(readDispatcher) {
             moduleDao.getModule(pkgName) ?: return@withContext null

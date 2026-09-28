@@ -74,6 +74,8 @@ object ManagerLogger {
 
     private fun writeLine(line: String) {
         synchronized(this) {
+            // stop() clears logcatProcess under this lock; a draining reader must not reopen.
+            if (logcatProcess == null) return
             try {
                 val today = dateFormat.format(Date())
                 if (fileOut == null || today != currentDate) {

@@ -53,12 +53,22 @@ object HotReloadRegistry {
         Thread(runnable, "NPatch-HotReload").apply { isDaemon = true }
     }
 
+    private fun pruneDeadProcesses() {
+        for ((key, record) in processes) {
+            val binder = record.binder?.asBinder()
+            if (binder != null && !binder.isBinderAlive) {
+                removeProcess(key)
+            }
+        }
+    }
+
     fun recordModules(
         uid: Int,
         pid: Int,
         processName: String,
         modules: List<LoadedModule>,
     ) {
+        pruneDeadProcesses()
         val key = ProcessKey(uid, pid)
         val process = processes.compute(key) { _, current ->
             (current ?: ProcessRecord(key, processName)).also {
@@ -118,6 +128,7 @@ object HotReloadRegistry {
     }
 
     fun getRunningTargets(modulePackageName: String): List<HookedProcess> {
+        pruneDeadProcesses()
         val installedVersion =
             runBlocking { ConfigManager.getInstalledModuleVersion(modulePackageName) }
         return targets.values

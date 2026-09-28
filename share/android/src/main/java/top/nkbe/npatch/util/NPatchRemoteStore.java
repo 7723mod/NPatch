@@ -47,6 +47,9 @@ public final class NPatchRemoteStore {
     private static final int PER_USER_RANGE = 100000;
 
     private static final Map<String, NPatchRemoteStore> INSTANCES = new ConcurrentHashMap<>();
+    // All module stores in a process share one database file; separate helpers would open
+    // independent connection pools against it and fail concurrent writes with SQLITE_BUSY.
+    private static final Map<String, DatabaseHelper> HELPERS = new ConcurrentHashMap<>();
 
     private static final class CallbackState {
         final int userId;
@@ -69,7 +72,9 @@ public final class NPatchRemoteStore {
         Context appContext = context.getApplicationContext();
         this.context = appContext == null ? context : appContext;
         this.modulePackageName = requireModulePackage(modulePackageName);
-        this.dbHelper = new DatabaseHelper(this.context);
+        String dataDir = this.context.getApplicationInfo().dataDir;
+        this.dbHelper = HELPERS.computeIfAbsent(
+                dataDir == null ? "" : dataDir, ignored -> new DatabaseHelper(this.context));
     }
 
     public static NPatchRemoteStore get(Context context, String modulePackageName) {

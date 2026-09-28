@@ -39,7 +39,7 @@ class RemoteApiProvider : ContentProvider() {
 
         val isKnownModule =
             runCatching {
-                runBlocking { ConfigManager.getModuleFile(modulePackageName) != null }
+                runBlocking { ConfigManager.isModuleConfigured(modulePackageName) }
             }.getOrDefault(false)
         if (!isKnownModule) {
             Log.w(TAG, "Rejected unknown LoadedModule $modulePackageName from uid=$callingUid")
