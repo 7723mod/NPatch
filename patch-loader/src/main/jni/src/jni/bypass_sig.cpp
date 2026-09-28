@@ -401,6 +401,12 @@ namespace lspd {
         return pathname;
     }
 
+    // ART 14+ 會拒絕載入 stat() 顯示「App 自己擁有且可寫」的 DEX/APK（即
+    // "Writable dex file ... is not allowed"）。系統安裝的 base.apk 必為
+    // system:system(1000:1000) 且對 App 唯讀。故 uid/gid/mode/nlink/ino 一律
+    // 取可見路徑（visible_path）的真實 stat 結果；僅 st_size/st_blocks 可從
+    // 重定向的 origin.apk 借用，讓大小校驗仍能通過。身份與權限欄位絕不可
+    // 整組複製自私有快取檔。
     static bool query_redirected_statx(const char* visible_path, struct statx* stx) {
         if (visible_path == nullptr || stx == nullptr) {
             return false;
@@ -415,6 +421,32 @@ namespace lspd {
         return rc == 0;
     }
 
+    // 就地清洗 stat 結果：強制以「真實查詢 visible_path（系統安裝路徑）」
+    // 的結果覆蓋身份/權限/設備/節點欄位，並無條件清除所有寫入位。無論是否發生過
+    // 重定向都會執行，作為上游查錯路徑時的最後防線。
+    template <typename StatLike>
+    static void enforce_read_only_system_identity(const char* visible_path, StatLike* st) {
+        struct stat real_st{};
+        // 用未被 hook 的原始函式直接查可見路徑，繞過重定向邏輯，取得
+        // 系統安裝檔案的真實身份與設備節點。
+        if (stat_backup != nullptr && stat_backup(visible_path, &real_st) == 0) {
+            st->st_dev = real_st.st_dev;
+            st->st_uid = real_st.st_uid;
+            st->st_gid = real_st.st_gid;
+            st->st_mode = real_st.st_mode;
+            st->st_nlink = real_st.st_nlink;
+            st->st_ino = real_st.st_ino;
+        } else if (static_cast<uid_t>(st->st_uid) == getuid()) {
+            // 備援：查不到真實擁有者時（如啟動過早、stat_backup 尚未就緒），
+            // 至少不能讓「App 自己擁有此檔」這個結果外流。1000(AID_SYSTEM)
+            // 對所有標準安裝路徑皆成立。
+            st->st_uid = 1000;
+            st->st_gid = 1000;
+        }
+        // 無論走哪個分支，已安裝 APK 對 App 絕不可寫。無條件清除寫入位——
+        // 這正是 ART 檢查的條件本身，不可依賴上面選了哪條路徑。
+        st->st_mode &= ~static_cast<decltype(st->st_mode)>(0222);
+    }
 
     template <typename StatLike>
     static bool rewrite_stat_like_result(const char* visible_path, StatLike* st) {
@@ -422,18 +454,16 @@ namespace lspd {
             return false;
         }
         struct statx stx = {};
-        if (!query_redirected_statx(visible_path, &stx)) {
-            return false;
+        bool has_redirect = query_redirected_statx(visible_path, &stx);
+        if (has_redirect) {
+            // 只借用大小/區塊統計，讓比對檔案大小的防作弊檢查通過；
+            // 身份與權限欄位刻意不動，下面會無條件清洗一次。
+            st->st_size = stx.stx_size;
+            st->st_blocks = stx.stx_blocks;
+            st->st_blksize = static_cast<decltype(st->st_blksize)>(stx.stx_blksize);
         }
-        st->st_ino = stx.stx_ino;
-        st->st_mode = stx.stx_mode;
-        st->st_nlink = stx.stx_nlink;
-        st->st_uid = stx.stx_uid;
-        st->st_gid = stx.stx_gid;
-        st->st_size = stx.stx_size;
-        st->st_blocks = stx.stx_blocks;
-        st->st_blksize = static_cast<decltype(st->st_blksize)>(stx.stx_blksize);
-        return true;
+        enforce_read_only_system_identity(visible_path, st);
+        return has_redirect;
     }
 
     static bool rewrite_statx_result(const char* visible_path, struct statx* stx) {
@@ -441,11 +471,48 @@ namespace lspd {
             return false;
         }
         struct statx redirected = {};
-        if (!query_redirected_statx(visible_path, &redirected)) {
-            return false;
+        bool has_redirect = query_redirected_statx(visible_path, &redirected);
+        if (has_redirect) {
+            stx->stx_size = redirected.stx_size;
+            stx->stx_blocks = redirected.stx_blocks;
+            stx->stx_blksize = redirected.stx_blksize;
         }
-        *stx = redirected;
-        return true;
+        // statx 有獨立於 stx_mode 的屬性位元，避免殘留旗標間接透露可寫訊號；
+        // uid/gid/mode/nlink/ino/dev 亦與 struct stat 分開存放，需同步清洗，
+        // 確保全程走 statx 的路徑也不會漏網。
+        // 【設計說明】這裡優先選擇 syscall(__NR_statx, ...) 直接發起核心系統呼叫，
+        // 原因為 NPatch 的 hook 是掛在 libc 函式層級（hooked_statx / xhook GOT），
+        // 直接 syscall 能天然避開 libc hook 遞迴，且可直接獲取 statx 原生的
+        // major/minor 設備編號。
+        struct statx real_stx{};
+        long rc = syscall(__NR_statx, AT_FDCWD, visible_path, 0, STATX_BASIC_STATS, &real_stx);
+        if (rc == 0) {
+            stx->stx_dev_major = real_stx.stx_dev_major;
+            stx->stx_dev_minor = real_stx.stx_dev_minor;
+            stx->stx_uid = real_stx.stx_uid;
+            stx->stx_gid = real_stx.stx_gid;
+            stx->stx_mode = real_stx.stx_mode;
+            stx->stx_nlink = real_stx.stx_nlink;
+            stx->stx_ino = real_stx.stx_ino;
+        } else {
+            // 備援分支（核心不支援 statx 或系統呼叫失敗）：退回使用原始 libc stat_backup 查詢，
+            // 並透過 major/minor 巨集同步拆解 st_dev，確保即使在 fallback 路徑下設備屬性亦完全對齊。
+            struct stat real_st{};
+            if (stat_backup != nullptr && stat_backup(visible_path, &real_st) == 0) {
+                stx->stx_dev_major = major(real_st.st_dev);
+                stx->stx_dev_minor = minor(real_st.st_dev);
+                stx->stx_uid = real_st.st_uid;
+                stx->stx_gid = real_st.st_gid;
+                stx->stx_mode = real_st.st_mode;
+                stx->stx_nlink = real_st.st_nlink;
+                stx->stx_ino = real_st.st_ino;
+            } else if (stx->stx_uid == getuid()) {
+                stx->stx_uid = 1000;
+                stx->stx_gid = 1000;
+            }
+        }
+        stx->stx_mode &= ~static_cast<decltype(stx->stx_mode)>(0222);
+        return has_redirect;
     }
 
 
