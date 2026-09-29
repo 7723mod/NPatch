@@ -67,7 +67,9 @@ android {
             excludes += "META-INF/androidx/**"
             excludes += "META-INF/*.version"
             excludes += "DebugProbesKt.bin"
-            excludes += "*.properties"
+            excludes += "**/*.properties"
+            excludes += "org/bouncycastle/**"
+            excludes += "META-INF/versions/**"
         }
     }
 

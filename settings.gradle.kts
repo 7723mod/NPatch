@@ -13,6 +13,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven { url = uri("https://jitpack.io") }
     }
     versionCatalogs {
         create("libs") {
@@ -26,7 +27,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "NPatch"
 include(
-    ":apkzlib",
     ":jar",
     ":manager",
     ":meta-loader",
@@ -45,5 +45,14 @@ includeBuild("core") {
         substitute(module("vector:core")).using(project(":xposed"))
         substitute(module("vector:daemon-service")).using(project(":services:daemon-service"))
         substitute(module("vector:stubs")).using(project(":hiddenapi:stubs"))
+    }
+}
+
+val neoApkDir = file("../NeoApk")
+if (neoApkDir.exists()) {
+    includeBuild(neoApkDir) {
+        dependencySubstitution {
+            substitute(module("top.nkbe:NeoApk")).using(project(":"))
+        }
     }
 }

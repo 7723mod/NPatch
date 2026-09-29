@@ -3,6 +3,7 @@ val androidTargetCompatibility = rootProject.extra["androidTargetCompatibility"]
 
 plugins {
     id("java-library")
+    alias(npatch.plugins.kotlin.jvm)
 }
 
 java {
@@ -17,8 +18,8 @@ java {
 }
 
 dependencies {
-    implementation(projects.apkzlib)
     implementation(projects.share.java)
+    implementation("top.nkbe:NeoApk:1.0.1")
     implementation("vector:axml")
 
     implementation(npatch.commons.io)

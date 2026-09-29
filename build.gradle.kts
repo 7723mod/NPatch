@@ -15,6 +15,7 @@ plugins {
     alias(libs.plugins.agp.app) apply false
     alias(npatch.plugins.compose.compiler) apply false
     alias(npatch.plugins.kotlin.android) apply false
+    alias(npatch.plugins.kotlin.jvm) apply false
 }
 
 abstract class GitCommitCountValueSource : ValueSource<Int, GitCommitCountValueSource.Parameters> {

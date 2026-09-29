@@ -22,6 +22,7 @@ google-devtools-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 rikka-tools-refine = { id = "dev.rikka.tools.refine", version.ref = "hiddenapi" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 
 [libraries]
 androidx-webkit = { group = "androidx.webkit", name = "webkit", version.ref = "webkit" }
