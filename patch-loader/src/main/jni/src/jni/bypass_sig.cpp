@@ -15,6 +15,7 @@
 #include "utils/jni_helper.hpp"
 #include <dlfcn.h>
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <cerrno>
 #include <cstdio>
@@ -66,6 +67,9 @@ namespace lspd {
     static std::string targetApkPath;
     static std::string redirectApkPath;
     static std::string currentPackageName;
+    static std::atomic<uint64_t> g_redirect_identity_dev{0};
+    static std::atomic<uint64_t> g_redirect_identity_ino{0};
+    static std::atomic<bool> g_redirect_identity_valid{false};
     static std::vector<std::string> moduleNativeLibraryRoots;
     static void *openat_target = nullptr;
     static void *openat64_target = nullptr;
@@ -80,6 +84,8 @@ namespace lspd {
     static void *lstat_target = nullptr;
     static void *stat64_target = nullptr;
     static void *lstat64_target = nullptr;
+    static void *fstat_target = nullptr;
+    static void *fstat64_target = nullptr;
     static void *statfs_target = nullptr;
     static void *statx_target = nullptr;
     static void *fopen_target = nullptr;
@@ -97,6 +103,8 @@ namespace lspd {
     static StatFn lstat_backup = nullptr;
     static Stat64Fn stat64_backup = nullptr;
     static Stat64Fn lstat64_backup = nullptr;
+    static FstatFn fstat_backup = nullptr;
+    static Fstat64Fn fstat64_backup = nullptr;
     static StatFsFn statfs_backup = nullptr;
     static StatxFn statx_backup = nullptr;
     static FopenFn fopen_backup = nullptr;
@@ -114,6 +122,8 @@ namespace lspd {
     static bool lstat_hook_installed = false;
     static bool stat64_hook_installed = false;
     static bool lstat64_hook_installed = false;
+    static bool fstat_hook_installed = false;
+    static bool fstat64_hook_installed = false;
     static bool statfs_hook_installed = false;
     static bool statx_hook_installed = false;
     static bool fopen_hook_installed = false;
@@ -423,6 +433,44 @@ namespace lspd {
         memset(stx, 0, sizeof(*stx));
         long rc = syscall(__NR_statx, AT_FDCWD, actual_path, 0, STATX_BASIC_STATS, stx);
         return rc == 0;
+    }
+
+    // Must be called with g_path_mutex held, right after targetApkPath/redirectApkPath change.
+    static void refresh_redirect_identity_cache_locked() {
+        g_redirect_identity_valid.store(false, std::memory_order_release);
+        if (redirectApkPath.empty()) {
+            return;
+        }
+        uint64_t dev = 0;
+        uint64_t ino = 0;
+        struct statx stx = {};
+        long rc = syscall(__NR_statx, AT_FDCWD, redirectApkPath.c_str(), 0, STATX_BASIC_STATS, &stx);
+        if (rc == 0) {
+            dev = makedev(stx.stx_dev_major, stx.stx_dev_minor);
+            ino = stx.stx_ino;
+        } else {
+            struct stat st{};
+            if (::stat(redirectApkPath.c_str(), &st) == 0) {
+                dev = st.st_dev;
+                ino = static_cast<uint64_t>(st.st_ino);
+            } else {
+                return;
+            }
+        }
+        g_redirect_identity_dev.store(dev, std::memory_order_relaxed);
+        g_redirect_identity_ino.store(ino, std::memory_order_relaxed);
+        g_redirect_identity_valid.store(true, std::memory_order_release);
+    }
+
+    // Lock-free (atomic flag + two integer compares, zero mutex locks and zero syscalls)
+    // fd-identity check used by hooked_fstat/hooked_fstat64 to skip everything but the
+    // redirected origin.apk fd — this stays blazing fast even during SQLite WAL transactions.
+    static bool fd_stat_is_redirected_apk(uint64_t dev, uint64_t ino) {
+        if (!g_redirect_identity_valid.load(std::memory_order_acquire)) {
+            return false;
+        }
+        return dev == g_redirect_identity_dev.load(std::memory_order_relaxed)
+               && ino == g_redirect_identity_ino.load(std::memory_order_relaxed);
     }
 
     // 就地清洗 stat 結果：強制以「真實查詢 visible_path（系統安裝路徑）」
@@ -1430,6 +1478,53 @@ namespace lspd {
         return rc;
     }
 
+    // ART 的 DexFile_openDexFileNative（以及部分校驗邏輯）是對「已開啟的 fd」
+    // 呼叫兩參數版 fstat()/fstat64()，而非帶路徑的 fstatat()。fd 本身已經在
+    // hooked_open*/hooked_openat* 階段被重定向到私有快取檔（redirectApkPath），
+    // 因此其真實 fstat 結果必然是「App 自己擁有且可寫」，若不在此處還原成可見
+    // 路徑（targetApkPath）的唯讀系統身份，會直接觸發 ART 14+ 的
+    // "Writable dex file ... is not allowed" SecurityException。
+    //
+    // 這兩個 hook 在整個程序生命週期內對「每一個」fstat() 呼叫都會執行——包括
+    // SQLite 資料庫檔、socket、pipe。絕不可對它們做 readlink(/proc/self/fd/N)
+    // 或無條件套用 enforce_read_only_system_identity：前者是一次完整的路徑解析
+    // 系統呼叫，會拖垮 I/O 熱路徑；後者的「自身擁有即視為系統唯讀」備援分支對
+    // DB/socket/pipe 同樣成立，會把它們的寫入位一併清空。因此只用 fstat 已經
+    // 回傳的 st_dev/st_ino 與快取的 redirectApkPath 身份做整數比對，未命中就
+    // 直接返回，不做任何額外系統呼叫。
+    static int hooked_fstat(int fd, struct stat* st) {
+        if (fstat_backup == nullptr) {
+            errno = ENOSYS;
+            return -1;
+        }
+        int rc = fstat_backup(fd, st);
+        if (rc == 0 && fd_stat_is_redirected_apk(st->st_dev, static_cast<uint64_t>(st->st_ino))) {
+            std::string visible_path;
+            {
+                std::scoped_lock lock(g_path_mutex);
+                visible_path = targetApkPath;
+            }
+            rewrite_stat_like_result(visible_path.c_str(), st);
+        }
+        return rc;
+    }
+
+    static int hooked_fstat64(int fd, struct stat64* st) {
+        if (fstat64_backup == nullptr) {
+            errno = ENOSYS;
+            return -1;
+        }
+        int rc = fstat64_backup(fd, st);
+        if (rc == 0 && fd_stat_is_redirected_apk(st->st_dev, static_cast<uint64_t>(st->st_ino))) {
+            std::string visible_path;
+            {
+                std::scoped_lock lock(g_path_mutex);
+                visible_path = targetApkPath;
+            }
+            rewrite_stat_like_result(visible_path.c_str(), st);
+        }
+        return rc;
+    }
     static int hooked_statfs(const char* pathname, struct statfs* st) {
         if (statfs_backup == nullptr) {
             errno = ENOSYS;
@@ -1656,6 +1751,7 @@ namespace lspd {
             g_lib_hide_enabled = g_lib_hide_enabled || hide;
             targetApkPath = strOrig.get();
             redirectApkPath = strRedirect.get();
+            refresh_redirect_identity_cache_locked();
 
             if (jPkgName != nullptr) {
                 lsplant::JUTFString strPkg(env, jPkgName);
@@ -1688,6 +1784,8 @@ namespace lspd {
         bool lstat_ok = true;
         bool stat64_ok = true;
         bool lstat64_ok = true;
+        bool fstat_ok = true;
+        bool fstat64_ok = true;
         bool statfs_ok = true;
         bool statx_ok = true;
         bool fopen_ok = true;
@@ -1718,6 +1816,10 @@ namespace lspd {
                                            &stat64_target, &stat64_backup, &stat64_hook_installed);
             lstat64_ok = install_plain_hook("lstat64", reinterpret_cast<void*>(hooked_lstat64),
                                             &lstat64_target, &lstat64_backup, &lstat64_hook_installed);
+            fstat_ok = install_plain_hook("fstat", reinterpret_cast<void*>(hooked_fstat),
+                                          &fstat_target, &fstat_backup, &fstat_hook_installed);
+            fstat64_ok = install_plain_hook("fstat64", reinterpret_cast<void*>(hooked_fstat64),
+                                            &fstat64_target, &fstat64_backup, &fstat64_hook_installed);
             statfs_ok = install_plain_hook("statfs", reinterpret_cast<void*>(hooked_statfs),
                                            &statfs_target, &statfs_backup, &statfs_hook_installed);
             statx_ok = install_plain_hook("statx", reinterpret_cast<void*>(hooked_statx),
@@ -1757,11 +1859,13 @@ namespace lspd {
         if (!openat_ok && !openat64_ok && !open_ok && !open64_ok && !open2_ok
             && !access_ok && !readlink_ok && !readlinkat_ok && !realpath_ok
             && !stat_ok && !lstat_ok && !stat64_ok && !lstat64_ok
+            && !fstat_ok && !fstat64_ok
             && !statfs_ok && !statx_ok && !fopen_ok
             && !dl_iterate_phdr_ok) {
             LOGW("SigBypass: No native file hooks were installed.");
         }
     }
+
 
     static void set_module_native_library_roots_impl(JNIEnv* env, jobjectArray jRoots) {
         std::scoped_lock lock(g_path_mutex);
