@@ -23,6 +23,7 @@ import com.wind.meditor.property.ModificationProperty;
 import com.wind.meditor.utils.NodeValue;
 
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
 import top.nkbe.npatch.share.Constants;
 import top.nkbe.npatch.share.LSPConfig;
 import top.nkbe.npatch.share.PatchConfig;
@@ -351,12 +352,12 @@ public class NPatch {
                     } catch (Throwable e) {
                         logger.e("Failed to modify split manifest: " + e.getMessage() + ", falling back to copy");
                         try (var xmlIs = srcZip.getInputStream(manifestEntry)) {
-                            manifestBytes = xmlIs.readAllBytes();
+                            manifestBytes = IOUtils.toByteArray(xmlIs);
                         }
                     }
                 } else {
                     try (var xmlIs = srcZip.getInputStream(manifestEntry)) {
-                        manifestBytes = xmlIs.readAllBytes();
+                        manifestBytes = IOUtils.toByteArray(xmlIs);
                     }
                 }
 
@@ -370,7 +371,11 @@ public class NPatch {
                     if (addedEntries.contains(name)) continue;
                     if (name.equals(ANDROID_MANIFEST_XML)) continue;
 
-                    copyEntry(srcZip, zipMaker, entry);
+                    try {
+                        copyEntry(srcZip, zipMaker, entry);
+                    } catch (Throwable e) {
+                        throw new PatchError("Error when copying split entry: " + name, e);
+                    }
                     addedEntries.add(name);
                 }
             } else {
@@ -497,7 +502,11 @@ public class NPatch {
                     }
 
                     if (!linked) {
-                        copyEntry(srcZip, zipMaker, entry);
+                        try {
+                            copyEntry(srcZip, zipMaker, entry);
+                        } catch (Throwable e) {
+                            throw new PatchError("Error when copying entry: " + name, e);
+                        }
                     }
                     addedEntries.add(name);
                 }
