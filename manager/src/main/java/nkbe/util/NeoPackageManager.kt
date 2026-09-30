@@ -368,18 +368,27 @@ object NeoPackageManager {
 
                 val installSet = ApkInstallSet.fromFiles(lspApp, candidates)
                 val baseFile = installSet.entries.first().file
-                val pkgInfo = lspApp.packageManager.getPackageArchiveInfo(
-                    baseFile.absolutePath,
-                    PackageManager.GET_META_DATA or PackageManager.GET_SIGNING_CERTIFICATES,
-                ) ?: throw IOException("Unable to parse base APK: ${baseFile.name}")
-                val appInfo = pkgInfo.applicationInfo
-                    ?: throw IOException("Base APK has no application info: ${baseFile.name}")
-                appInfo.sourceDir = baseFile.absolutePath
-                appInfo.publicSourceDir = baseFile.absolutePath
-                appInfo.splitSourceDirs = installSet.entries
+                val splitSourceDirs = installSet.entries
                     .drop(1)
                     .map { it.file.absolutePath }
                     .toTypedArray()
+                // GET_SIGNING_CERTIFICATES is intentionally omitted: some OEM PackageParsers
+                // (e.g. EMUI) fail the whole parse over signature validation even though
+                // signingInfo is never read below. Degrade to flag-less parsing, then to the
+                // AXML manifest already extracted by ApkInstallSet, so a non-standard manifest
+                // (unknown <meta-data> tags, etc.) can't abort package selection entirely.
+                val pkgInfo = runCatching {
+                    lspApp.packageManager.getPackageArchiveInfo(baseFile.absolutePath, PackageManager.GET_META_DATA)
+                }.getOrNull() ?: runCatching {
+                    lspApp.packageManager.getPackageArchiveInfo(baseFile.absolutePath, 0)
+                }.getOrNull()
+
+                val appInfo = pkgInfo?.applicationInfo ?: ApplicationInfo().apply {
+                    packageName = installSet.packageName
+                }
+                appInfo.sourceDir = baseFile.absolutePath
+                appInfo.publicSourceDir = baseFile.absolutePath
+                appInfo.splitSourceDirs = splitSourceDirs
                 val label = runCatching {
                     lspApp.packageManager.getApplicationLabel(appInfo).toString()
                 }.getOrNull().takeUnless { it.isNullOrBlank() } ?: appInfo.packageName
@@ -387,9 +396,11 @@ object NeoPackageManager {
                     AppInfo(
                         app = appInfo,
                         label = label,
-                        versionName = pkgInfo.versionName ?: "",
-                        versionCode = androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(pkgInfo),
-                        moduleMetadata = ModuleMetadataReader.read(pkgInfo, lspApp.packageManager),
+                        versionName = pkgInfo?.versionName ?: "",
+                        versionCode = pkgInfo?.let { androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(it) }
+                            ?: installSet.versionCode,
+                        moduleMetadata = pkgInfo?.let { ModuleMetadataReader.read(it, lspApp.packageManager) }
+                            ?: ModuleMetadataReader.read(baseFile, lspApp.packageManager),
                     )
                 )
             }.recoverCatching { t ->
