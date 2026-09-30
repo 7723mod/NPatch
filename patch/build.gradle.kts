@@ -19,7 +19,7 @@ java {
 
 dependencies {
     implementation(projects.share.java)
-    implementation("top.nkbe:NeoApk:1.0.1")
+    implementation("top.nkbe:NeoApk:1.0.2")
     implementation("vector:axml")
 
     implementation(npatch.commons.io)

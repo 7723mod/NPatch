@@ -6,6 +6,7 @@ import static top.nkbe.npatch.share.Constants.LOADER_DEX_ASSET_PATH;
 import static top.nkbe.npatch.share.Constants.ORIGINAL_APK_ASSET_PATH;
 import static top.nkbe.npatch.share.Constants.PROXY_APP_COMPONENT_FACTORY;
 
+import top.nkbe.nza.dex.DexShimBuilder;
 import top.nkbe.nza.sign.GenericSignatureKey;
 import top.nkbe.nza.sign.SignatureKey;
 import top.nkbe.nza.sign.V2V3SchemeSigner;
@@ -273,6 +274,17 @@ public class NPatch {
             newPackage = pair.packageName;
         }
 
+        // Entry-hook mode: the host already declares its own appComponentFactory. Instead of
+        // overwriting the manifest to name our stub (a foreign-class IOC visible to any static
+        // scan), keep the host's declared name and inject a tiny shim class of that name whose
+        // superclass is our stub, so the platform's instantiation of it triggers our bootstrap.
+        // A package-relative name (leading '.') is left to the default path: resolving it correctly
+        // under package rename is ambiguous, and the fallback (naming the stub) never regresses.
+        final boolean entryHookMode = appComponentFactory != null
+                && !appComponentFactory.isEmpty()
+                && !appComponentFactory.startsWith(".")
+                && !appComponentFactory.equals(PROXY_APP_COMPONENT_FACTORY);
+
         logger.d("original appComponentFactory class: " + appComponentFactory);
         logger.d("original split name: " + pair.splitName);
         logger.d("original minSdkVersion: " + minSdkVersion);
@@ -411,7 +423,7 @@ public class NPatch {
 
                 byte[] modifiedManifestBytes;
                 try (var xmlIs = srcZip.getInputStream(manifestEntry)) {
-                    modifiedManifestBytes = modifyManifestFile(xmlIs, metadata, minSdkVersion, pair.packageName, newPackage, originalSignature);
+                    modifiedManifestBytes = modifyManifestFile(xmlIs, metadata, minSdkVersion, pair.packageName, newPackage, originalSignature, entryHookMode);
                 } catch (Throwable e) {
                     throw new PatchError("Error when modifying manifest", e);
                 }
@@ -441,6 +453,10 @@ public class NPatch {
                 }
 
                 injectLoader(srcZip, zipMaker, addedEntries);
+
+                if (entryHookMode) {
+                    injectFactoryShim(zipMaker, addedEntries, appComponentFactory);
+                }
 
                 logger.i("Adding loader dex...");
                 try (var is = getClass().getClassLoader().getResourceAsStream(LOADER_DEX_ASSET_PATH)) {
@@ -562,6 +578,32 @@ public class NPatch {
         }
     }
 
+    /**
+     * Injects the entry-hook shim: a minimal dex declaring {@code hostFactory} with our stub as its
+     * superclass. It must sit at the next contiguous {@code classesN.dex} index after the metaloader
+     * dex (which {@link #injectLoader} has just added), so the framework's sequential multidex
+     * enumeration actually loads it -- a gap would leave the shim unloaded and the host-named
+     * factory unresolvable at startup.
+     */
+    private void injectFactoryShim(ZipMaker zipMaker, Set<String> addedEntries, String hostFactory) {
+        int maxDexIndex = 0;
+        for (String name : addedEntries) {
+            maxDexIndex = Math.max(maxDexIndex, getDexIndex(name));
+        }
+        String shimName = "classes" + (maxDexIndex + 1) + ".dex";
+        try {
+            byte[] shim = DexShimBuilder.buildFactoryShim(hostFactory, PROXY_APP_COMPONENT_FACTORY);
+            zipMaker.putNextEntry(shimName);
+            zipMaker.write(shim);
+            zipMaker.closeEntry();
+            addedEntries.add(shimName);
+            logger.i("Entry-hook: kept host appComponentFactory '" + hostFactory
+                    + "', shim injected as " + shimName);
+        } catch (Throwable e) {
+            throw new PatchError("Error when adding factory shim dex", e);
+        }
+    }
+
     /** Copies an entry, re-storing native libs and resources.arsc uncompressed so they stay mmap-able. */
     private static void copyEntry(ZipFile srcZip, ZipMaker zipMaker, ZipEntry entry) throws IOException {
         String name = entry.getName();
@@ -680,7 +722,7 @@ public class NPatch {
         }
     }
 
-    private byte[] modifyManifestFile(InputStream is, String metadata, int minSdkVersion, String originPackage, String newPackage, String originalSignature) throws IOException {
+    private byte[] modifyManifestFile(InputStream is, String metadata, int minSdkVersion, String originPackage, String newPackage, String originalSignature, boolean entryHookMode) throws IOException {
         ModificationProperty property = new ModificationProperty();
 
         String targetPackage = (newPackage != null && !newPackage.isEmpty()) ? newPackage : originPackage;
@@ -697,7 +739,9 @@ public class NPatch {
             property.addUsesSdkAttribute(new AttributeItem(NodeValue.UsesSDK.MIN_SDK_VERSION, 28));
         }
         property.addApplicationAttribute(new AttributeItem(NodeValue.Application.DEBUGGABLE, debuggableFlag));
-        property.addApplicationAttribute(new AttributeItem("appComponentFactory", PROXY_APP_COMPONENT_FACTORY));
+        if (!entryHookMode) {
+            property.addApplicationAttribute(new AttributeItem("appComponentFactory", PROXY_APP_COMPONENT_FACTORY));
+        }
         if (usesCleartextTraffic) {
             property.addApplicationAttribute(new AttributeItem("usesCleartextTraffic", Boolean.TRUE));
         }
