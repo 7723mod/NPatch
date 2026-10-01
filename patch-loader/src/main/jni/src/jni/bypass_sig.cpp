@@ -1,4 +1,4 @@
-//
+﻿//
 // Created by VIP on 2021/4/25.
 // Modified  by HSSkyBoy on 2025/12/15
 //
@@ -59,17 +59,12 @@ namespace lspd {
     using ReadFn = ssize_t(*)(int, void*, size_t);
     using Pread64Fn = ssize_t(*)(int, void*, size_t, off64_t);
     using LseekFn = off_t(*)(int, off_t, int);
-    using FstatFn = int(*)(int, struct stat*);
-    using Fstat64Fn = int(*)(int, struct stat64*);
     using MmapFn = void*(*)(void*, size_t, int, int, int, off_t);
     using DlIteratePhdrFn = int(*)(int (*)(struct dl_phdr_info*, size_t, void*), void*);
 
     static std::string targetApkPath;
     static std::string redirectApkPath;
     static std::string currentPackageName;
-    static std::atomic<uint64_t> g_redirect_identity_dev{0};
-    static std::atomic<uint64_t> g_redirect_identity_ino{0};
-    static std::atomic<bool> g_redirect_identity_valid{false};
     static std::vector<std::string> moduleNativeLibraryRoots;
     static void *openat_target = nullptr;
     static void *openat64_target = nullptr;
@@ -84,8 +79,6 @@ namespace lspd {
     static void *lstat_target = nullptr;
     static void *stat64_target = nullptr;
     static void *lstat64_target = nullptr;
-    static void *fstat_target = nullptr;
-    static void *fstat64_target = nullptr;
     static void *statfs_target = nullptr;
     static void *statx_target = nullptr;
     static void *fopen_target = nullptr;
@@ -103,8 +96,8 @@ namespace lspd {
     static StatFn lstat_backup = nullptr;
     static Stat64Fn stat64_backup = nullptr;
     static Stat64Fn lstat64_backup = nullptr;
-    static FstatFn fstat_backup = nullptr;
-    static Fstat64Fn fstat64_backup = nullptr;
+    static FstatAtFn fstatat_backup = nullptr;
+    static FstatAt64Fn fstatat64_backup = nullptr;
     static StatFsFn statfs_backup = nullptr;
     static StatxFn statx_backup = nullptr;
     static FopenFn fopen_backup = nullptr;
@@ -122,8 +115,6 @@ namespace lspd {
     static bool lstat_hook_installed = false;
     static bool stat64_hook_installed = false;
     static bool lstat64_hook_installed = false;
-    static bool fstat_hook_installed = false;
-    static bool fstat64_hook_installed = false;
     static bool statfs_hook_installed = false;
     static bool statx_hook_installed = false;
     static bool fopen_hook_installed = false;
@@ -415,12 +406,24 @@ namespace lspd {
         return pathname;
     }
 
-    // ART 14+ 會拒絕載入 stat() 顯示「App 自己擁有且可寫」的 DEX/APK（即
-    // "Writable dex file ... is not allowed"）。系統安裝的 base.apk 必為
-    // system:system(1000:1000) 且對 App 唯讀。故 uid/gid/mode/nlink/ino 一律
-    // 取可見路徑（visible_path）的真實 stat 結果；僅 st_size/st_blocks 可從
-    // 重定向的 origin.apk 借用，讓大小校驗仍能通過。身份與權限欄位絕不可
-    // 整組複製自私有快取檔。
+    // Content substitution only: when visible_path has an active redirect, this borrows the
+    // redirect target's st_size/st_blocks so a size-based integrity check on visible_path still
+    // matches what's actually being read through it. Identity (uid/gid/mode/dev/ino) is
+    // deliberately left untouched by every caller below -- see the note on
+    // OriginApkHelper.enforceReadOnly() in OriginApkHelper.java for why that's safe: the
+    // redirect target (the private origin.apk cache) is chmod'd read-only at the source the
+    // moment it's created, so a plain, unhooked stat/fstat of it already reports what ART and
+    // any self-signature-checking app need to see (the real on-disk mode bits, not a disguise).
+    //
+    // An earlier revision of this function also forced uid/gid/mode/dev/ino to match
+    // visible_path's real system identity, to spoof the redirect target as the installed
+    // base.apk for apps that inspect those fields directly. That was dropped along with
+    // hooked_fstat/hooked_fstat64 (see git history): it bought defense against a narrow class
+    // of self-integrity checks, but its (dev, ino) fd-identity cache went stale across
+    // concurrent origin.apk replacement, and a recycled inode could then get its write bits
+    // wiped by mistake -- which is exactly what SQLiteReadOnlyDatabaseException reports were
+    // tracing back to. Upstream JingMatrix/LSPatch's own bypass_sig.cpp takes the same
+    // position deliberately: "a stat/access of the apk is left to report the real file."
     static bool query_redirected_statx(const char* visible_path, struct statx* stx) {
         if (visible_path == nullptr || stx == nullptr) {
             return false;
@@ -435,71 +438,6 @@ namespace lspd {
         return rc == 0;
     }
 
-    // Must be called with g_path_mutex held, right after targetApkPath/redirectApkPath change.
-    static void refresh_redirect_identity_cache_locked() {
-        g_redirect_identity_valid.store(false, std::memory_order_release);
-        if (redirectApkPath.empty()) {
-            return;
-        }
-        uint64_t dev = 0;
-        uint64_t ino = 0;
-        struct statx stx = {};
-        long rc = syscall(__NR_statx, AT_FDCWD, redirectApkPath.c_str(), 0, STATX_BASIC_STATS, &stx);
-        if (rc == 0) {
-            dev = makedev(stx.stx_dev_major, stx.stx_dev_minor);
-            ino = stx.stx_ino;
-        } else {
-            struct stat st{};
-            if (::stat(redirectApkPath.c_str(), &st) == 0) {
-                dev = st.st_dev;
-                ino = static_cast<uint64_t>(st.st_ino);
-            } else {
-                return;
-            }
-        }
-        g_redirect_identity_dev.store(dev, std::memory_order_relaxed);
-        g_redirect_identity_ino.store(ino, std::memory_order_relaxed);
-        g_redirect_identity_valid.store(true, std::memory_order_release);
-    }
-
-    // Lock-free (atomic flag + two integer compares, zero mutex locks and zero syscalls)
-    // fd-identity check used by hooked_fstat/hooked_fstat64 to skip everything but the
-    // redirected origin.apk fd — this stays blazing fast even during SQLite WAL transactions.
-    static bool fd_stat_is_redirected_apk(uint64_t dev, uint64_t ino) {
-        if (!g_redirect_identity_valid.load(std::memory_order_acquire)) {
-            return false;
-        }
-        return dev == g_redirect_identity_dev.load(std::memory_order_relaxed)
-               && ino == g_redirect_identity_ino.load(std::memory_order_relaxed);
-    }
-
-    // 就地清洗 stat 結果：強制以「真實查詢 visible_path（系統安裝路徑）」
-    // 的結果覆蓋身份/權限/設備/節點欄位，並無條件清除所有寫入位。無論是否發生過
-    // 重定向都會執行，作為上游查錯路徑時的最後防線。
-    template <typename StatLike>
-    static void enforce_read_only_system_identity(const char* visible_path, StatLike* st) {
-        struct stat real_st{};
-        // 用未被 hook 的原始函式直接查可見路徑，繞過重定向邏輯，取得
-        // 系統安裝檔案的真實身份與設備節點。
-        if (stat_backup != nullptr && stat_backup(visible_path, &real_st) == 0) {
-            st->st_dev = real_st.st_dev;
-            st->st_uid = real_st.st_uid;
-            st->st_gid = real_st.st_gid;
-            st->st_mode = real_st.st_mode;
-            st->st_nlink = real_st.st_nlink;
-            st->st_ino = real_st.st_ino;
-        } else if (static_cast<uid_t>(st->st_uid) == getuid()) {
-            // 備援：查不到真實擁有者時（如啟動過早、stat_backup 尚未就緒），
-            // 至少不能讓「App 自己擁有此檔」這個結果外流。1000(AID_SYSTEM)
-            // 對所有標準安裝路徑皆成立。
-            st->st_uid = 1000;
-            st->st_gid = 1000;
-        }
-        // 無論走哪個分支，已安裝 APK 對 App 絕不可寫。無條件清除寫入位——
-        // 這正是 ART 檢查的條件本身，不可依賴上面選了哪條路徑。
-        st->st_mode &= ~static_cast<decltype(st->st_mode)>(0222);
-    }
-
     template <typename StatLike>
     static bool rewrite_stat_like_result(const char* visible_path, StatLike* st) {
         if (visible_path == nullptr || st == nullptr) {
@@ -508,13 +446,12 @@ namespace lspd {
         struct statx stx = {};
         bool has_redirect = query_redirected_statx(visible_path, &stx);
         if (has_redirect) {
-            // 只借用大小/區塊統計，讓比對檔案大小的防作弊檢查通過；
-            // 身份與權限欄位刻意不動，下面會無條件清洗一次。
+            // Borrow size/blocks only, so a size-based integrity check passes; identity and
+            // mode bits are whatever the real stat of visible_path already reported.
             st->st_size = stx.stx_size;
             st->st_blocks = stx.stx_blocks;
             st->st_blksize = static_cast<decltype(st->st_blksize)>(stx.stx_blksize);
         }
-        enforce_read_only_system_identity(visible_path, st);
         return has_redirect;
     }
 
@@ -529,41 +466,6 @@ namespace lspd {
             stx->stx_blocks = redirected.stx_blocks;
             stx->stx_blksize = redirected.stx_blksize;
         }
-        // statx 有獨立於 stx_mode 的屬性位元，避免殘留旗標間接透露可寫訊號；
-        // uid/gid/mode/nlink/ino/dev 亦與 struct stat 分開存放，需同步清洗，
-        // 確保全程走 statx 的路徑也不會漏網。
-        // 【設計說明】這裡優先選擇 syscall(__NR_statx, ...) 直接發起核心系統呼叫，
-        // 原因為 NPatch 的 hook 是掛在 libc 函式層級（hooked_statx / xhook GOT），
-        // 直接 syscall 能天然避開 libc hook 遞迴，且可直接獲取 statx 原生的
-        // major/minor 設備編號。
-        struct statx real_stx{};
-        long rc = syscall(__NR_statx, AT_FDCWD, visible_path, 0, STATX_BASIC_STATS, &real_stx);
-        if (rc == 0) {
-            stx->stx_dev_major = real_stx.stx_dev_major;
-            stx->stx_dev_minor = real_stx.stx_dev_minor;
-            stx->stx_uid = real_stx.stx_uid;
-            stx->stx_gid = real_stx.stx_gid;
-            stx->stx_mode = real_stx.stx_mode;
-            stx->stx_nlink = real_stx.stx_nlink;
-            stx->stx_ino = real_stx.stx_ino;
-        } else {
-            // 備援分支（核心不支援 statx 或系統呼叫失敗）：退回使用原始 libc stat_backup 查詢，
-            // 並透過 major/minor 巨集同步拆解 st_dev，確保即使在 fallback 路徑下設備屬性亦完全對齊。
-            struct stat real_st{};
-            if (stat_backup != nullptr && stat_backup(visible_path, &real_st) == 0) {
-                stx->stx_dev_major = major(real_st.st_dev);
-                stx->stx_dev_minor = minor(real_st.st_dev);
-                stx->stx_uid = real_st.st_uid;
-                stx->stx_gid = real_st.st_gid;
-                stx->stx_mode = real_st.st_mode;
-                stx->stx_nlink = real_st.st_nlink;
-                stx->stx_ino = real_st.st_ino;
-            } else if (stx->stx_uid == getuid()) {
-                stx->stx_uid = 1000;
-                stx->stx_gid = 1000;
-            }
-        }
-        stx->stx_mode &= ~static_cast<decltype(stx->stx_mode)>(0222);
         return has_redirect;
     }
 
@@ -1478,53 +1380,62 @@ namespace lspd {
         return rc;
     }
 
-    // ART 的 DexFile_openDexFileNative（以及部分校驗邏輯）是對「已開啟的 fd」
-    // 呼叫兩參數版 fstat()/fstat64()，而非帶路徑的 fstatat()。fd 本身已經在
-    // hooked_open*/hooked_openat* 階段被重定向到私有快取檔（redirectApkPath），
-    // 因此其真實 fstat 結果必然是「App 自己擁有且可寫」，若不在此處還原成可見
-    // 路徑（targetApkPath）的唯讀系統身份，會直接觸發 ART 14+ 的
-    // "Writable dex file ... is not allowed" SecurityException。
-    //
-    // 這兩個 hook 在整個程序生命週期內對「每一個」fstat() 呼叫都會執行——包括
-    // SQLite 資料庫檔、socket、pipe。絕不可對它們做 readlink(/proc/self/fd/N)
-    // 或無條件套用 enforce_read_only_system_identity：前者是一次完整的路徑解析
-    // 系統呼叫，會拖垮 I/O 熱路徑；後者的「自身擁有即視為系統唯讀」備援分支對
-    // DB/socket/pipe 同樣成立，會把它們的寫入位一併清空。因此只用 fstat 已經
-    // 回傳的 st_dev/st_ino 與快取的 redirectApkPath 身份做整數比對，未命中就
-    // 直接返回，不做任何額外系統呼叫。
-    static int hooked_fstat(int fd, struct stat* st) {
-        if (fstat_backup == nullptr) {
+    static int hooked_fstatat(int dirfd, const char* pathname, struct stat* st, int flags) {
+        if (fstatat_backup == nullptr) {
             errno = ENOSYS;
             return -1;
         }
-        int rc = fstat_backup(fd, st);
-        if (rc == 0 && fd_stat_is_redirected_apk(st->st_dev, static_cast<uint64_t>(st->st_ino))) {
-            std::string visible_path;
-            {
-                std::scoped_lock lock(g_path_mutex);
-                visible_path = targetApkPath;
-            }
-            rewrite_stat_like_result(visible_path.c_str(), st);
+        if (pathname != nullptr && is_dev_fuse_path(pathname)) {
+            errno = ENOENT;
+            return -1;
+        }
+        ProcFdReadlinkatPath effective_path;
+        prepare_proc_fd_readlinkat_path(&effective_path, dirfd, pathname,
+                                        [](const char* link_path, char* resolved_path, size_t size) -> ssize_t {
+                                            return syscall(__NR_readlinkat, AT_FDCWD, link_path, resolved_path, size);
+                                        });
+        std::string redirected_path_storage;
+        const char* redirected_path = get_visible_or_redirected_path(effective_path.path(), false, &redirected_path_storage);
+        int rc = fstatat_backup(effective_path.dirfd, redirected_path, st, flags);
+        if (rc == 0) {
+            rewrite_stat_like_result(effective_path.path(), st);
         }
         return rc;
     }
 
-    static int hooked_fstat64(int fd, struct stat64* st) {
-        if (fstat64_backup == nullptr) {
+    static int hooked_fstatat64(int dirfd, const char* pathname, struct stat64* st, int flags) {
+        if (fstatat64_backup == nullptr) {
             errno = ENOSYS;
             return -1;
         }
-        int rc = fstat64_backup(fd, st);
-        if (rc == 0 && fd_stat_is_redirected_apk(st->st_dev, static_cast<uint64_t>(st->st_ino))) {
-            std::string visible_path;
-            {
-                std::scoped_lock lock(g_path_mutex);
-                visible_path = targetApkPath;
-            }
-            rewrite_stat_like_result(visible_path.c_str(), st);
+        if (pathname != nullptr && is_dev_fuse_path(pathname)) {
+            errno = ENOENT;
+            return -1;
+        }
+        ProcFdReadlinkatPath effective_path;
+        prepare_proc_fd_readlinkat_path(&effective_path, dirfd, pathname,
+                                        [](const char* link_path, char* resolved_path, size_t size) -> ssize_t {
+                                            return syscall(__NR_readlinkat, AT_FDCWD, link_path, resolved_path, size);
+                                        });
+        std::string redirected_path_storage;
+        const char* redirected_path = get_visible_or_redirected_path(effective_path.path(), false, &redirected_path_storage);
+        int rc = fstatat64_backup(effective_path.dirfd, redirected_path, st, flags);
+        if (rc == 0) {
+            rewrite_stat_like_result(effective_path.path(), st);
         }
         return rc;
     }
+
+    // fstat/fstat64 on an already-open fd are deliberately left unhooked (see git history for
+    // the hooked_fstat/hooked_fstat64 this used to be, and the note above query_redirected_statx
+    // for why): they ran on every single fstat() call process-wide -- including SQLite's own
+    // db/journal/-wal fds -- and relied on a (dev, ino) cache of the redirect target that could
+    // go stale across a concurrent origin.apk replacement. A recycled inode landing on an
+    // unrelated, freshly-created file made this misfire and strip that file's write bits,
+    // surfacing as SQLiteReadOnlyDatabaseException. The fd for the redirected origin.apk is
+    // already chmod'd read-only at the source (OriginApkHelper.enforceReadOnly() in
+    // OriginApkHelper.java), so a plain fstat() on it reports the correct, real mode without
+    // any rewriting here.
     static int hooked_statfs(const char* pathname, struct statfs* st) {
         if (statfs_backup == nullptr) {
             errno = ENOSYS;
@@ -1751,7 +1662,6 @@ namespace lspd {
             g_lib_hide_enabled = g_lib_hide_enabled || hide;
             targetApkPath = strOrig.get();
             redirectApkPath = strRedirect.get();
-            refresh_redirect_identity_cache_locked();
 
             if (jPkgName != nullptr) {
                 lsplant::JUTFString strPkg(env, jPkgName);
@@ -1784,8 +1694,6 @@ namespace lspd {
         bool lstat_ok = true;
         bool stat64_ok = true;
         bool lstat64_ok = true;
-        bool fstat_ok = true;
-        bool fstat64_ok = true;
         bool statfs_ok = true;
         bool statx_ok = true;
         bool fopen_ok = true;
@@ -1816,10 +1724,6 @@ namespace lspd {
                                            &stat64_target, &stat64_backup, &stat64_hook_installed);
             lstat64_ok = install_plain_hook("lstat64", reinterpret_cast<void*>(hooked_lstat64),
                                             &lstat64_target, &lstat64_backup, &lstat64_hook_installed);
-            fstat_ok = install_plain_hook("fstat", reinterpret_cast<void*>(hooked_fstat),
-                                          &fstat_target, &fstat_backup, &fstat_hook_installed);
-            fstat64_ok = install_plain_hook("fstat64", reinterpret_cast<void*>(hooked_fstat64),
-                                            &fstat64_target, &fstat64_backup, &fstat64_hook_installed);
             statfs_ok = install_plain_hook("statfs", reinterpret_cast<void*>(hooked_statfs),
                                            &statfs_target, &statfs_backup, &statfs_hook_installed);
             statx_ok = install_plain_hook("statx", reinterpret_cast<void*>(hooked_statx),
@@ -1859,7 +1763,6 @@ namespace lspd {
         if (!openat_ok && !openat64_ok && !open_ok && !open64_ok && !open2_ok
             && !access_ok && !readlink_ok && !readlinkat_ok && !realpath_ok
             && !stat_ok && !lstat_ok && !stat64_ok && !lstat64_ok
-            && !fstat_ok && !fstat64_ok
             && !statfs_ok && !statx_ok && !fopen_ok
             && !dl_iterate_phdr_ok) {
             LOGW("SigBypass: No native file hooks were installed.");

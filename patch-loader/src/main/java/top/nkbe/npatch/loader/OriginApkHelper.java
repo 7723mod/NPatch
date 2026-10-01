@@ -53,6 +53,7 @@ public class OriginApkHelper {
         // Fast-path: if valid, avoid locking entirely
         if (isApkValid(internalCacheApk, expectedSize)) {
             Log.d(TAG, "Internal cache hit: " + internalCacheApk);
+            enforceReadOnly(internalCacheApk);
             return internalCacheApk;
         }
 
@@ -87,6 +88,7 @@ public class OriginApkHelper {
                 // Double-check: another process might have finished extracting while waiting for the lock
                 if (isApkValid(internalCacheApk, expectedSize)) {
                     Log.d(TAG, "Internal cache hit after lock: " + internalCacheApk);
+                    enforceReadOnly(internalCacheApk);
                     return internalCacheApk;
                 }
 
@@ -117,10 +119,11 @@ public class OriginApkHelper {
                         Files.move(tempFile, internalCacheApk, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
                     } catch (AtomicMoveNotSupportedException e) {
                         Log.w(TAG, "ATOMIC_MOVE unsupported on this filesystem, falling back to copy+delete", e);
+                        Files.deleteIfExists(internalCacheApk);
                         Files.copy(tempFile, internalCacheApk, StandardCopyOption.REPLACE_EXISTING);
                     }
+                    enforceReadOnly(internalCacheApk);
 
-                    // Perform verification and record sidecar
                     isApkValid(internalCacheApk, expectedSize);
                 } finally {
                     try {
@@ -139,6 +142,16 @@ public class OriginApkHelper {
         }
 
         return internalCacheApk;
+    }
+
+    private static void enforceReadOnly(Path apkPath) {
+        try {
+            if (!apkPath.toFile().setReadOnly()) {
+                Log.w(TAG, "Failed to mark cached origin apk read-only: " + apkPath);
+            }
+        } catch (Throwable e) {
+            Log.w(TAG, "Failed to mark cached origin apk read-only: " + apkPath, e);
+        }
     }
 
     public static long resolveExpectedOriginApkSize(ApplicationInfo appInfo) {
