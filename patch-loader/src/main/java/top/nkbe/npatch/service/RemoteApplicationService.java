@@ -45,6 +45,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -54,6 +55,7 @@ public class RemoteApplicationService implements IFrameworkService {
     private static final String MODULE_SERVICE = "top.nkbe.npatch.manager.ModuleService";
     private static final int CONNECTION_TIMEOUT_SEC = 2;
     private static final long SNAPSHOT_CONNECTION_TIMEOUT_MS = 800L;
+    private static final long PROVIDER_TIMEOUT_SEC = 2L;
     private static final long MAX_BACKGROUND_WAIT_MS = 5 * 60 * 1000L;
     private static final int REGISTER_CLIENT_PACKAGE = 0x4E5041;
     private static final Handler MAIN_HANDLER = new Handler(Looper.getMainLooper());
@@ -184,7 +186,11 @@ public class RemoteApplicationService implements IFrameworkService {
         } else {
             Log.w(TAG, "Manager not ready in time; starting with local cached modules");
             recordFallbackEvent("bind_timeout");
+            boolean reconciled = bindInitiated && reconcileWithProvider(localLegacy, localModern);
             applyLocalCachedModules(localLegacy, localModern);
+            if (reconciled) {
+                updateModulesCache(this.context);
+            }
 
             // Schedule give-up timer for background connection
             if (bindInitiated) {
@@ -222,6 +228,85 @@ public class RemoteApplicationService implements IFrameworkService {
         }
         cachedLegacyModuleScope = new ArrayList<>(localLegacy);
         cachedModuleScope = new ArrayList<>(localModern);
+    }
+
+    /**
+     * The snapshot may be stale when the manager was not running at launch. Asking the manager's
+     * ConfigProvider (which also starts the manager process) yields the current scope; adopt it
+     * when it differs. Returns true only if the lists were changed, and leaves them untouched when
+     * the provider is unreachable.
+     */
+    private boolean reconcileWithProvider(List<LoadedModule> legacy, List<LoadedModule> modern) {
+        List<String> current = queryProviderPackagesWithTimeout();
+        if (current == null) {
+            return false;
+        }
+        Map<String, LoadedModule> snapshot = new LinkedHashMap<>();
+        for (LoadedModule m : legacy) snapshot.put(m.packageName, m);
+        for (LoadedModule m : modern) snapshot.put(m.packageName, m);
+        if (snapshot.keySet().equals(new java.util.HashSet<>(current))) {
+            return false;
+        }
+
+        Log.i(TAG, "Local module snapshot is stale, adopting provider scope: " + current);
+        PackageManager pm = context.getPackageManager();
+        List<LoadedModule> newLegacy = new ArrayList<>();
+        List<LoadedModule> newModern = new ArrayList<>();
+        for (String pkg : current) {
+            LoadedModule existing = snapshot.remove(pkg);
+            if (existing == null) {
+                loadSingleModuleByPm(context, pm, pkg, newLegacy, newModern);
+            } else if (existing.code != null && existing.code.legacy) {
+                newLegacy.add(existing);
+            } else {
+                newModern.add(existing);
+            }
+        }
+        closePreloadedDexes(new ArrayList<>(snapshot.values()));
+        legacy.clear();
+        legacy.addAll(newLegacy);
+        modern.clear();
+        modern.addAll(newModern);
+        return true;
+    }
+
+    private List<String> queryProviderPackagesWithTimeout() {
+        FutureTask<List<String>> query = new FutureTask<>(() -> queryProviderPackages(context));
+        Thread worker = new Thread(query, "NPatch-ProviderQuery");
+        worker.setDaemon(true);
+        worker.start();
+        try {
+            return query.get(PROVIDER_TIMEOUT_SEC, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            query.cancel(true);
+            Thread.currentThread().interrupt();
+        } catch (Throwable t) {
+            query.cancel(true);
+            Log.w(TAG, "Provider scope query failed, keeping local snapshot: " + t);
+        }
+        return null;
+    }
+
+    /** Package names the manager lists for this app, or null when the manager cannot answer. */
+    private static List<String> queryProviderPackages(Context context) {
+        Uri queryUri = Uri.parse("content://top.nkbe.npatch.manager.provider.config/config")
+                .buildUpon()
+                .appendQueryParameter("package", context.getPackageName())
+                .build();
+        try (Cursor cursor = context.getContentResolver().query(queryUri, null, null, null, null)) {
+            if (cursor == null) {
+                return null;
+            }
+            int colIndex = cursor.getColumnIndex("packageName");
+            List<String> result = new ArrayList<>();
+            while (cursor.moveToNext()) {
+                String pkg = colIndex == -1 ? null : cursor.getString(colIndex);
+                if (pkg != null && !pkg.isEmpty()) {
+                    result.add(pkg);
+                }
+            }
+            return result;
+        }
     }
 
     private void onManagerReconnected(IFrameworkService connected) {
