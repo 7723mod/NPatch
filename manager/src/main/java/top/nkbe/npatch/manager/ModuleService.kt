@@ -115,12 +115,14 @@ class ModuleService : Service() {
         override fun getLegacyModules(): List<LoadedModule> {
             val list = modules().filter { it.code?.legacy == true }
             Log.d(TAG, "$packageName calls getLegacyModules: $list")
+            ModuleActivationController.pushToCompanionsAsync(list.map { it.packageName })
             return list
         }
 
         override fun getModules(): List<LoadedModule> {
             val list = modules().filter { it.code?.legacy == false }
             Log.d(TAG, "$packageName calls getModules: $list")
+            ModuleActivationController.pushToCompanionsAsync(list.map { it.packageName })
             return list
         }
 

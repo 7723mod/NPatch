@@ -367,10 +367,8 @@ fun AppDetailScreen(
                                                 Log.d(TAG, "Activate ${it.app.packageName} for $packageName")
                                                 ConfigManager.activateModule(packageName, LoadedModule(it.app.packageName, it.app.sourceDir))
                                             }
-                                            if (ShizukuApi.isReady) {
-                                                // 一併通知被移除與新加入的模組，避免範圍調整後殘留舊狀態
-                                                ModuleScopeSyncStore.syncModuleScopes(affectedPackages)
-                                            }
+                                            // 一併通知被移除與新加入的模組，避免範圍調整後殘留舊狀態（優先 Shizuku，無 Shizuku 則走 ContentProvider）
+                                            ModuleScopeSyncStore.syncModuleScopes(affectedPackages)
                                         }
                                         moduleManageViewModel.refreshScopedActivationState()
                                         moduleCount = withContext(Dispatchers.IO) { ConfigManager.getModulesForApp(packageName).size }

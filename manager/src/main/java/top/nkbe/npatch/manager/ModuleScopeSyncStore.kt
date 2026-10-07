@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import top.nkbe.npatch.config.ConfigManager
 import top.nkbe.npatch.lspApp
 
 object ModuleScopeSyncStore {
@@ -52,7 +53,9 @@ object ModuleScopeSyncStore {
     // Shizuku left every non-Shizuku install (the common case) with no self-heal at all.
     suspend fun syncTrackedModuleScopes() =
         withContext(Dispatchers.IO) {
-            trackedModulePackages().forEach { modulePackageName ->
+            val dbPackages = runCatching { ConfigManager.getScopedModulePackageNames() }.getOrDefault(emptySet())
+            val filePackages = trackedModulePackages()
+            (dbPackages + filePackages).distinct().forEach { modulePackageName ->
                 ModuleActivationController.pushToCompanion(modulePackageName)
             }
         }

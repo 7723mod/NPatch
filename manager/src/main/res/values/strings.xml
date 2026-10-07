@@ -351,4 +351,7 @@
     <string name="patch_extract_native_libs">Extract native libraries</string>
     <string name="patch_extract_native_libs_desc">Force the installer to unpack the app\'s native libraries, so a module that needs the app\'s own native code on disk can read them.</string>
     <string name="patch_more_options">More options</string>
+    <string name="patch_select_app_from_multiple">Select Application to Patch</string>
+    <string name="patch_select_app_from_multiple_desc">Multiple standalone applications were selected. Please select one to proceed:</string>
+    <string name="patch_parse_failed_title">Failed to Parse APK</string>
 </resources>

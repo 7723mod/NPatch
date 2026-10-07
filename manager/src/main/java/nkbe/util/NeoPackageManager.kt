@@ -122,12 +122,7 @@ object NeoPackageManager {
         return try {
             val pm = context.packageManager
             val packages = pm.getInstalledPackages(0)
-            if (packages.isNotEmpty() && (packages.size > 1 || packages.any { it.packageName != context.packageName })) {
-                return true
-            }
-            val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-            val activities = pm.queryIntentActivities(intent, 0)
-            activities.isNotEmpty() && (activities.size > 1 || activities.any { it.activityInfo?.packageName != context.packageName })
+            packages.isNotEmpty() && (packages.size > 1 || packages.any { it.packageName != context.packageName })
         } catch (e: Throwable) {
             false
         }
@@ -152,6 +147,7 @@ object NeoPackageManager {
         val result = withContext(Dispatchers.IO) {
             val pm = lspApp.packageManager
             var packages: List<android.content.pm.PackageInfo>
+            var isRestrictedScan = false
 
             if (ShizukuApi.isReady) {
                 Log.i(TAG, "Fetching app list using Shizuku API")
@@ -169,6 +165,7 @@ object NeoPackageManager {
             }
 
             if (packages.isEmpty() || (packages.size == 1 && packages[0].packageName == lspApp.packageName)) {
+                isRestrictedScan = true
                 Log.i(TAG, "Standard package list is restricted, using intent query fallback")
                 val fallbackPackages = queryLauncherPackagesFallback(pm)
                 if (fallbackPackages.isNotEmpty()) {
@@ -199,11 +196,62 @@ object NeoPackageManager {
                 }.awaitAll().filterNotNull().toMutableList()
             }
 
+            // Always preserve and merge known configured modules if missing from scan
+            val existingPackages = collection.map { it.app.packageName }.toSet()
+            val savedModules = ConfigManager.getAllConfiguredModules()
+            for (saved in savedModules) {
+                if (saved.pkgName !in existingPackages) {
+                    val pkgInfo = runCatching {
+                        pm.getPackageInfo(saved.pkgName, PackageManager.GET_META_DATA)
+                    }.getOrNull()
+                    val appInfo = pkgInfo?.applicationInfo
+                    if (pkgInfo != null && appInfo != null) {
+                        val label = runCatching { pm.getApplicationLabel(appInfo).toString() }
+                            .getOrDefault(saved.pkgName)
+                        val moduleMetadata = runCatching {
+                            ModuleMetadataReader.read(pkgInfo, pm)
+                        }.getOrNull()
+                        collection.add(
+                            AppInfo(
+                                app = appInfo,
+                                label = label,
+                                versionName = pkgInfo.versionName ?: "",
+                                versionCode = androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(pkgInfo),
+                                moduleMetadata = moduleMetadata
+                            )
+                        )
+                    } else if (File(saved.apkPath).exists()) {
+                        val archiveInfo = runCatching {
+                            pm.getPackageArchiveInfo(saved.apkPath, PackageManager.GET_META_DATA)
+                        }.getOrNull()
+                        val archiveAppInfo = archiveInfo?.applicationInfo
+                        if (archiveInfo != null && archiveAppInfo != null) {
+                            archiveAppInfo.sourceDir = saved.apkPath
+                            archiveAppInfo.publicSourceDir = saved.apkPath
+                            val label = runCatching { pm.getApplicationLabel(archiveAppInfo).toString() }
+                                .getOrDefault(saved.pkgName)
+                            val moduleMetadata = runCatching {
+                                ModuleMetadataReader.read(archiveInfo, pm)
+                            }.getOrNull()
+                            collection.add(
+                                AppInfo(
+                                    app = archiveAppInfo,
+                                    label = label,
+                                    versionName = archiveInfo.versionName ?: "",
+                                    versionCode = androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(archiveInfo),
+                                    moduleMetadata = moduleMetadata
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+
             collection.sortWith(compareBy(Collator.getInstance(Locale.getDefault()), AppInfo::label))
             val modules = buildMap {
                 collection.forEach { if (it.isXposedModule) put(it.app.packageName, it.app.sourceDir) }
             }
-            ConfigManager.updateModules(modules)
+            ConfigManager.updateModules(modules, isRestrictedScan = isRestrictedScan)
             collection
         }
         withContext(Dispatchers.Main.immediate) {
@@ -366,49 +414,82 @@ object NeoPackageManager {
                     candidates += selectedFiles
                 }
 
-                val installSet = ApkInstallSet.fromFiles(lspApp, candidates)
-                val baseFile = installSet.entries.first().file
-                val splitSourceDirs = installSet.entries
-                    .drop(1)
-                    .map { it.file.absolutePath }
-                    .toTypedArray()
-                // GET_SIGNING_CERTIFICATES is intentionally omitted: some OEM PackageParsers
-                // (e.g. EMUI) fail the whole parse over signature validation even though
-                // signingInfo is never read below. Degrade to flag-less parsing, then to the
-                // AXML manifest already extracted by ApkInstallSet, so a non-standard manifest
-                // (unknown <meta-data> tags, etc.) can't abort package selection entirely.
-                val pkgInfo = runCatching {
-                    lspApp.packageManager.getPackageArchiveInfo(baseFile.absolutePath, PackageManager.GET_META_DATA)
-                }.getOrNull() ?: runCatching {
-                    lspApp.packageManager.getPackageArchiveInfo(baseFile.absolutePath, 0)
-                }.getOrNull()
-
-                val appInfo = pkgInfo?.applicationInfo ?: ApplicationInfo().apply {
-                    packageName = installSet.packageName
+                // 1. Try unified install set first (1 base or 1 base + split APKs of the same app)
+                val singleSet = runCatching { ApkInstallSet.fromFiles(lspApp, candidates) }
+                if (singleSet.isSuccess) {
+                    val installSet = singleSet.getOrThrow()
+                    val baseFile = installSet.entries.first().file
+                    val splitSourceDirs = installSet.entries
+                        .drop(1)
+                        .map { it.file.absolutePath }
+                        .toTypedArray()
+                    return@runCatching listOf(buildAppInfoFromFile(baseFile, splitSourceDirs, installSet.packageName, installSet.versionCode))
                 }
-                appInfo.sourceDir = baseFile.absolutePath
-                appInfo.publicSourceDir = baseFile.absolutePath
-                appInfo.splitSourceDirs = splitSourceDirs
-                val label = runCatching {
-                    lspApp.packageManager.getApplicationLabel(appInfo).toString()
-                }.getOrNull().takeUnless { it.isNullOrBlank() } ?: appInfo.packageName
-                listOf(
-                    AppInfo(
-                        app = appInfo,
-                        label = label,
-                        versionName = pkgInfo?.versionName ?: "",
-                        versionCode = pkgInfo?.let { androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(it) }
-                            ?: installSet.versionCode,
-                        moduleMetadata = pkgInfo?.let { ModuleMetadataReader.read(it, lspApp.packageManager) }
-                            ?: ModuleMetadataReader.read(baseFile, lspApp.packageManager),
-                    )
-                )
+
+                // 2. Fallback: Parse individual candidate APKs to support selecting multiple standalone base APKs
+                val parsedCandidates = candidates.mapNotNull { file ->
+                    val pair = readManifestInfo(file) ?: return@mapNotNull null
+                    Triple(file, pair.packageName, pair.splitName)
+                }
+
+                val baseCandidates = parsedCandidates.filter { it.third.isNullOrBlank() }
+                if (baseCandidates.isEmpty()) {
+                    throw singleSet.exceptionOrNull() ?: IOException("APK install set has no base APK")
+                }
+
+                baseCandidates.map { (baseFile, pkgName, _) ->
+                    val matchingSplits = parsedCandidates
+                        .filter { it.second == pkgName && !it.third.isNullOrBlank() }
+                        .map { it.first.absolutePath }
+                        .toTypedArray()
+                    buildAppInfoFromFile(baseFile, matchingSplits, pkgName)
+                }
             }.recoverCatching { t ->
                 cleanTmpApkDir()
                 Log.e(TAG, "Failed to load apks", t)
                 throw t
             }
         }
+    }
+
+    private fun readManifestInfo(file: File): top.nkbe.npatch.patch.util.ManifestParser.Pair? = runCatching {
+        java.util.zip.ZipFile(file).use { zip ->
+            val manifest = zip.getEntry("AndroidManifest.xml") ?: return@use null
+            zip.getInputStream(manifest).use { input ->
+                top.nkbe.npatch.patch.util.ManifestParser.parseManifestFile(input)
+            }
+        }
+    }.getOrNull()
+
+    private fun buildAppInfoFromFile(
+        baseFile: File,
+        splitSourceDirs: Array<String>,
+        defaultPackageName: String,
+        defaultVersionCode: Long = 1L
+    ): AppInfo {
+        val pkgInfo = runCatching {
+            lspApp.packageManager.getPackageArchiveInfo(baseFile.absolutePath, PackageManager.GET_META_DATA)
+        }.getOrNull() ?: runCatching {
+            lspApp.packageManager.getPackageArchiveInfo(baseFile.absolutePath, 0)
+        }.getOrNull()
+
+        val appInfo = pkgInfo?.applicationInfo ?: ApplicationInfo().apply {
+            packageName = defaultPackageName
+        }
+        appInfo.sourceDir = baseFile.absolutePath
+        appInfo.publicSourceDir = baseFile.absolutePath
+        appInfo.splitSourceDirs = splitSourceDirs
+        val label = runCatching {
+            lspApp.packageManager.getApplicationLabel(appInfo).toString()
+        }.getOrNull().takeUnless { it.isNullOrBlank() } ?: appInfo.packageName
+        return AppInfo(
+            app = appInfo,
+            label = label,
+            versionName = pkgInfo?.versionName ?: "",
+            versionCode = pkgInfo?.let { androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(it) } ?: defaultVersionCode,
+            moduleMetadata = pkgInfo?.let { ModuleMetadataReader.read(it, lspApp.packageManager) }
+                ?: ModuleMetadataReader.read(baseFile, lspApp.packageManager),
+        )
     }
 
     private fun copyDocumentToTempFile(uri: Uri, fileName: String): File {

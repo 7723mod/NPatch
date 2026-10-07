@@ -3,14 +3,19 @@ package top.nkbe.npatch.ui.page
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
@@ -64,6 +69,8 @@ fun NewPatchScreen(
     var isAnalyzing by remember { mutableStateOf(false) }
     var missingOriginalDialog by remember { mutableStateOf<nkbe.util.NeoPackageManager.AppInfo?>(null) }
     var packageMismatchDialog by remember { mutableStateOf<Pair<nkbe.util.NeoPackageManager.AppInfo, nkbe.util.NeoPackageManager.ExtractResult.PackageMismatch>?>(null) }
+    var multiAppCandidates by remember { mutableStateOf<List<nkbe.util.NeoPackageManager.AppInfo>?>(null) }
+    var parseErrorMessage by remember { mutableStateOf<String?>(null) }
 
     fun handleAppSelected(app: nkbe.util.NeoPackageManager.AppInfo) {
         var patchedType = app.patchedType
@@ -96,15 +103,17 @@ fun NewPatchScreen(
             NeoPackageManager.getAppInfoFromApks(apks)
                 .onSuccess {
                     isAnalyzing = false
-                    handleAppSelected(it.first())
+                    if (it.size > 1) {
+                        multiAppCandidates = it
+                    } else if (it.isNotEmpty()) {
+                        handleAppSelected(it.first())
+                    } else {
+                        parseErrorMessage = errorUnknown
+                    }
                 }
                 .onFailure { error ->
                     isAnalyzing = false
-                    activityScope.launch {
-                        snackbarHost.showSnackbar(error.localizedMessage ?: error.message ?: errorUnknown)
-                    }
-                    viewModel.reset()
-                    navigator.pop()
+                    parseErrorMessage = error.localizedMessage ?: error.message ?: errorUnknown
                 }
         }
     }
@@ -156,14 +165,16 @@ fun NewPatchScreen(
                         isAnalyzing = true
                         NeoPackageManager.getAppInfoFromApks(listOf(uri)).onSuccess {
                             isAnalyzing = false
-                            handleAppSelected(it.first())
+                            if (it.size > 1) {
+                                multiAppCandidates = it
+                            } else if (it.isNotEmpty()) {
+                                handleAppSelected(it.first())
+                            } else {
+                                parseErrorMessage = errorUnknown
+                            }
                         }.onFailure { error ->
                             isAnalyzing = false
-                            activityScope.launch {
-                                snackbarHost.showSnackbar(error.localizedMessage ?: error.message ?: errorUnknown)
-                            }
-                            viewModel.reset()
-                            navigator.pop()
+                            parseErrorMessage = error.localizedMessage ?: error.message ?: errorUnknown
                         }
                     }
                 }
@@ -223,7 +234,7 @@ fun NewPatchScreen(
                 viewModel.patchState in listOf(PatchState.PATCHING, PatchState.FINISHED, PatchState.ERROR) -> {
                     DoPatchBody(modifier = Modifier, navigator = navigator)
                 }
-                isAnalyzing || viewModel.patchState == PatchState.SELECTING -> {
+                else -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
@@ -243,7 +254,6 @@ fun NewPatchScreen(
                         }
                     }
                 }
-                else -> {}
             }
 
             OverlayDialog(
@@ -435,6 +445,113 @@ fun NewPatchScreen(
                                 viewModel.reset()
                                 navigator.pop()
                             }
+                        ),
+                    )
+                }
+            }
+
+            var lastParseErrorMessage by remember { mutableStateOf<String?>(null) }
+            if (parseErrorMessage != null) {
+                lastParseErrorMessage = parseErrorMessage
+            }
+            lastParseErrorMessage?.let { errMsg ->
+                OverlayDialog(
+                    title = stringResource(R.string.patch_parse_failed_title),
+                    summary = errMsg,
+                    show = parseErrorMessage != null,
+                    onDismissRequest = {
+                        parseErrorMessage = null
+                        viewModel.reset()
+                        navigator.pop()
+                    },
+                    renderInRootScaffold = false,
+                ) {
+                    DialogButtonBar(
+                        positive = DialogButtonBarAction(
+                            text = stringResource(android.R.string.ok),
+                            onClick = {
+                                parseErrorMessage = null
+                                viewModel.reset()
+                                navigator.pop()
+                            },
+                        ),
+                    )
+                }
+            }
+
+            var lastMultiAppCandidates by remember { mutableStateOf<List<nkbe.util.NeoPackageManager.AppInfo>?>(null) }
+            if (multiAppCandidates != null) {
+                lastMultiAppCandidates = multiAppCandidates
+            }
+            lastMultiAppCandidates?.let { candidates ->
+                OverlayDialog(
+                    title = stringResource(R.string.patch_select_app_from_multiple),
+                    summary = stringResource(R.string.patch_select_app_from_multiple_desc),
+                    show = multiAppCandidates != null,
+                    onDismissRequest = {
+                        multiAppCandidates = null
+                        viewModel.reset()
+                        navigator.pop()
+                    },
+                    renderInRootScaffold = false,
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                    ) {
+                        candidates.forEach { candidate ->
+                            top.yukonga.miuix.kmp.basic.Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                onClick = {
+                                    multiAppCandidates = null
+                                    handleAppSelected(candidate)
+                                }
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Image(
+                                        bitmap = NeoPackageManager.getIcon(candidate),
+                                        contentDescription = null,
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                    )
+                                    Spacer(Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = candidate.label,
+                                            style = MiuixTheme.textStyles.body1,
+                                            fontWeight = FontWeight.SemiBold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = candidate.app.packageName,
+                                            style = MiuixTheme.textStyles.body2,
+                                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    DialogButtonBar(
+                        positive = DialogButtonBarAction(
+                            text = stringResource(android.R.string.cancel),
+                            onClick = {
+                                multiAppCandidates = null
+                                viewModel.reset()
+                                navigator.pop()
+                            },
                         ),
                     )
                 }

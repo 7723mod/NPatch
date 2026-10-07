@@ -86,7 +86,7 @@ class ModuleManageViewModel : ViewModel() {
     }
 
     fun refreshEnabledActivations() {
-        if (activationRefreshInFlight || !ShizukuApi.isReady) return
+        if (activationRefreshInFlight) return
         val packageNames = scopedModulePackages.filter { packageName ->
             NeoPackageManager.appList.firstOrNull { it.app.packageName == packageName }
                 ?.moduleMetadata
@@ -98,7 +98,7 @@ class ModuleManageViewModel : ViewModel() {
         viewModelScope.launch {
             val scopedPackages = withContext(Dispatchers.IO) {
                 packageNames.forEach { packageName ->
-                    ModuleActivationController.activate(packageName)
+                    ModuleActivationController.pushToCompanion(packageName)
                 }
                 loadActivationSnapshot()
             }

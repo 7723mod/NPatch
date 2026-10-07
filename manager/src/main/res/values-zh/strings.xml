@@ -343,4 +343,7 @@
     <string name="patch_extract_native_libs">解压原生库</string>
     <string name="patch_extract_native_libs_desc">强制安装器解压应用的原生库，让需要读取应用原生代码的模块能够直接读到文件。</string>
     <string name="patch_more_options">更多选项</string>
+    <string name="patch_select_app_from_multiple">选择要修补的应用</string>
+    <string name="patch_select_app_from_multiple_desc">检测到多个独立应用安装包，请选择其中一个继续修补：</string>
+    <string name="patch_parse_failed_title">APK 解析失败</string>
 </resources>

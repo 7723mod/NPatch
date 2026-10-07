@@ -40,17 +40,24 @@ object ConfigManager {
         ConcurrentHashMap<String, org.matrix.vector.ipc.LoadedModule>()
     private val moduleLoadLocks = ConcurrentHashMap<String, Mutex>()
 
-    suspend fun updateModules(newModules: Map<String, String>) {
+    suspend fun updateModules(newModules: Map<String, String>, isRestrictedScan: Boolean = false) {
         val changedModules =
             withContext(writeDispatcher) {
                 val changed = linkedSetOf<String>()
                 for (LoadedModule in moduleDao.getAll()) {
                     val apkPath = newModules[LoadedModule.pkgName]
                     if (apkPath == null) {
-                        moduleDao.delete(LoadedModule)
-                        removeCachedModule(LoadedModule.pkgName)
-                        moduleLoadLocks.remove(LoadedModule.pkgName)
-                        ModuleScopeSyncStore.deleteSnapshot(LoadedModule.pkgName)
+                        if (!isRestrictedScan) {
+                            val isStillPresent = File(LoadedModule.apkPath).exists() || runCatching {
+                                lspApp.packageManager.getPackageInfo(LoadedModule.pkgName, 0)
+                            }.isSuccess
+                            if (!isStillPresent) {
+                                moduleDao.delete(LoadedModule)
+                                removeCachedModule(LoadedModule.pkgName)
+                                moduleLoadLocks.remove(LoadedModule.pkgName)
+                                ModuleScopeSyncStore.deleteSnapshot(LoadedModule.pkgName)
+                            }
+                        }
                     } else if (LoadedModule.apkPath != apkPath) {
                         LoadedModule.apkPath = apkPath
                         moduleDao.update(LoadedModule)
@@ -68,6 +75,11 @@ object ConfigManager {
             getModuleFile(packageName)?.let(HotReloadRegistry::autoHotReload)
         }
     }
+
+    suspend fun getAllConfiguredModules(): List<LoadedModule> =
+        withContext(readDispatcher) {
+            moduleDao.getAll()
+        }
 
     suspend fun activateModule(pkgName: String, LoadedModule: LoadedModule) =
         withContext(writeDispatcher) {
