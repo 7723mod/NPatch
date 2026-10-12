@@ -12,6 +12,8 @@ import java.util.concurrent.ConcurrentHashMap
 
 import kotlinx.coroutines.runBlocking
 import top.nkbe.npatch.config.ConfigManager
+import top.nkbe.npatch.config.Configs
+import top.nkbe.npatch.service.KeepAliveService
 import org.matrix.vector.ipc.LoadedModule
 import org.matrix.vector.ipc.IProcessChannel
 import org.matrix.vector.ipc.IFrameworkService
@@ -36,6 +38,9 @@ class ModuleService : Service() {
         // ActivityManager dispatches onBind, so Binder.getCallingUid() here is not the client.
         // The returned Binder validates the package on its first direct transaction instead.
         Log.i(TAG, "$packageName requests binder")
+        if (Configs.keepAlive) {
+            KeepAliveService.start(this)
+        }
         return ScopedApplicationService(packageName).asBinder()
     }
 

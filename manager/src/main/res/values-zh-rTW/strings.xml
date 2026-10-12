@@ -346,4 +346,8 @@
     <string name="patch_select_app_from_multiple">選擇要修補的應用程式</string>
     <string name="patch_select_app_from_multiple_desc">檢測到多個獨立應用程式安裝套件，請選擇其中一個繼續修補：</string>
     <string name="patch_parse_failed_title">APK 解析失敗</string>
+    <string name="settings_keep_alive">訊息保活</string>
+    <string name="settings_keep_alive_summary">在通知列顯示常駐通知以保持管理器背景存活</string>
+    <string name="keep_alive_notification_title">NPatch 正在執行</string>
+    <string name="keep_alive_notification_text">正在背景為已修補應用程式提供服務</string>
 </resources>

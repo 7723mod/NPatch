@@ -255,4 +255,8 @@
     <string name="patch_override_label_hint">留空则保持原名喵</string>
     <string name="patch_extract_native_libs">解压原生库</string>
     <string name="patch_extract_native_libs_desc">强制把应用的原生库拆出来塞进窝里，方便挂件直接翻找底层代码喵。</string>
+    <string name="settings_keep_alive">消息保活喵</string>
+    <string name="settings_keep_alive_summary">在通知栏常驻一条消息，防止被系统把管家猫抓走喵</string>
+    <string name="keep_alive_notification_title">NPatch 正在运行喵</string>
+    <string name="keep_alive_notification_text">正在暗中为已修补应用保驾护航喵</string>
 </resources>

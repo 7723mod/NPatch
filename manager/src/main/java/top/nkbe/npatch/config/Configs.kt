@@ -82,4 +82,9 @@ object Configs {
     var thirdPartyInstallerPackage by delegateStateOf(lspApp.prefs.getString(PREFS_THIRD_PARTY_INSTALLER, "") ?: "") {
         lspApp.prefs.edit().putString(PREFS_THIRD_PARTY_INSTALLER, it).apply()
     }
+
+    private const val PREFS_KEEP_ALIVE = "keep_alive"
+    var keepAlive by delegateStateOf(lspApp.prefs.getBoolean(PREFS_KEEP_ALIVE, false)) {
+        lspApp.prefs.edit().putBoolean(PREFS_KEEP_ALIVE, it).apply()
+    }
 }

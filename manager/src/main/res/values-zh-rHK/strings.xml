@@ -106,4 +106,8 @@
     <string name="time_days_ago">%d天前</string>
     <string name="settings_card_background_alpha">卡片背景不透明度</string>
     <string name="settings_card_background_alpha_summary">啟用自訂背景圖片時生效</string>
+    <string name="settings_keep_alive">訊息保活</string>
+    <string name="settings_keep_alive_summary">在通知列顯示常駐通知以保持管理器背景存活</string>
+    <string name="keep_alive_notification_title">NPatch 正在運行</string>
+    <string name="keep_alive_notification_text">正在後台為已修補應用提供服務</string>
 </resources>

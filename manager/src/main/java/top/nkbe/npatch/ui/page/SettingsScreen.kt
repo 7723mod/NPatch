@@ -33,10 +33,12 @@ import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.SettingsBrightness
+import androidx.compose.material.icons.outlined.NotificationsActive
 import android.Manifest
 import android.os.Build
 import top.nkbe.npatch.install.InstallNotificationHelper
 import top.nkbe.npatch.install.ThirdPartyPackageInstaller
+import top.nkbe.npatch.service.KeepAliveService
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -180,6 +182,7 @@ fun SettingsScreen() {
             ) {
                 LanguagePreference()
                 KeyStore()
+                KeepAlivePreference()
                 DetailPatchLogs()
                 OutputFullLog()
                 WelcomeGuide()
@@ -1041,6 +1044,52 @@ private fun keyStorePresetIndex(preset: KeystorePreset): Int {
         KeystorePreset.FPA -> 1
         KeystorePreset.CUSTOM -> 2
     }
+}
+
+@Composable
+private fun KeepAlivePreference() {
+    val context = LocalContext.current
+    var keepAlive by remember { mutableStateOf(Configs.keepAlive) }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            Configs.keepAlive = true
+            keepAlive = true
+            KeepAliveService.start(context)
+        } else {
+            Configs.keepAlive = false
+            keepAlive = false
+            KeepAliveService.stop(context)
+        }
+    }
+
+    SwitchPreference(
+        title = stringResource(R.string.settings_keep_alive),
+        summary = stringResource(R.string.settings_keep_alive_summary),
+        checked = keepAlive,
+        startAction = {
+            SettingsStartIcon(Icons.Outlined.NotificationsActive)
+        },
+        onCheckedChange = { enable ->
+            if (enable) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                    !InstallNotificationHelper.hasNotificationPermission(context)
+                ) {
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    Configs.keepAlive = true
+                    keepAlive = true
+                    KeepAliveService.start(context)
+                }
+            } else {
+                Configs.keepAlive = false
+                keepAlive = false
+                KeepAliveService.stop(context)
+            }
+        }
+    )
 }
 
 @Composable

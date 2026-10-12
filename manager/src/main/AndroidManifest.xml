@@ -17,6 +17,11 @@
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"
+        tools:ignore="ForegroundServiceSpecialUse"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
@@ -77,11 +82,29 @@
             android:name=".install.InstallResultReceiver"
             android:exported="true" />
 
+        <receiver
+            android:name=".manager.BootReceiver"
+            android:directBootAware="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
 
         <service
             android:name=".manager.ModuleService"
             android:exported="true"
             tools:ignore="ExportedService" />
+
+        <service
+            android:name=".service.KeepAliveService"
+            android:foregroundServiceType="specialUse"
+            android:exported="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keep NPatch Manager process alive to provide modules and configs for patched apps" />
+        </service>
 
 
         <provider

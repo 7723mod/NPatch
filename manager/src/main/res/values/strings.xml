@@ -354,4 +354,8 @@
     <string name="patch_select_app_from_multiple">Select Application to Patch</string>
     <string name="patch_select_app_from_multiple_desc">Multiple standalone applications were selected. Please select one to proceed:</string>
     <string name="patch_parse_failed_title">Failed to Parse APK</string>
+    <string name="settings_keep_alive">Message keep-alive</string>
+    <string name="settings_keep_alive_summary">Show a persistent notification to keep the manager alive in the background</string>
+    <string name="keep_alive_notification_title">NPatch is running</string>
+    <string name="keep_alive_notification_text">Providing services for patched apps in background</string>
 </resources>

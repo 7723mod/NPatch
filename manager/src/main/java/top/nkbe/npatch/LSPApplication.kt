@@ -17,6 +17,8 @@ import top.nkbe.npatch.manager.ManagerIntegrity
 import top.nkbe.npatch.manager.ModuleScopeSyncStore
 import nkbe.util.NeoPackageManager
 import nkbe.util.ShizukuApi
+import top.nkbe.npatch.config.Configs
+import top.nkbe.npatch.service.KeepAliveService
 import java.io.File
 
 lateinit var lspApp: LSPApplication
@@ -76,6 +78,9 @@ class LSPApplication : Application() {
             }
         }
         AppBroadcastReceiver.register(this)
+        if (Configs.keepAlive) {
+            KeepAliveService.start(this)
+        }
         globalScope.launch { 
             NeoPackageManager.fetchAppList()
         }
