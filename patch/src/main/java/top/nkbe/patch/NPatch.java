@@ -278,9 +278,13 @@ public class NPatch {
         // overwriting the manifest to name our stub (a foreign-class IOC visible to any static
         // scan), keep the host's declared name and inject a tiny shim class of that name whose
         // superclass is our stub, so the platform's instantiation of it triggers our bootstrap.
+        // This relies on the original dex files being omitted from the outer APK. With --injectdex
+        // they precede the shim, so the host's own factory wins class lookup and bootstrap never
+        // runs; name the stub explicitly in that case.
         // A package-relative name (leading '.') is left to the default path: resolving it correctly
         // under package rename is ambiguous, and the fallback (naming the stub) never regresses.
-        final boolean entryHookMode = appComponentFactory != null
+        final boolean entryHookMode = !injectDex
+                && appComponentFactory != null
                 && !appComponentFactory.isEmpty()
                 && !appComponentFactory.startsWith(".")
                 && !appComponentFactory.equals(PROXY_APP_COMPONENT_FACTORY);
