@@ -17,7 +17,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import dev.rikka.tools.refine.Refine
+import java.lang.reflect.Method
 import java.util.LinkedHashSet
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeout
 import kotlin.coroutines.resume
@@ -217,37 +219,76 @@ object ShizukuApi {
         check(isPermissionGranted) { "Shizuku permission is not granted" }
     }
 
-    fun getInstalledApplications(): List<ApplicationInfo> {
-        ensureReady()
-        val userId = Process.myUserHandle().hashCode()
-        val flags = PackageManager.GET_META_DATA
+    private val sliceFetcherCache = ConcurrentHashMap<String, Method>()
+    private val sliceListGetterCache = ConcurrentHashMap<Class<*>, Method>()
+
+    @Suppress("UNCHECKED_CAST")
+    private fun <T> fetchSliceList(
+        methodName: String,
+        flags: Int,
+        userId: Int,
+        directCall: () -> List<T>
+    ): List<T> {
         return try {
-            iPackageManager.getInstalledApplications(flags.toLong(), userId).list
-        } catch (e: NoSuchMethodError) {
-            try {
-                val method = iPackageManager.javaClass.getMethod("getInstalledApplications", Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
-                val parceledListSlice = method.invoke(iPackageManager, flags, userId)
-                parceledListSlice?.javaClass?.getMethod("getList")?.invoke(parceledListSlice) as List<ApplicationInfo>
-            } catch (e2: Exception) {
+            directCall()
+        } catch (_: LinkageError) {
+            runCatching {
+                val target = iPackageManager
+                val method = sliceFetcherCache.getOrPut(methodName) {
+                    val targetClass = target.javaClass
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        runCatching {
+                            targetClass.getMethod(methodName, Long::class.javaPrimitiveType, Int::class.javaPrimitiveType)
+                        }.getOrElse {
+                            targetClass.getMethod(methodName, Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
+                        }
+                    } else {
+                        runCatching {
+                            targetClass.getMethod(methodName, Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
+                        }.getOrElse {
+                            targetClass.getMethod(methodName, Long::class.javaPrimitiveType, Int::class.javaPrimitiveType)
+                        }
+                    }.apply { isAccessible = true }
+                }
+
+                val slice = if (method.parameterTypes[0] == Long::class.javaPrimitiveType) {
+                    method.invoke(target, flags.toLong(), userId)
+                } else {
+                    method.invoke(target, flags, userId)
+                } ?: return emptyList()
+
+                val listGetter = sliceListGetterCache.getOrPut(slice.javaClass) {
+                    slice.javaClass.getMethod("getList").apply { isAccessible = true }
+                }
+                listGetter.invoke(slice) as? List<T> ?: emptyList()
+            }.getOrElse { e ->
+                Log.e(TAG, "$methodName reflective fallback failed", e)
                 emptyList()
             }
         }
     }
 
+    fun getInstalledApplications(): List<ApplicationInfo> {
+        ensureReady()
+        val userId = Process.myUserHandle().hashCode()
+        val flags = PackageManager.GET_META_DATA
+        return fetchSliceList(
+            methodName = "getInstalledApplications",
+            flags = flags,
+            userId = userId,
+            directCall = { iPackageManager.getInstalledApplications(flags.toLong(), userId).list }
+        )
+    }
+
     fun getInstalledPackages(flags: Int): List<PackageInfo> {
         ensureReady()
         val userId = Process.myUserHandle().hashCode()
-        return try {
-            iPackageManager.getInstalledPackages(flags.toLong(), userId).list
-        } catch (e: NoSuchMethodError) {
-            try {
-                val method = iPackageManager.javaClass.getMethod("getInstalledPackages", Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
-                val parceledListSlice = method.invoke(iPackageManager, flags, userId)
-                parceledListSlice?.javaClass?.getMethod("getList")?.invoke(parceledListSlice) as List<PackageInfo>
-            } catch (e2: Exception) {
-                emptyList()
-            }
-        }
+        return fetchSliceList(
+            methodName = "getInstalledPackages",
+            flags = flags,
+            userId = userId,
+            directCall = { iPackageManager.getInstalledPackages(flags.toLong(), userId).list }
+        )
     }
 
     fun createPackageInstallerSession(
