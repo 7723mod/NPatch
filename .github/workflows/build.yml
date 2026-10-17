@@ -4,7 +4,15 @@ on:
   workflow_dispatch:
   pull_request:
   push:
+    branches: [ dev ]
   merge_group:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -18,14 +26,13 @@ jobs:
 
     steps:
     - name: 檢出程式碼
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
       with:
-        ref: ${{ github.sha }}
         submodules: 'recursive'
         fetch-depth: 0
 
     - name: 設定快取
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ~/.ccache
         key: ${{ runner.os }}-ccache-${{ github.sha }}
@@ -34,26 +41,42 @@ jobs:
 
     - name: 如果需要，則寫入簽名密鑰
       if: github.ref == 'refs/heads/dev' && github.event_name != 'pull_request'
+      env:
+        KEY_STORE: ${{ secrets.KEY_STORE }}
+        KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+        ALIAS: ${{ secrets.ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       run: |
-        if [ ! -z "${{ secrets.KEY_STORE }}" ]; then
-          echo androidStorePassword='${{ secrets.KEY_STORE_PASSWORD }}' >> gradle.properties
-          echo androidKeyAlias='${{ secrets.ALIAS }}' >> gradle.properties
-          echo androidKeyPassword='${{ secrets.KEY_PASSWORD }}' >> gradle.properties
-          echo androidStoreFile='key.jks' >> gradle.properties
-          echo ${{ secrets.KEY_STORE }} | base64 --decode > key.jks
+        if [ -n "$KEY_STORE" ]; then
+          echo "androidStorePassword=$KEY_STORE_PASSWORD" >> gradle.properties
+          echo "androidKeyAlias=$ALIAS" >> gradle.properties
+          echo "androidKeyPassword=$KEY_PASSWORD" >> gradle.properties
+          echo "androidStoreFile=key.jks" >> gradle.properties
+          echo "$KEY_STORE" | base64 --decode > key.jks
         fi
 
     - name: 設定 Java
-      uses: actions/setup-java@v5
+      uses: actions/setup-java@v6
       with:
         java-version: '21'
         distribution: 'zulu'
 
     - name: 設定 Gradle
-      uses: gradle/actions/setup-gradle@v5
+      uses: gradle/actions/setup-gradle@v6
+      with:
+        cache-read-only: ${{ github.ref != 'refs/heads/dev' }}
 
-    - name: 設定 Android SDK
-      uses: android-actions/setup-android@v3
+    # Install exactly what the build pins (compileSdk/targetSdk 37, build-tools 37.0.0, NDK r29)
+    # so Gradle never falls back to downloading SDK components mid-build.
+    - name: 設定 Android SDK 37
+      uses: android-actions/setup-android@v4
+      with:
+        cmdline-tools-version: 14742923
+        packages: >-
+          platform-tools
+          platforms;android-37.0
+          build-tools;37.0.0
+          ndk;29.0.13846066
 
     - name: 設定 ninja
       uses: seanmiddleditch/gha-setup-ninja@master
@@ -73,27 +96,27 @@ jobs:
       run: chmod +x gradlew
 
     - name: 設定 commit id
-      run: echo "commit=$(echo ${{ github.sha }} | cut -c-7)" > $GITHUB_ENV
+      run: echo "commit=$(echo ${{ github.sha }} | cut -c-7)" >> $GITHUB_ENV
 
     - name: 使用 Gradle 構建
       run: ./gradlew buildAll
 
     - name: 上傳 Release Artifact
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v7
       with:
         name: npatch-release-${{ env.commit }}
         path: out/release/*
         retention-days: 14
 
     - name: 上傳 Debug Artifact
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v7
       with:
         name: npatch-debug-${{ env.commit }}
         path: out/debug/*
         retention-days: 7
 
     - name: 上傳 mappings
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v7
       with:
         name: mappings-${{ env.commit }}
         path: |
@@ -101,7 +124,7 @@ jobs:
           manager/build/outputs/mapping
 
     - name: 上傳 symbols
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v7
       with:
         name: symbols-${{ env.commit }}
         path: |
