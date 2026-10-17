@@ -75,14 +75,18 @@ data class ApkInstallSet(
                 readManifestInfo(baseInfo.file).let { 1L }
             }
 
-            val baseSignerDigest = (
-                basePackageInfo?.signingInfo?.apkContentsSigners
-                    ?: @Suppress("DEPRECATION") basePackageInfo?.signatures
-            )?.map { signature -> sha256(signature.toByteArray()) }
-                ?.sorted()
-                ?.joinToString(":")
-                ?.takeIf { it.isNotEmpty() }
-                ?: readSignerDigest(baseInfo.file)
+            // Splits can only be read from the signing block, so the base must be read the same way:
+            // PackageManager reports just the current signer of a rotated (v3.1) key, while the block
+            // reader returns every v3/v3.1 certificate, and comparing the two rejects valid sets.
+            val baseSignerDigest = runCatching { readSignerDigest(baseInfo.file) }.getOrNull()
+                ?: (
+                    basePackageInfo?.signingInfo?.apkContentsSigners
+                        ?: @Suppress("DEPRECATION") basePackageInfo?.signatures
+                )?.map { signature -> sha256(signature.toByteArray()) }
+                    ?.sorted()
+                    ?.joinToString(":")
+                    ?.takeIf { it.isNotEmpty() }
+                ?: throw IOException("Unable to read APK signature: ${baseInfo.file.name}")
 
             // Step 4: Validate split APKs using ManifestParser results + ApkSignatureHelper.
             manifestInfos.filterNot { it === baseInfo }.forEach { split ->

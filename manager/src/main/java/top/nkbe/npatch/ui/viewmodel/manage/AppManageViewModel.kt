@@ -25,6 +25,7 @@ import nkbe.util.NeoPackageManager
 import nkbe.util.NeoPackageManager.AppInfo
 import nkbe.util.ShizukuApi
 import top.nkbe.npatch.patch.util.Logger
+import java.io.File
 import java.io.FileNotFoundException
 import java.util.zip.ZipFile
 
@@ -156,6 +157,14 @@ class AppManageViewModel : ViewModel() {
                 val patchPaths = mutableListOf<String>()
                 val embeddedModulePaths = mutableListOf<String>()
                 for (apk in apkPaths) {
+                    // Only the base embeds the original APK; a patched split is the original split with
+                    // a rewritten manifest, so it is fed back to the patcher as it is.
+                    if (apk != appInfo.app.sourceDir) {
+                        val dst = lspApp.tmpApkDir.resolve(apk.substringAfterLast('/'))
+                        File(apk).copyTo(dst, overwrite = true)
+                        patchPaths.add(dst.absolutePath)
+                        continue
+                    }
                     ZipFile(apk).use { zip ->
                         var entry = zip.getEntry(Constants.ORIGINAL_APK_ASSET_PATH)
                         if (entry == null) entry = zip.getEntry("assets/npatch/origin_apk.bin")

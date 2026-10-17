@@ -401,6 +401,9 @@ object NeoPackageManager {
                     val src = DocumentFile.fromSingleUri(lspApp, uri)
                         ?: throw IOException("DocumentFile is null")
                     val srcName = src.name ?: "selected-$index.apk"
+                    if (!isSupportedInputName(srcName)) {
+                        throw IOException("Unsupported file type: $srcName (only .apk, .apks and .xapk are supported)")
+                    }
                     val copiedName = if (isApksArchiveName(srcName)) {
                         "$index-$srcName"
                     } else {
@@ -524,7 +527,13 @@ object NeoPackageManager {
 
     private fun isApksArchiveName(fileName: String): Boolean {
         val lower = fileName.lowercase(Locale.ROOT)
-        return lower.endsWith(".apks") || lower.endsWith(".xapk") || lower.endsWith(".apkm") || lower.endsWith(".zip")
+        return lower.endsWith(".apks") || lower.endsWith(".xapk")
+    }
+
+    /** Only .apk, .apks and .xapk are accepted; a name without an extension is left to content sniffing. */
+    private fun isSupportedInputName(fileName: String): Boolean {
+        val extension = fileName.substringAfterLast('.', "").lowercase(Locale.ROOT)
+        return extension.isEmpty() || extension == "apk" || isApksArchiveName(fileName)
     }
 
     private fun isApksArchive(fileName: String, file: File? = null): Boolean {
@@ -894,7 +903,15 @@ object NeoPackageManager {
 
                 appInfo.sourceDir = extractedFile.absolutePath
                 appInfo.publicSourceDir = extractedFile.absolutePath
-                appInfo.splitSourceDirs = null
+                // Splits embed no original; carry the installed ones over, or the re-patched set would
+                // install as a lone base missing its native libraries and resources.
+                appInfo.splitSourceDirs = patchedApp.app.splitSourceDirs
+                    ?.map { path ->
+                        val split = File(path)
+                        uniqueTempFile(sanitizeVisibleFileName(split.name)).also { split.copyTo(it) }.absolutePath
+                    }
+                    ?.takeIf { it.isNotEmpty() }
+                    ?.toTypedArray()
 
                 val innerLabel = runCatching { pm.getApplicationLabel(appInfo).toString() }
                     .getOrDefault(pkgInfo.packageName)
