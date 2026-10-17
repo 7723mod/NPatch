@@ -49,7 +49,7 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class RemoteApplicationService implements IFrameworkService {
+public class RemoteApplicationService extends IFrameworkService.Stub {
 
     private static final String TAG = "NPatch";
     private static final String MODULE_SERVICE = "top.nkbe.npatch.manager.ModuleService";
@@ -702,9 +702,14 @@ public class RemoteApplicationService implements IFrameworkService {
         }
     }
 
+    /**
+     * Always the local stub, never the manager's binder: VectorServiceClient rejects a null binder
+     * (so a bind timeout would load no modules) and drops the service when a remote binder dies,
+     * while every call here already falls back to the local cache on its own.
+     */
     @Override
     public IBinder asBinder() {
-        return service == null ? null : service.asBinder();
+        return this;
     }
 
     @Override
