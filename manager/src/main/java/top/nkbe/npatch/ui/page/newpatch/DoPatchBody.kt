@@ -379,7 +379,7 @@ fun InstallDialog(
     var uninstallFirst by remember(method, patchApp.app.packageName) {
         mutableStateOf(
             if (method == NeoPackageManager.InstallMethod.SHIZUKU) {
-                ShizukuApi.isPackageInstalledWithoutPatch(patchApp.app.packageName)
+                runCatching { ShizukuApi.isPackageInstalledWithoutPatch(patchApp.app.packageName) }.getOrDefault(false)
             } else {
                 checkIsApkFixedByLSP(context, patchApp.app.packageName)
             },

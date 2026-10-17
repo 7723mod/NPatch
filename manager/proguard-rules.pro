@@ -25,6 +25,7 @@
 -keep class org.lsposed.lspd.nativebridge.** { *; }
 -keep class org.lsposed.hiddenapibypass.** { *; }
 -keep class top.nkbe.npatch.loader.SigBypass { *; }
+-keep class top.nkbe.npatch.ShizukuService { <init>(); }
 -dontwarn com.google.auto.value.AutoValue$Builder
 -dontwarn com.google.auto.value.AutoValue
 -dontwarn org.lsposed.hiddenapibypass.**

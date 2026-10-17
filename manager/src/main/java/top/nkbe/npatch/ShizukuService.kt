@@ -159,10 +159,13 @@ class ShizukuService : INPatchShizukuService.Stub() {
     override fun dumpLogcat(packageName: String, maxLines: Int): String? {
         return runCatching {
             val limit = if (maxLines in 1..20000) maxLines else 5000
+            val sinceMillis = System.currentTimeMillis() - LOGCAT_WINDOW_MS
+            val since = "${sinceMillis / 1000}.${"%03d".format(sinceMillis % 1000)}"
             val process = Runtime.getRuntime().exec(
-                arrayOf("logcat", "-d", "-v", "threadtime", "-t", limit.toString())
+                arrayOf("logcat", "-d", "-v", "threadtime", "-T", since)
             )
-            val lines = mutableListOf<String>()
+            // Keep the newest matching lines once the cap is reached.
+            val lines = ArrayDeque<String>()
             process.inputStream.bufferedReader(java.nio.charset.StandardCharsets.UTF_8).use { reader ->
                 var line = reader.readLine()
                 while (line != null) {
@@ -172,7 +175,8 @@ class ShizukuService : INPatchShizukuService.Stub() {
                         line.contains("AndroidRuntime") ||
                         line.contains("DEBUG")
                     ) {
-                        lines.add(line)
+                        if (lines.size == limit) lines.removeFirst()
+                        lines.addLast(line)
                     }
                     line = reader.readLine()
                 }
@@ -250,6 +254,7 @@ class ShizukuService : INPatchShizukuService.Stub() {
 
     companion object {
         private const val COPY_BUFFER_SIZE = 4096 * 4096
+        private const val LOGCAT_WINDOW_MS = 10 * 60 * 1000L
         const val KEY_STATUS = "status"
         const val KEY_MESSAGE = "message"
 

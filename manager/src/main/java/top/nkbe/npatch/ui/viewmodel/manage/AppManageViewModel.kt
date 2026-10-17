@@ -221,7 +221,7 @@ class AppManageViewModel : ViewModel() {
         Log.i(TAG, "Perform optimize for ${appInfo.app.packageName}")
         optimizeState = ProcessingState.Processing
         val result = withContext(Dispatchers.IO) {
-            ShizukuApi.performDexOptMode(appInfo.app.packageName)
+            runCatching { ShizukuApi.performDexOptMode(appInfo.app.packageName) }.getOrDefault(false)
         }
         optimizeState = ProcessingState.Done(result)
     }
