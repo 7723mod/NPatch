@@ -48,8 +48,8 @@ val commitCount = providers.of(GitCommitCountValueSource::class) {
     parameters.workingDirectory.set(rootDir.absolutePath)
     parameters.candidateRefs.set(
         listOf(
-            "refs/remotes/origin/miuix",
-            "refs/heads/miuix",
+            "refs/remotes/origin/dev",
+            "refs/heads/dev",
             "HEAD",
         )
     )

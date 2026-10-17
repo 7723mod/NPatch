@@ -33,7 +33,7 @@ jobs:
           ${{ runner.os }}-ccache-
 
     - name: 如果需要，則寫入簽名密鑰
-      if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+      if: github.ref == 'refs/heads/dev' && github.event_name != 'pull_request'
       run: |
         if [ ! -z "${{ secrets.KEY_STORE }}" ]; then
           echo androidStorePassword='${{ secrets.KEY_STORE_PASSWORD }}' >> gradle.properties

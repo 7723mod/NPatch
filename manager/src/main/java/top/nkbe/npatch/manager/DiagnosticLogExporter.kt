@@ -2,6 +2,7 @@ package top.nkbe.npatch.manager
 
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Environment
 import android.util.Base64
 import org.json.JSONObject
@@ -139,8 +140,23 @@ object DiagnosticLogExporter {
         zipPrefix: String,
         remainingBytes: Long,
     ): DirectoryResult {
-        if (!directory.isDirectory || remainingBytes <= 0L) {
+        if (remainingBytes <= 0L) {
             return DirectoryResult(0, 0, 0L, emptyList())
+        }
+        // Without all-files access another app's non-media files are invisible, so an empty result
+        // must not be reported as "no logs".
+        val accessWarnings = if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()
+        ) {
+            listOf("${directory.path}: all files access is not granted to NPatch; existing logs may be invisible")
+        } else {
+            emptyList()
+        }
+        if (!directory.isDirectory) {
+            return DirectoryResult(0, 0, 0L, accessWarnings)
+        }
+        if (directory.list() == null) {
+            return DirectoryResult(0, 0, 0L, accessWarnings + "${directory.path}: directory cannot be listed")
         }
         val canonicalRoot = runCatching { directory.canonicalFile }.getOrElse {
             return DirectoryResult(0, 0, 0L, listOf("${directory.path}: ${it.message}"))
@@ -154,6 +170,9 @@ object DiagnosticLogExporter {
                 .toList()
         }.getOrElse {
             return DirectoryResult(0, 0, 0L, listOf("${directory.path}: ${it.message}"))
+        }
+        if (candidates.isEmpty()) {
+            return DirectoryResult(0, 0, 0L, accessWarnings)
         }
 
         var collected = 0
