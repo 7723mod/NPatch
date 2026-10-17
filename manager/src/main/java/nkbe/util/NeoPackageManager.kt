@@ -41,6 +41,7 @@ object NeoPackageManager {
     private const val TAG = "NeoPackageManager"
     private const val SETTINGS_CATEGORY = "de.robv.android.xposed.category.MODULE_SETTINGS"
     private const val MAX_ARCHIVE_APK_COUNT = 256
+    private val DUPLICATE_APK_SUFFIX = Regex("\\.apk\\.\\d+$", RegexOption.IGNORE_CASE)
     private const val MAX_ARCHIVE_EXTRACTED_BYTES = 4L * 1024 * 1024 * 1024
 
     const val STATUS_USER_CANCELLED = -2
@@ -400,9 +401,10 @@ object NeoPackageManager {
                 apks.forEachIndexed { index, uri ->
                     val src = DocumentFile.fromSingleUri(lspApp, uri)
                         ?: throw IOException("DocumentFile is null")
-                    val srcName = src.name ?: "selected-$index.apk"
+                    // "app.apk.1" is how browsers name a repeated download of the same APK.
+                    val srcName = (src.name ?: "selected-$index.apk").replace(DUPLICATE_APK_SUFFIX, ".apk")
                     if (!isSupportedInputName(srcName)) {
-                        throw IOException("Unsupported file type: $srcName (only .apk, .apks and .xapk are supported)")
+                        throw IOException("Unsupported file type: $srcName (only .apk, .apks, .xapk and .apkm are supported)")
                     }
                     val copiedName = if (isApksArchiveName(srcName)) {
                         "$index-$srcName"
@@ -527,10 +529,10 @@ object NeoPackageManager {
 
     private fun isApksArchiveName(fileName: String): Boolean {
         val lower = fileName.lowercase(Locale.ROOT)
-        return lower.endsWith(".apks") || lower.endsWith(".xapk")
+        return lower.endsWith(".apks") || lower.endsWith(".xapk") || lower.endsWith(".apkm")
     }
 
-    /** Only .apk, .apks and .xapk are accepted; a name without an extension is left to content sniffing. */
+    /** Only .apk, .apks, .xapk and .apkm are accepted; a name without an extension is left to content sniffing. */
     private fun isSupportedInputName(fileName: String): Boolean {
         val extension = fileName.substringAfterLast('.', "").lowercase(Locale.ROOT)
         return extension.isEmpty() || extension == "apk" || isApksArchiveName(fileName)
