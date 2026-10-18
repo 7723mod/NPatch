@@ -32,7 +32,9 @@
 #include <set>
 #include <string>
 #include <string_view>
+#include <sys/mman.h>
 #include <sys/syscall.h>
+#include <unistd.h>
 
 namespace lspd {
 
@@ -90,8 +92,28 @@ namespace lspd {
             ctx->general.regs.x1 = reinterpret_cast<uint64_t>(g_redirect_path.c_str());
         }
 
+        // Some ROMs (e.g. Honor MagicOS 9) map .text execute-only (XOM: `--x` with no read
+        // permission). Reading such a page to scan for `svc #0` faults with SEGV_ACCERR and, since
+        // the scan does a plain load, kills the process (see issue #156). Widen the covering pages to
+        // PROT_READ | PROT_EXEC first; these are our own process's app-library mappings, so the
+        // mprotect is permitted. Execution is preserved, and on the common r-x case this is a no-op.
+        // Returns false when the range could not be made readable, so the caller skips reading it.
+        bool ensure_range_readable(uintptr_t base, size_t len) {
+            static const uintptr_t page_size =
+                    static_cast<uintptr_t>(sysconf(_SC_PAGESIZE) > 0 ? sysconf(_SC_PAGESIZE) : 4096);
+            const uintptr_t page_mask = page_size - 1;
+            const uintptr_t start = base & ~page_mask;
+            const uintptr_t end = (base + len + page_mask) & ~page_mask;
+            if (mprotect(reinterpret_cast<void*>(start), end - start, PROT_READ | PROT_EXEC) != 0) {
+                LOGW("SvcBypass: cannot make [{:#x},{:#x}) readable, skipping scan", start, end);
+                return false;
+            }
+            return true;
+        }
+
         // Instrument every `svc #0` in [base, base+len). Caller must hold g_svc_mutex.
         int instrument_range(uintptr_t base, size_t len) {
+            if (len < sizeof(uint32_t) || !ensure_range_readable(base, len)) return 0;
             auto* words = reinterpret_cast<const uint32_t*>(base);
             size_t count = len / sizeof(uint32_t);
             int done = 0;
