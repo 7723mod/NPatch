@@ -7,100 +7,140 @@ body:
     attributes:
       value: |
         Thanks for reporting issues for NPatch!
-        
-        **Before reporting, please visit [t.me/ONPatch](https://t.me/ONPatch) to try the latest test release.**
-        If an app patched with a previous version crashes or malfunctions, please try re-patching it first.
 
-        To help us locate and fix the problem efficiently, please fill in the detailed information below as required.
+        **Before reporting, please visit [t.me/ONPatch](https://t.me/ONPatch) to try the latest test release.**
+        If an app patched with a previous version crashes or malfunctions, please re-patch it with the latest version first — most reports turn out to already be fixed.
+
+        Every field below is checked before anyone looks at logs. An issue that misses a required field, uses `N/A` / `latest` where a specific value is asked for, or has no diagnostic logs attached will be closed without investigation.
+        Please write the issue title in English to help avoid duplicates.
 
         ---
 
         感谢您向 NPatch 反馈问题！
-        
+
         **在提交反馈前，请先前往 [t.me/ONPatch](https://t.me/ONPatch) 尝试最新发布的测试版本。**
-        若之前版本修补的应用出现闪退或是无法正常工作，请先尝试重新修补。
-        
-        为了帮助我们高效定位并解决问题，请按要求填写下方详细信息。
-        为避免重复反馈，标题请务必使用英文填写。
+        若之前版本修补的应用出现闪退或是无法正常工作，请先用最新版本重新修补——多数反馈到这一步就已经解决了。
+
+        下面每一项都会在有人查看日志之前先被核对。缺填必填项、在要求填具体数值的地方填 `N/A` / `最新`，或没有附上诊断日志，都会被直接关闭、不会进一步排查。
+        为避免重复反馈，标题请使用英文填写。
+
+  - type: input
+    attributes:
+      label: NPatch version / NPatch 版本
+      description: Open NPatch → "About NPatch" on the home page. Fill in both the version and the build number, e.g. `1.0.9 (843)`. Never "latest". / 打开 NPatch 首页的「关于 NPatch」，同时填写版本号与构建号，例如 `1.0.9 (843)`。不要填「最新」。
+      placeholder: "e.g. 1.0.9 (843)"
+    validations:
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: Patch mode / 修补模式
+      description: Shown as "Use Manager" when patching. It decides which code path is involved, so an answer that contradicts the logs will get the issue closed. / 修补时的「使用管理器」开关。它决定问题落在哪条代码路径上，与日志矛盾的回答会导致 issue 被直接关闭。
+      options:
+        - Local mode (useManager = true, no Shizuku) / 本地模式（useManager = true，无需 Shizuku）
+        - Manager mode with Shizuku connected / 管理器模式，Shizuku 已连接
+        - Integrated mode (useManager = false) / 集成模式（useManager = false）
+        - Not sure / 不确定
+    validations:
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: Signature bypass level / 签名绕过等级
+      description: The level selected when patching (Patch screen → Signature bypass). Levels 3/4/5 each enable a different, mutually exclusive native mechanism, so a wrong level sends us to the wrong code. / 修补时选择的等级（打包页面 → 签名绕过）。3/4/5 各自启用不同且互斥的 native 机制，等级填错会让我们查错代码。
+      options:
+        - "0 - None / 无"
+        - "1 - Basic / 基础"
+        - "2 - High / 高"
+        - "3 - Extreme / 极限"
+        - "4 - Seccomp"
+        - "5 - Stealth / 隐身"
+        - Not sure / 不确定
+    validations:
+      required: true
+
   - type: textarea
     attributes:
       label: Steps to reproduce / 复现步骤
-      description: Please describe the complete operation steps to trigger the problem in detail / 请详细描述触发问题的完整操作步骤
+      description: The complete sequence of actions, in order — not a summary. / 完整、逐步的操作顺序，而不是概括性描述。
       value: |
-        1. 
-        2. 
-        3. 
+        1.
+        2.
+        3.
     validations:
       required: true
+
   - type: textarea
     attributes:
       label: Expected behaviour / 预期行为
       placeholder: Describe what should happen normally / 描述正常情况下应该出现的结果
     validations:
       required: true
+
   - type: textarea
     attributes:
       label: Actual behaviour / 实际行为
       placeholder: Describe what actually happens, or which function is abnormal / 描述实际出现的结果，或具体哪个功能无法正常工作
     validations:
       required: true
+
   - type: textarea
     attributes:
-      label: Xposed Module List / Xposed 模块列表
-      description: List all Xposed modules you have enabled on the device / 列出设备上已启用的全部 Xposed 模块
+      label: Xposed module list / Xposed 模块列表
+      description: Every module enabled for the affected app, with its version and the libxposed API it targets (102/101/legacy) if known. Write "none" if you use no module. / 该应用启用的所有模块及其版本，如知道请附上对应的 libxposed API（102/101/legacy）。没有使用任何模块请填「none」。
       render: Shell
     validations:
       required: true
+
   - type: input
     attributes:
-      label: NPatch version / NPatch 版本
-      description: Don't use 'latest'. Please fill in the 3-digit specific version number (like 533), otherwise your issue will be closed. / 请勿填写「最新版」，请填写3位数字的具体版本号 (比如533)，否则该 issue 将被关闭。
+      label: Device model and ROM / 设备型号与 ROM
+      description: Exact model and ROM/vendor build. A bare Android version is not enough — most hard crashes are vendor-ROM-specific. / 精确型号及 ROM/厂商版本。只填 Android 版本不够——多数难查的崩溃都只出现在特定厂商 ROM 上。
+      placeholder: "e.g. Honor AMG-AN00, MagicOS 9.0.0"
     validations:
       required: true
+
   - type: input
     attributes:
       label: Android version / Android 版本
-      description: Specific Android version number (including minor versions, e.g. 14 / 15 / 14.0). / 具体的 Android 系统版本号（可包含小版本号，如 14 / 15 / 14.0）。
+      description: Specific Android version, including the minor version if any (e.g. 14 / 15 / 14.0). / 具体的 Android 系统版本号（可含小版本号，如 14 / 15 / 14.0）。
     validations:
       required: true
+
   - type: input
     attributes:
       label: Shizuku version / Shizuku 版本
-      description: If you are not using Shizuku mode, please fill in `N/A`. / 如果未使用 Shizuku 模式，请填写 `N/A`。
+      description: Only the version of Shizuku itself. Fill in `N/A` if you used Local mode or Integrated mode. / 只问 Shizuku 自身的版本。使用本地模式或集成模式请填 `N/A`。
     validations:
       required: true
-  - type: checkboxes
-    id: precheck
-    attributes:
-      label: Pre-check Confirmation / 预先检查确认
-      options:
-        - label: I am using the latest CI test version of NPatch, and confirm that NPatch has the log output function enabled. / 我正在使用 NPatch 最新的 CI 测试版本，且确认 NPatch 已启用日志输出功能。
-          required: true
+
   - type: textarea
     attributes:
       label: Apk file / Apk 文件
-      description: The original apk file that failed to be patched (if any). / 修补失败的原始安装包文件（如有）
-      placeholder: You can upload the apk file by clicking the bottom bar. / 可点击下方底栏上传安装包文件
+      description: The original apk that failed to be patched (if any). / 修补失败的原始安装包（如有）。
+      placeholder: Drag the file into this box to upload. / 将文件拖入此处上传。
+
   - type: textarea
     attributes:
-      label: Logs / 日志
+      label: Diagnostic logs / 诊断日志
       description: |
-        NPatch has the log output function enabled by default, no manual activation required. If a problem occurs, please submit the latest log files under the path: `/sdcard/Android/media/{PackageName}/npatch/log/`.
-        In the new version, all logs related to NPatch startup are also uniformly stored in this directory of the corresponding app.
-        For app startup/activation exceptions, please provide the complete [bugreport](https://developer.android.com/studio/debug/bug-report).
-        Issues without valid logs due to functional anomalies will be closed directly.
+        Reproduce the issue first, then open NPatch → the affected app's detail page → **Export diagnostic logs**, and attach the resulting `.zip` as-is. Do not retype or summarize its contents.
+        If `collection-report.txt` inside it says `Collected log files: 0`, check that NPatch has all-files storage access and that you reproduced the issue *before* exporting, then export again.
+        For an app-startup/activation crash, also attach a full [bugreport](https://developer.android.com/studio/debug/bug-report) if Shizuku/root lets you capture one.
 
-        NPatch 已默认启用日志输出功能，无需手动开启。若出现问题，请提交以下路径下的最新日志文件：`/sdcard/Android/media/{应用包名}/npatch/log/`。
-        新版本中，所有与 NPatch 启动相关的日志，也会统一存放至对应应用的该目录下。
-        若为应用启动/激活异常问题，请提供完整的 [bugreport 日志](https://developer.android.google.cn/studio/debug/bug-report)。
-        功能异常问题而未提交有效日志的问题反馈，将被直接关闭。
-      value: |
-        <details>
-        <summary>Click to expand and paste logs / 点击展开粘贴日志内容</summary>
-
-        ```
-        # Replace this line with your log content / 将此行替换为你的日志内容
-        ```
-        </details>
+        先复现问题，然后打开 NPatch → 受影响应用的详情页 → **导出诊断日志**，把生成的 `.zip` 原样附上，不要转述或摘录。
+        如果其中的 `collection-report.txt` 写着 `Collected log files: 0`，请先确认 NPatch 已获得「所有文件访问权限」、且是在*导出之前*复现的问题，然后重新导出。
+        若为应用启动/激活异常，能通过 Shizuku/root 获取时，请一并附上完整的 [bugreport](https://developer.android.google.cn/studio/debug/bug-report)。
+      placeholder: Drag the diagnostic .zip into this box to upload. / 将诊断 .zip 拖入此处上传。
     validations:
       required: true
+
+  - type: checkboxes
+    id: precheck
+    attributes:
+      label: Pre-check confirmation / 预先检查确认
+      options:
+        - label: I am on the latest build from t.me/ONPatch and re-patched the app with it. / 我使用 t.me/ONPatch 的最新版本，并已用它重新修补过应用。
+          required: true
+        - label: I searched existing issues and this is not a duplicate. / 我已搜索现有 issue，确认并非重复反馈。
+          required: true

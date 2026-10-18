@@ -1,24 +1,39 @@
----
-name: Feature request/新特性请求
-description: Suggest an idea./提出建议
+name: Feature request / 新特性请求
+description: Suggest an idea for NPatch. / 提出功能建议
 labels: [enhancement]
 title: "[Feature Request] "
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Please search existing issues first. Want to implement it yourself, or add / fix a translation? Use the **Contribution** template instead.
+        请先搜索现有 issue。如果想亲自实现，或新增 / 修改翻译，请改用 **Contribution / 贡献** 模板。
+
   - type: textarea
     attributes:
-      label: Is your feature request related to a problem?/你的请求是否与某个问题相关？
-      placeholder: A clear and concise description of what the problem is./请清晰准确表述该问题。
+      label: Problem or use case / 问题或使用场景
+      description: What are you trying to do, and what is getting in the way? / 你想做什么，现在遇到了什么阻碍？
+      placeholder: A clear and concise description of the problem. / 请清晰准确地描述问题。
     validations:
       required: true
+
   - type: textarea
     attributes:
-      label: Describe the solution you'd like/描述你想要的解决方案
-      placeholder: A clear and concise description of what you want to happen./请清晰准确描述新特性的预期行为
+      label: Proposed solution / 期望的解决方案
+      placeholder: A clear and concise description of the expected behaviour. / 请清晰准确地描述新特性的预期行为。
     validations:
       required: true
+
   - type: textarea
     attributes:
-      label: Additional context/其他信息
-      placeholder: Add any other context or screenshots about the feature request here./其他关于新特性的信息或者截图
+      label: Alternatives considered / 已考虑的替代方案
+      description: Workarounds or other tools you have tried. / 你尝试过的变通办法或其他工具。
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: Additional context / 其他信息
+      placeholder: Screenshots, mockups, links. / 截图、设计草图、相关链接。
     validations:
       required: false

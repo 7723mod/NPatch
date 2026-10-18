@@ -36,7 +36,8 @@
     <string name="about_disclaimer_body">NPatch 僅供學習、研究以及合法的應用程式相容性工作使用。請尊重當地法律、應用程式條款與原開發者權益。您需自行承擔在裝置上使用修補應用與模組的責任。</string>
     <string name="about_links_title">相關連結</string>
     <string name="about_official_website">官方網站</string>
-    <string name="about_link_website_summary">前往 NkBe 的官方網站</string>
+    <string name="about_link_website_summary">前往 NPatch 官方網站</string>
+    <string name="about_build_number">構建 %1$s</string>
     <string name="about_link_github_summary">查看原始碼與發布版本</string>
     <string name="about_link_telegram_summary">訂閱我們的頻道</string>
     <string name="about_acknowledgments_title">特別鳴謝（排名不分先後）</string>

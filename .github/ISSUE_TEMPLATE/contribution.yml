@@ -1,0 +1,68 @@
+name: Contribution (translation / feature) / 贡献（翻译 / 功能）
+description: Add or change a translation, or propose a feature you want to implement. / 新增或修改翻译，或提出由你来实现的功能
+labels: [contribution]
+title: "[Contribution] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping improve NPatch! **Pull requests are not accepted.** Please fork the repository, push your work to a branch in your own fork, and give the branch link below. The maintainer will review it and merge it manually.
+        感谢你为 NPatch 做出贡献！**本项目不接受 PR。** 请 fork 仓库，把改动推送到你自己 fork 里的分支，并在下方提供该分支的链接。维护者会审查并手动合并。
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Contribution type / 贡献类型
+      options:
+        - Add a new language / 新增语言
+        - Change or fix an existing translation / 修改或修正现有翻译
+        - Add a new feature / 新增功能
+        - Change an existing feature / 改动现有功能
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: Language / 语言
+      description: Only for translation contributions. Language and region, e.g. `Japanese (ja)`, `Chinese Traditional (zh-rTW)`. / 仅翻译类贡献填写。语言及地区，例如 `Japanese (ja)`、`Chinese Traditional (zh-rTW)`。
+      placeholder: "e.g. Japanese (ja)"
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: What to add or change / 要新增或修改的内容
+      description: |
+        Translation: list the string names (e.g. `about_author_summary`) and the current vs. proposed text, or say that you will translate the whole `values/strings.xml`.
+        Feature: describe the behaviour and which screen or module it touches.
+
+        翻译：列出字符串名称（如 `about_author_summary`）以及现有文本与建议文本，或说明你将翻译整份 `values/strings.xml`。
+        功能：描述行为，以及涉及的页面或模块。
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Motivation / 动机
+      description: Why is it needed — wrong wording, missing language, a user need? / 为什么需要——措辞错误、缺少语言，还是用户需求？
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: Fork branch link / Fork 分支链接
+      description: Link to the branch in your fork that contains the change, e.g. `https://github.com/you/NPatch/tree/feat-xxx`. If it is not ready yet, write "later" and edit this issue once it is. / 你 fork 中包含改动的分支链接，例如 `https://github.com/you/NPatch/tree/feat-xxx`。尚未完成请填「later」，完成后再编辑此 issue。
+      placeholder: "https://github.com/<you>/NPatch/tree/<branch>"
+    validations:
+      required: true
+
+  - type: checkboxes
+    attributes:
+      label: Checklist / 确认事项
+      options:
+        - label: I searched existing issues for the same contribution. / 我已搜索现有 issue，没有相同的贡献。
+          required: true
+        - label: I understand that no pull request is needed; my branch lives in my own fork. / 我了解无需提交 PR，我的分支位于自己的 fork 中。
+          required: true
+        - label: I will follow the style and naming of the surrounding code or strings. / 我会遵循周边代码或字符串的风格与命名。
+          required: true

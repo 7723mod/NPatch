@@ -8,7 +8,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -19,7 +21,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -46,6 +47,7 @@ import top.nkbe.npatch.ui.viewmodel.manage.ModuleManageViewModel
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Text
@@ -141,192 +143,161 @@ private fun StatusCard(onManageShortcut: (Int) -> Unit) {
     }
 
     val isGranted = ShizukuApi.isPermissionGranted
-    val warningContainer = if (MiuixTheme.colorScheme.surface.luminance() > 0.5f) {
-        Color(0xFFFFE08A)
-    } else {
-        Color(0xFF5C4800)
-    }
-    val warningContent = if (MiuixTheme.colorScheme.surface.luminance() > 0.5f) {
-        Color(0xFF5A4300)
-    } else {
-        Color(0xFFFFF1BF)
-    }
-    val containerColor = if (isGranted) MiuixTheme.colorScheme.primaryContainer else warningContainer
-    val contentColor = if (isGranted) MiuixTheme.colorScheme.onPrimaryContainer else warningContent
-
     val appViewModel = viewModel<AppManageViewModel>()
     val moduleViewModel = viewModel<ModuleManageViewModel>()
-    val appsCount = appViewModel.appList.size
-    val modulesCount = moduleViewModel.appList.size
 
-    Row(
+    val warningColor = Color(0xFFE65100)
+    val statusColor = if (isGranted) MiuixTheme.colorScheme.primary else warningColor
+    val cardColors = if (isGranted) {
+        backgroundAwareCardColors()
+    } else {
+        CardDefaults.defaultColors(
+            color = warningColor.copy(alpha = 0.15f)
+        )
+    }
+
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp)
-            .padding(bottom = 12.dp)
-            .height(IntrinsicSize.Min), // 让左右两边高度完美对齐
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(bottom = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Card(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight(),
-            colors = backgroundAwareCardColors(color = containerColor),
+            modifier = Modifier.fillMaxWidth(),
+            colors = cardColors,
             onClick = {
                 if (ShizukuApi.isBinderAvailable && !isGranted) {
                     ShizukuApi.requestPermission()
                 }
             },
+            insideMargin = PaddingValues(horizontal = 20.dp, vertical = 20.dp),
             showIndication = true,
-            pressFeedbackType = PressFeedbackType.Tilt
+            pressFeedbackType = PressFeedbackType.Sink,
         ) {
-            Box(modifier = Modifier.fillMaxSize()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .offset(x = 38.dp, y = 45.dp),
-                    contentAlignment = Alignment.BottomEnd
+                        .size(44.dp)
+                        .background(
+                            color = statusColor.copy(alpha = 0.16f),
+                            shape = CircleShape,
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        modifier = Modifier.size(170.dp),
                         imageVector = if (isGranted) Icons.Outlined.CheckCircle else Icons.Outlined.Warning,
-                        tint = contentColor.copy(alpha = 0.2f),
-                        contentDescription = null
+                        contentDescription = null,
+                        tint = statusColor,
+                        modifier = Modifier.size(26.dp)
                     )
                 }
+
+                Spacer(Modifier.width(16.dp))
+
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(all = 16.dp)
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        modifier = Modifier.fillMaxWidth(),
                         text = stringResource(if (isGranted) R.string.shizuku_available else R.string.shizuku_unavailable),
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = contentColor
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isGranted) MiuixTheme.colorScheme.onSurface else statusColor,
                     )
-                    Spacer(Modifier.height(2.dp))
                     Text(
-                        modifier = Modifier.fillMaxWidth(),
-                        text =
-                            ShizukuApi.getVersionOrNull()?.let { "API $it" }
-                                ?: stringResource(R.string.home_shizuku_warning),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = contentColor.copy(alpha = 0.8f)
+                        text = if (isGranted) {
+                            ShizukuApi.getVersionOrNull()?.let { "API $it" }.orEmpty()
+                        } else {
+                            stringResource(R.string.home_shizuku_optional_summary)
+                        },
+                        fontSize = 13.sp,
+                        color = if (isGranted) {
+                            MiuixTheme.colorScheme.onSurfaceVariantSummary
+                        } else {
+                            MiuixTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+                        },
                     )
-                    if (!isGranted) {
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            modifier = Modifier.fillMaxWidth(),
-                            text = stringResource(R.string.home_shizuku_optional_summary),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Normal,
-                            color = contentColor.copy(alpha = 0.9f)
-                        )
-                    }
+                }
+
+                if (!isGranted && ShizukuApi.isBinderAvailable) {
+                    Spacer(Modifier.width(8.dp))
+                    Icon(
+                        imageVector = MiuixIcons.Regular.Back,
+                        contentDescription = null,
+                        tint = statusColor.copy(alpha = 0.7f),
+                        modifier = Modifier
+                            .graphicsLayer(rotationZ = 180f)
+                            .size(20.dp),
+                    )
                 }
             }
         }
 
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight()
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                colors = backgroundAwareCardColors(),
-                onClick = {
-                    onManageShortcut(0)
-                },
-                insideMargin = PaddingValues(16.dp),
-                showIndication = true,
-                pressFeedbackType = PressFeedbackType.Sink,
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        horizontalAlignment = Alignment.Start
-                    ) {
-                        Text(
-                            modifier = Modifier.fillMaxWidth(),
-                            text = stringResource(R.string.apps),
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 15.sp,
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        )
-                        Text(
-                            modifier = Modifier.fillMaxWidth(),
-                            text = appsCount.toString(),
-                            fontSize = 26.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MiuixTheme.colorScheme.onSurface,
-                        )
-                    }
-                    Icon(
-                        imageVector = MiuixIcons.Regular.Back,
-                        contentDescription = null,
-                        tint = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                        modifier = Modifier
-                            .graphicsLayer(rotationZ = 180f)
-                            .size(18.dp)
-                    )
-                }
+            CountCard(
+                modifier = Modifier.weight(1f),
+                title = stringResource(R.string.apps),
+                count = appViewModel.appList.size,
+                onClick = { onManageShortcut(0) },
+            )
+            CountCard(
+                modifier = Modifier.weight(1f),
+                title = stringResource(R.string.modules),
+                count = moduleViewModel.appList.size,
+                onClick = { onManageShortcut(1) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun CountCard(
+    modifier: Modifier,
+    title: String,
+    count: Int,
+    onClick: () -> Unit,
+) {
+    Card(
+        modifier = modifier,
+        colors = backgroundAwareCardColors(),
+        onClick = onClick,
+        insideMargin = PaddingValues(16.dp),
+        showIndication = true,
+        pressFeedbackType = PressFeedbackType.Sink,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 15.sp,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                )
+                Text(
+                    text = count.toString(),
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MiuixTheme.colorScheme.onSurface,
+                )
             }
-            Spacer(Modifier.height(12.dp))
-            Card(
+            Icon(
+                imageVector = MiuixIcons.Regular.Back,
+                contentDescription = null,
+                tint = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                colors = backgroundAwareCardColors(),
-                onClick = {
-                    onManageShortcut(1)
-                },
-                insideMargin = PaddingValues(16.dp),
-                showIndication = true,
-                pressFeedbackType = PressFeedbackType.Sink,
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        horizontalAlignment = Alignment.Start
-                    ) {
-                        Text(
-                            modifier = Modifier.fillMaxWidth(),
-                            text = stringResource(R.string.modules),
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 15.sp,
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        )
-                        Text(
-                            modifier = Modifier.fillMaxWidth(),
-                            text = modulesCount.toString(),
-                            fontSize = 26.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MiuixTheme.colorScheme.onSurface,
-                        )
-                    }
-                    Icon(
-                        imageVector = MiuixIcons.Regular.Back,
-                        contentDescription = null,
-                        tint = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                        modifier = Modifier
-                            .graphicsLayer(rotationZ = 180f)
-                            .size(18.dp)
-                    )
-                }
-            }
+                    .graphicsLayer(rotationZ = 180f)
+                    .size(18.dp),
+            )
         }
     }
 }

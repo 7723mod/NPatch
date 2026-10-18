@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import top.nkbe.npatch.BuildConfig
 import top.nkbe.npatch.R
 import top.nkbe.npatch.ui.component.NPatchScaffold
 import top.nkbe.npatch.ui.component.NPatchTopAppBar
@@ -120,7 +122,7 @@ fun AboutScreen(onBack: () -> Unit) {
             overscrollEffect = null
         ) {
             item {
-                ModuleIntroCard()
+                ModuleIntroCard(onWebsiteClick = { context.openUri(ABOUT_WEBSITE_URL) })
             }
 
             item {
@@ -149,7 +151,7 @@ fun AboutScreen(onBack: () -> Unit) {
 }
 
 @Composable
-private fun ModuleIntroCard() {
+private fun ModuleIntroCard(onWebsiteClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = backgroundAwareCardColors(),
@@ -176,15 +178,57 @@ private fun ModuleIntroCard() {
                 color = MiuixTheme.colorScheme.primary,
                 textAlign = TextAlign.Center
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                InfoChip(stringResource(R.string.welcome_version, BuildConfig.VERSION_NAME))
+                InfoChip(stringResource(R.string.about_build_number, BuildConfig.VERSION_CODE.toString()))
+            }
+            Spacer(Modifier.height(12.dp))
             Text(
                 text = stringResource(R.string.home_description),
                 fontSize = MiuixTheme.textStyles.body2.fontSize,
                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 textAlign = TextAlign.Center
             )
+            Spacer(Modifier.height(16.dp))
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(MiuixTheme.colorScheme.primary)
+                    .clickable(onClick = onWebsiteClick)
+                    .padding(horizontal = 18.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Public,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MiuixTheme.colorScheme.onPrimary
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = ABOUT_WEBSITE_LABEL,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MiuixTheme.colorScheme.onPrimary
+                )
+            }
         }
     }
+}
+
+@Composable
+private fun InfoChip(text: String) {
+    Text(
+        text = text,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.Medium,
+        color = MiuixTheme.colorScheme.onPrimaryContainer,
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(backgroundAwareColor(MiuixTheme.colorScheme.primaryContainer))
+            .padding(horizontal = 12.dp, vertical = 4.dp)
+    )
 }
 
 @Composable
@@ -474,7 +518,8 @@ private fun Context.openUri(uri: String) {
     startActivity(Intent(Intent.ACTION_VIEW, uri.toUri()))
 }
 
-private const val ABOUT_WEBSITE_URL = "https://www.nkbe.top"
+private const val ABOUT_WEBSITE_URL = "https://npatch.nkbe.top"
+private const val ABOUT_WEBSITE_LABEL = "npatch.nkbe.top"
 private const val GITHUB_URL = "https://github.com/7723mod/NPatch"
 private const val TELEGRAM_URL = "https://t.me/NPatch"
 private const val AUTHOR_GITHUB_URL = "https://github.com/HSSkyBoy"
