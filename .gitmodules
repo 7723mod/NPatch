@@ -1,8 +1,4 @@
 [submodule "core"]
 	path = core
-	url = https://github.com/HSSkyBoy/Vector.git
+	url = https://github.com/Nk-Be/Vector.git
 	branch = core-837
-[submodule "remote-api"]
-	path = remote-api
-	url = https://github.com/7723mod/NPatch-Remote-API.git
-	branch = master

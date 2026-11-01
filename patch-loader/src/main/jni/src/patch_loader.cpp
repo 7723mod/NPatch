@@ -27,6 +27,7 @@
 #include "art/runtime/oat_file_manager.h"
 #include "native_util.h"
 #include "jni/svc_bypass.h"
+#include "jni/resources_hook.h"
 #include "elf/symbol_cache.h"
 #include "utils/jni_helper.hpp"
 
@@ -105,7 +106,13 @@ namespace lspd {
         auto mid_init = JNI_GetMethodID(env, in_memory_classloader, "<init>", "(Ljava/nio/ByteBuffer;Ljava/lang/ClassLoader;)V");
         auto dex_buffer = env->NewDirectByteBuffer(dex.data(), dex.size());
 
-        ScopedLocalRef<jobject> my_cl(JNI_NewObject(env, in_memory_classloader, mid_init, dex_buffer, stub_classloader));
+        ScopedLocalRef<jobject> super_loader{
+            env, vector::native::jni::BuildDummySuperClassLoader(
+                     env, stub_classloader.get(), "android.content.res.Resources",
+                     "android.content.res.TypedArray")};
+        jobject framework_parent = super_loader.get() ? super_loader.get() : stub_classloader.get();
+
+        ScopedLocalRef<jobject> my_cl(JNI_NewObject(env, in_memory_classloader, mid_init, dex_buffer, framework_parent));
         if (!my_cl) {
             LOGE("InMemoryDexClassLoader creation failed!!!");
             return;
