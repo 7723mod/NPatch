@@ -16,7 +16,7 @@ import java.io.File
 import java.io.IOException
 import java.io.OutputStream
 import java.util.UUID
-import java.util.zip.Deflater
+import java.util.zip.CRC32
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
@@ -329,12 +329,26 @@ object Patcher {
 
         java.io.BufferedOutputStream(output, STREAM_BUFFER_SIZE).use { bufferedOut ->
             ZipOutputStream(bufferedOut).use { zip ->
-                zip.setLevel(Deflater.NO_COMPRESSION)
                 val buffer = ByteArray(STREAM_BUFFER_SIZE)
                 mappedEntries.forEach { (apkFile, entryName) ->
+                    // APK entries inside an .apks bundle must be STORED (uncompressed).
+                    // Using DEFLATED (even with NO_COMPRESSION level) corrupts the APK's
+                    // V2/V3 signature block offsets, causing the installer to reject it as unsigned.
+                    // STORED also requires pre-computed size + compressedSize + CRC32.
+                    val fileSize = apkFile.length()
+                    val crc = CRC32()
+                    apkFile.inputStream().buffered(STREAM_BUFFER_SIZE).use { input ->
+                        var read: Int
+                        while (input.read(buffer).also { read = it } >= 0) {
+                            crc.update(buffer, 0, read)
+                        }
+                    }
                     val entry = ZipEntry(entryName).apply {
+                        method = ZipEntry.STORED
                         time = 0L
-                        size = apkFile.length()
+                        size = fileSize
+                        compressedSize = fileSize
+                        this.crc = crc.value
                     }
                     zip.putNextEntry(entry)
                     apkFile.inputStream().buffered(STREAM_BUFFER_SIZE).use { input ->
