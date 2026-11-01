@@ -443,23 +443,14 @@ public class NPatch {
                 zipMaker.closeEntry();
                 addedEntries.add(CONFIG_ASSET_PATH);
 
-                if (isInjectProvider) {
-                    try (var is = getClass().getClassLoader().getResourceAsStream("assets/mtprovider.dex")) {
-                        if (is != null) {
-                            zipMaker.putNextEntry("assets/npatch/mtprovider.dex");
-                            zipMaker.writeFully(is);
-                            zipMaker.closeEntry();
-                            addedEntries.add("assets/npatch/mtprovider.dex");
-                        }
-                    } catch (Throwable e) {
-                        throw new PatchError("Error when adding dex", e);
-                    }
-                }
-
                 injectLoader(srcZip, zipMaker, addedEntries);
 
                 if (entryHookMode) {
                     injectFactoryShim(zipMaker, addedEntries, appComponentFactory);
+                }
+
+                if (isInjectProvider) {
+                    injectProviderDex(srcZip, zipMaker, addedEntries);
                 }
 
                 logger.i("Adding loader dex...");
@@ -605,6 +596,39 @@ public class NPatch {
                     + "', shim injected as " + shimName);
         } catch (Throwable e) {
             throw new PatchError("Error when adding factory shim dex", e);
+        }
+    }
+
+    /**
+     * Injects MT Manager DocumentsProvider dex as a contiguous classesN.dex in the APK's
+     * main dex sequence. This enables native MultiDex loading across all Android versions
+     * and avoids fragile runtime reflection into Dalvik/ART ClassLoader internals.
+     */
+    void injectProviderDex(ZipFile srcZip, ZipMaker zipMaker, Set<String> addedEntries) {
+        int maxDexIndex = 0;
+        if (injectDex) {
+            for (ZipEntry entry : srcZip.getEntries()) {
+                maxDexIndex = Math.max(maxDexIndex, getDexIndex(entry.getName()));
+            }
+        }
+        for (String name : addedEntries) {
+            maxDexIndex = Math.max(maxDexIndex, getDexIndex(name));
+        }
+        String providerDexName = "classes" + (Math.max(1, maxDexIndex) + 1) + ".dex";
+        logger.i("Adding provider dex as " + providerDexName + "...");
+        try (var is = getClass().getClassLoader().getResourceAsStream("assets/mtprovider.dex")) {
+            if (is == null) {
+                throw new PatchError("Fatal: Could not find assets/mtprovider.dex in patcher resources!");
+            }
+            zipMaker.putNextEntry(providerDexName);
+            zipMaker.writeFully(is);
+            zipMaker.closeEntry();
+            addedEntries.add(providerDexName);
+            logger.i("Provider dex injected as " + providerDexName);
+        } catch (PatchError e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new PatchError("Error when adding provider dex", e);
         }
     }
 

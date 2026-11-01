@@ -1,7 +1,6 @@
 package top.nkbe.npatch.loader;
 
 import static top.nkbe.npatch.share.Constants.CONFIG_ASSET_PATH;
-import static top.nkbe.npatch.share.Constants.PROVIDER_DEX_ASSET_PATH;
 
 import android.app.ActivityThread;
 import android.app.LoadedApk;
@@ -84,7 +83,7 @@ public class LSPApplication {
     private static volatile Throwable lastCoreCapturedCrash;
 
     private static PatchConfig config;
-    private static Path pendingProviderPath;
+    private static boolean loadedApkUsesOriginCache;
 
     private static void logInfo(String msg) {
         XLog.i(TAG, msg);
@@ -477,7 +476,7 @@ public class LSPApplication {
             sweepThread.start();
 
             String loadedApkSourceDir = installedApkPath;
-            boolean loadedApkUsesOriginCache = false;
+            loadedApkUsesOriginCache = false;
             if (config.lspConfig.sigBypassLevel >= Constants.SIGBYPASS_BASIC) {
                 Path cacheApkPath = OriginApkHelper.prepareOriginApk(appInfo, baseClassLoader);
                 SigBypass.setPaths(cacheApkPath.toString(), installedApkPath);
@@ -502,27 +501,6 @@ public class LSPApplication {
             // few lines below, so that decision has to be made here -- before the app's own class
             // loader exists and before its factory's <clinit> can run.
             appInfo.appComponentFactory = resolveOriginalAppComponentFactory(loadedApkSourceDir);
-
-            if (config.injectProvider) {
-                Path providerDir = Paths.get(appInfo.dataDir, "cache/code_cache/");
-                if (!Files.exists(providerDir)) Files.createDirectories(providerDir);
-                Path providerPath = providerDir.resolve("provider.dex");
-                try {
-                    Files.deleteIfExists(providerPath);
-                    try (InputStream is = baseClassLoader.getResourceAsStream(PROVIDER_DEX_ASSET_PATH)) {
-                        if (is != null) Files.copy(is, providerPath);
-                    }
-                    if (Files.exists(providerPath)) {
-                        providerPath.toFile().setWritable(false);
-                        pendingProviderPath = providerPath;
-                    } else {
-                        pendingProviderPath = null;
-                    }
-                } catch (Exception e) {
-                    Log.e(TAG, "Failed to inject provider:" + Log.getStackTraceString(e));
-                    pendingProviderPath = null;
-                }
-            }
 
             var mPackages = (Map<?, ?>) XposedHelpers.getObjectField(activityThread, "mPackages");
             mPackages.remove(appInfo.packageName);
@@ -568,23 +546,8 @@ public class LSPApplication {
 
         appendHostNativeLibraryPaths(loader, installedApkPath);
 
-        if (config.injectProvider && pendingProviderPath != null) {
-            try {
-                Object dexPathList = XposedHelpers.getObjectField(loader, "pathList");
-                Object dexElements = XposedHelpers.getObjectField(dexPathList, "dexElements");
-                int length = Array.getLength(dexElements);
-                Object newElements = Array.newInstance(dexElements.getClass().getComponentType(), length + 1);
-                System.arraycopy(dexElements, 0, newElements, 0, length);
-
-                Class<?> dexFileClass = Class.forName("dalvik.system.DexFile");
-                Object dexFile = dexFileClass.getConstructor(String.class).newInstance(pendingProviderPath.toString());
-                Class<?> elementClass = Class.forName("dalvik.system.DexPathList$Element");
-                Object element = elementClass.getConstructor(dexFileClass).newInstance(dexFile);
-                Array.set(newElements, length, element);
-                XposedHelpers.setObjectField(dexPathList, "dexElements", newElements);
-            } catch (Throwable e) {
-                Log.e(TAG, "Failed to inject provider dex: " + e.getMessage(), e);
-            }
+        if (config.injectProvider && loadedApkUsesOriginCache) {
+            appendHostDexPath(loader, installedApkPath);
         }
 
         var activityClientRecordClass = XposedHelpers.findClass("android.app.ActivityThread$ActivityClientRecord", ActivityThread.class.getClassLoader());
@@ -752,6 +715,54 @@ public class LSPApplication {
             }
         } catch (Throwable e) {
             Log.e(TAG, "Failed to append host native library paths: " + libPaths, e);
+        }
+    }
+
+    private static void appendHostDexPath(ClassLoader loader, String installedApkPath) {
+        if (loader == null || installedApkPath == null || installedApkPath.isEmpty()) return;
+        try {
+            Method method = null;
+            try {
+                method = loader.getClass().getMethod("addDexPath", String.class);
+            } catch (NoSuchMethodException e) {
+                Class<?> baseClass = Class.forName("dalvik.system.BaseDexClassLoader");
+                method = baseClass.getDeclaredMethod("addDexPath", String.class);
+            }
+            if (method != null) {
+                method.setAccessible(true);
+                method.invoke(loader, installedApkPath);
+                Log.i(TAG, "Appended installed apk to loader for provider: " + installedApkPath);
+                return;
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "Failed to append installed apk for provider via addDexPath: " + t.getMessage(), t);
+        }
+
+        try {
+            Object dexPathList = XposedHelpers.getObjectField(loader, "pathList");
+            if (dexPathList != null) {
+                Method addDexPathMethod = null;
+                for (Method m : dexPathList.getClass().getDeclaredMethods()) {
+                    if (m.getName().equals("addDexPath")) {
+                        addDexPathMethod = m;
+                        break;
+                    }
+                }
+                if (addDexPathMethod != null) {
+                    addDexPathMethod.setAccessible(true);
+                    Class<?>[] paramTypes = addDexPathMethod.getParameterTypes();
+                    if (paramTypes.length == 2) {
+                        addDexPathMethod.invoke(dexPathList, installedApkPath, null);
+                    } else if (paramTypes.length == 3) {
+                        addDexPathMethod.invoke(dexPathList, installedApkPath, null, false);
+                    } else {
+                        addDexPathMethod.invoke(dexPathList, installedApkPath);
+                    }
+                    Log.i(TAG, "Appended installed apk to DexPathList for provider: " + installedApkPath);
+                }
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "Failed to append installed apk to DexPathList for provider: " + t.getMessage(), t);
         }
     }
 
