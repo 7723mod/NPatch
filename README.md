@@ -8,7 +8,7 @@ Official Website: [npatch.nkbe.top](https://npatch.nkbe.top/en/)
 
 ## Introduction
 
-NPatch patches an Xposed loader and the [Vector](https://github.com/HSSkyBoy/Vector) core directly into the target APK, allowing Xposed modules to run seamlessly without Root privileges or system modifications. The patched APK carries its own loader and native core, with no extra extraction required at runtime.
+NPatch patches an Xposed loader and the [Vector](https://github.com/Nk-Be/Vector) core directly into the target APK, allowing Xposed modules to run seamlessly without Root privileges or system modifications. The patched APK carries its own loader and native core, with no extra extraction required at runtime.
 
 ### Patching Modes
 
@@ -50,7 +50,7 @@ See the [Usage Guide](https://npatch.nkbe.top/en/guide/usage.html) for detailed 
 
 ## Credits
 
-- [Vector](https://github.com/HSSkyBoy/Vector): Core runtime
+- [Vector](https://github.com/Nk-Be/Vector): Core runtime
 - [Xpatch](https://github.com/WindySha/Xpatch): Fork source
 - [Apkzlib](https://android.googlesource.com/platform/tools/apkzlib): Repacking tool
 

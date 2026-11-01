@@ -32,7 +32,6 @@ include(
     ":meta-loader",
     ":patch",
     ":patch-loader",
-    ":remote-api",
     ":share:android",
     ":share:java",
 )
@@ -48,10 +47,12 @@ includeBuild("core") {
     }
 }
 
-val neoApkDir = file("../NeoApk")
-if (neoApkDir.exists()) {
+val neoApkDir = listOf(file("../NeoApk"), file("NeoApk")).firstOrNull { it.exists() }
+if (neoApkDir != null) {
     includeBuild(neoApkDir) {
         dependencySubstitution {
+            substitute(module("com.github.Nk-Be:NeoApk")).using(project(":"))
+            substitute(module("com.github.HSSkyBoy:NeoApk")).using(project(":"))
             substitute(module("top.nkbe:NeoApk")).using(project(":"))
         }
     }
