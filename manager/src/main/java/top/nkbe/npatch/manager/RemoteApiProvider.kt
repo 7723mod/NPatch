@@ -6,7 +6,9 @@ import android.database.Cursor
 import android.net.Uri
 import android.os.Binder
 import android.os.Bundle
+import android.os.IBinder
 import android.util.Log
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.runBlocking
 import top.nkbe.npatch.config.ConfigManager
 import top.nkbe.npatch.util.LocalInjectedModuleService
@@ -23,7 +25,11 @@ class RemoteApiProvider : ContentProvider() {
         const val METHOD_GET_INJECTED_SERVICE = "getInjectedRemoteService"
         const val KEY_MODULE_PACKAGE = "modulePackageName"
         const val KEY_BINDER = "binder"
+        const val KEY_CLIENT_TOKEN = "clientToken"
         private const val TAG = "NPatchRemoteApi"
+
+        private val xposedServices = ConcurrentHashMap<Pair<String, Int>, XposedServiceBinder>()
+        private val injectedServices = ConcurrentHashMap<Pair<String, Int>, LocalInjectedModuleService>()
     }
 
     override fun onCreate(): Boolean = true
@@ -34,7 +40,44 @@ class RemoteApiProvider : ContentProvider() {
         }
         val providerContext = context ?: return null
         val modulePackageName = extras?.getString(KEY_MODULE_PACKAGE) ?: return null
+        val clientToken = extras.getBinder(KEY_CLIENT_TOKEN)
         val callingUid = Binder.getCallingUid()
+        val cacheKey = Pair(modulePackageName, callingUid)
+
+        if (clientToken != null) {
+            try {
+                clientToken.linkToDeath({
+                    if (method == METHOD_GET_REMOTE_SERVICE) {
+                        xposedServices.remove(cacheKey)
+                    } else {
+                        injectedServices.remove(cacheKey)
+                    }
+                }, 0)
+            } catch (e: Exception) {
+                Log.d(TAG, "Failed to link client token to death for $cacheKey", e)
+            }
+        }
+
+        if (method == METHOD_GET_REMOTE_SERVICE) {
+            xposedServices[cacheKey]?.let { cached ->
+                val binder = cached.asBinder()
+                if (binder.isBinderAlive) {
+                    return Bundle().apply { putBinder(KEY_BINDER, binder) }
+                } else {
+                    xposedServices.remove(cacheKey, cached)
+                }
+            }
+        } else {
+            injectedServices[cacheKey]?.let { cached ->
+                val binder = cached.asBinder()
+                if (binder.isBinderAlive) {
+                    return Bundle().apply { putBinder(KEY_BINDER, binder) }
+                } else {
+                    injectedServices.remove(cacheKey, cached)
+                }
+            }
+        }
+
         val callerPackages = providerContext.packageManager.getPackagesForUid(callingUid).orEmpty()
 
         val isKnownModule =
@@ -46,14 +89,17 @@ class RemoteApiProvider : ContentProvider() {
             return null
         }
 
-        val service =
+        val service: IBinder =
             when (method) {
                 METHOD_GET_REMOTE_SERVICE -> {
                     if (modulePackageName !in callerPackages) {
                         Log.w(TAG, "Rejected writable service for uid=$callingUid")
                         return null
                     }
-                    XposedServiceBinder(modulePackageName, callingUid).asBinder()
+                    val created = xposedServices.computeIfAbsent(cacheKey) {
+                        XposedServiceBinder(modulePackageName, callingUid)
+                    }
+                    created.asBinder()
                 }
 
                 else -> {
@@ -65,11 +111,10 @@ class RemoteApiProvider : ContentProvider() {
                         Log.w(TAG, "Rejected injected service for uid=$callingUid")
                         return null
                     }
-                    LocalInjectedModuleService(
-                        providerContext,
-                        modulePackageName,
-                        callingUid,
-                    ).asBinder()
+                    val created = injectedServices.computeIfAbsent(cacheKey) {
+                        LocalInjectedModuleService(providerContext, modulePackageName, callingUid)
+                    }
+                    created.asBinder()
                 }
             }
 

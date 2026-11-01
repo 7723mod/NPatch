@@ -5,6 +5,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.net.Uri;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -290,6 +291,13 @@ public final class NPatchRemoteStore {
     }
 
     private void notifyPreferenceChanges(String group, int userId, Bundle diff) {
+        try {
+            Uri notifyUri = Uri.parse("content://" + context.getPackageName() + ".remote/pref/" + modulePackageName + "/" + group);
+            context.getContentResolver().notifyChange(notifyUri, null);
+        } catch (Throwable t) {
+            Log.w(TAG, "Failed to notify preference change uri for " + modulePackageName, t);
+        }
+
         Set<CallbackState> callbacks = groupCallbacks.get(group);
         if (callbacks == null || callbacks.isEmpty()) {
             return;
