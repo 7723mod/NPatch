@@ -27,8 +27,8 @@ body:
   - type: input
     attributes:
       label: NPatch version / NPatch 版本
-      description: Open NPatch → "About NPatch" on the home page. Fill in both the version and the build number, e.g. `1.0.9 (843)`. Never "latest". / 打开 NPatch 首页的「关于 NPatch」，同时填写版本号与构建号，例如 `1.0.9 (843)`。不要填「最新」。
-      placeholder: "e.g. 1.0.9 (843)"
+      description: Open NPatch → "About NPatch" on the home page. Fill in both the version and the build number, e.g. `1.1.0 (856)`. Never "latest". / 打开 NPatch 首页的「关于 NPatch」，同时填写版本号与构建号，例如 `1.1.0 (856)`。不要填「最新」。
+      placeholder: "e.g. 1.1.0 (856)"
     validations:
       required: true
 
