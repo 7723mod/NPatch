@@ -115,19 +115,55 @@ public class SigBypass {
         visibleApkPath = patchedApkPath;
     }
 
-    private static boolean is360ProtectedApk(String apkPath) {
+    private static boolean is360StubClass(String className) {
+        if (className == null) return false;
+        return className.equals("com.stub.StubApp")
+                || className.startsWith("com.qihoo.util.StubApp");
+    }
+
+    private static boolean is360ProtectedApk(String apkPath, Context context) {
+        if (context != null) {
+            try {
+                String appClassName = null;
+                if (context.getApplicationInfo() != null) {
+                    appClassName = context.getApplicationInfo().className;
+                }
+                if (is360StubClass(appClassName)) {
+                    Log.i(TAG, "360 protector detected by Application className: " + appClassName);
+                    return true;
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+
         if (apkPath == null) return false;
         try (ZipFile apk = new ZipFile(apkPath)) {
             var entries = apk.entries();
             while (entries.hasMoreElements()) {
                 ZipEntry entry = entries.nextElement();
-                String name = entry.getName().toLowerCase(java.util.Locale.ROOT);
-                if (name.contains("qihoo")
-                        || name.contains("qihu")
-                        || name.contains("360")
-                        || name.contains("jiagu")
-                        || name.contains("stub_360")) {
+                String fullPath = entry.getName();
+                String lowerPath = fullPath.toLowerCase(java.util.Locale.ROOT);
+
+                // 2. Assets 專有特徵
+                int lastSlash = lowerPath.lastIndexOf('/');
+                String fileName = lastSlash >= 0 ? lowerPath.substring(lastSlash + 1) : lowerPath;
+
+                if (lowerPath.equals("assets/libjiagu.so")
+                        || lowerPath.startsWith("assets/qihoo/")
+                        || lowerPath.contains("/qihoo/")
+                        || fileName.equals(".appkey")) {
+                    Log.i(TAG, "360 protector marker (asset): " + fullPath);
                     return true;
+                }
+
+                // 1. Native SO 檔名特徵（不論位於 lib/ 還是 assets/ 等位置）
+                if (fileName.endsWith(".so")) {
+                    if (fileName.startsWith("libjiagu")
+                            || fileName.equals("libprotectclass.so")
+                            || fileName.startsWith("libjgdtc")) {
+                        Log.i(TAG, "360 protector marker (native lib): " + fullPath);
+                        return true;
+                    }
                 }
             }
         } catch (Throwable e) {
@@ -850,7 +886,7 @@ public class SigBypass {
             // interaction risk without adding coverage. access/readlink/stat-family inline hooks
             // stay installed either way -- seccomp doesn't cover those.
             boolean skipOpenatRedirect = sigBypassLevel == Constants.SIGBYPASS_SECCOMP;
-            useMinimalNativeFileHook = useMinimalNativeFileHook || is360ProtectedApk(redirectApkPath);
+            useMinimalNativeFileHook = useMinimalNativeFileHook || is360ProtectedApk(redirectApkPath, context);
             if (useMinimalNativeFileHook) {
                 XLog.i(TAG, "360-like protector detected, using minimal native APK redirect");
                 org.lsposed.lspd.nativebridge.SigBypass.enableOpenatHookMinimal(

@@ -161,7 +161,9 @@ namespace lspd {
                 done += instrument_range(static_cast<uintptr_t>(info->dlpi_addr + ph.p_vaddr),
                                          ph.p_filesz);
             }
-            if (done > 0) LOGD("SvcBypass: instrumented {} site(s) in {}", done, name);
+            // LOGI, not LOGD: release builds drop LOGD entirely, and this line is the only
+            // proof that the packer library was actually instrumented.
+            if (done > 0) LOGI("SvcBypass: instrumented {} site(s) in {}", done, name);
             return 0;
         }
 
@@ -237,7 +239,7 @@ namespace lspd {
                 g_app_dir_prefix = slash == std::string_view::npos
                                        ? std::string{}
                                        : std::string{t.substr(0, slash)};
-                LOGD("SvcBypass: scope {} ; {} -> {}", g_app_dir_prefix, g_target_path,
+                LOGI("SvcBypass: scope {} ; {} -> {}", g_app_dir_prefix, g_target_path,
                      g_redirect_path);
             }
             if (g_app_dir_prefix.empty()) {
