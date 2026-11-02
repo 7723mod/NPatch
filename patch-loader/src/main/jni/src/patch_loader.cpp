@@ -26,6 +26,7 @@
 #include "art/runtime/jit/profile_saver.h"
 #include "art/runtime/oat_file_manager.h"
 #include "native_util.h"
+#include "jni/bypass_sig.h"
 #include "jni/svc_bypass.h"
 #include "jni/resources_hook.h"
 #include "elf/symbol_cache.h"
