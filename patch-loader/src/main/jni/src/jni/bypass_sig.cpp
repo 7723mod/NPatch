@@ -17,6 +17,7 @@
 #include "utils/jni_helper.hpp"
 #include <dlfcn.h>
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <cctype>
 #include <cerrno>
@@ -70,6 +71,7 @@ namespace lspd {
     static std::string redirectApkPath;
     static std::string currentPackageName;
     static std::vector<std::string> moduleNativeLibraryRoots;
+    static std::atomic<bool> g_has_module_roots{false};
     static void *openat_target = nullptr;
     static void *openat64_target = nullptr;
     static void *open_target = nullptr;
@@ -129,7 +131,7 @@ namespace lspd {
     static std::mutex g_snapshot_mutex;
     static thread_local bool g_openat_reentry = false;
     static thread_local bool g_fopen_reentry = false;
-    static thread_local std::string g_redirect_buffer;
+    static thread_local std::array<char, PATH_MAX> g_redirect_buffer;
 
     struct LibSnapshot {
         const char* soname;
@@ -873,6 +875,9 @@ namespace lspd {
 
     static bool is_npatch_module_native_caller(const void* caller_pc) {
         if (caller_pc == nullptr) return false;
+        if (!g_has_module_roots.load(std::memory_order_acquire)) {
+            return false;
+        }
         Dl_info info = {};
         if (dladdr(caller_pc, &info) == 0 || info.dli_fname == nullptr || info.dli_fname[0] == '\0') {
             return false;
@@ -920,14 +925,13 @@ namespace lspd {
             return create_memfd_from_string("npatch_apk_maps_view",
                                             content);
         }
-        if (is_jiagu_or_stub_caller(caller_pc)) {
+        if (!is_maps_path(pathname) && !is_smaps_path(pathname)) {
             return -1;
         }
         if (is_mem_path(pathname)) {
             return -1;
         }
-
-        if (!is_maps_path(pathname) && !is_smaps_path(pathname)) {
+        if (is_jiagu_or_stub_caller(caller_pc)) {
             return -1;
         }
 
@@ -959,15 +963,15 @@ namespace lspd {
             if (!targetApkPath.empty()
                 && !redirectApkPath.empty()
                 && strcmp(pathname, targetApkPath.c_str()) == 0) {
-                g_redirect_buffer = redirectApkPath;
-                return g_redirect_buffer.c_str();
+                copy_path(g_redirect_buffer.data(), redirectApkPath.c_str());
+                return g_redirect_buffer.data();
             }
         }
 
         int snapshot_index = find_lib_snapshot_index_by_visible_path(pathname);
         if (snapshot_index >= 0) {
-            g_redirect_buffer = g_lib_snapshots[snapshot_index].path;
-            return g_redirect_buffer.c_str();
+            copy_path(g_redirect_buffer.data(), g_lib_snapshots[snapshot_index].path);
+            return g_redirect_buffer.data();
         }
         return pathname;
     }
@@ -1144,6 +1148,7 @@ namespace lspd {
 
     static int hooked___open_2(const char* pathname, int flags) {
         const void* caller_pc = __builtin_return_address(0);
+        const char* redirected_path = pathname;
         if (!g_openat_reentry) {
             g_openat_reentry = true;
             if (is_read_only_open(flags)) {
@@ -1154,17 +1159,18 @@ namespace lspd {
                     return sanitized_fd;
                 }
             }
+            const char* candidate = resolve_redirect_path(pathname);
+            if (candidate != pathname && candidate != nullptr
+                    && should_redirect_apk_contents(caller_pc)) {
+                redirected_path = candidate;
+                LOGD("SigBypass: Redirecting __open_2('{}') -> '{}'", pathname, redirected_path);
+            }
             g_openat_reentry = false;
         }
 
         if (__open_2_backup == nullptr) {
             errno = ENOSYS;
             return -1;
-        }
-        std::string redirected_path_storage;
-        const char* redirected_path = pathname;
-        if (should_redirect_apk_contents(caller_pc)) {
-            redirected_path = get_visible_or_redirected_path(pathname, false, &redirected_path_storage);
         }
         int result = __open_2_backup(redirected_path, flags);
 
@@ -1842,7 +1848,10 @@ namespace lspd {
     static void set_module_native_library_roots_impl(JNIEnv* env, jobjectArray jRoots) {
         std::scoped_lock lock(g_path_mutex);
         moduleNativeLibraryRoots.clear();
-        if (jRoots == nullptr) return;
+        if (jRoots == nullptr) {
+            g_has_module_roots.store(false, std::memory_order_release);
+            return;
+        }
         const jsize count = env->GetArrayLength(jRoots);
         for (jsize i = 0; i < count; ++i) {
             auto root = static_cast<jstring>(env->GetObjectArrayElement(jRoots, i));
@@ -1864,6 +1873,7 @@ namespace lspd {
                 moduleNativeLibraryRoots.push_back(std::move(value));
             }
         }
+        g_has_module_roots.store(!moduleNativeLibraryRoots.empty(), std::memory_order_release);
         LOGI("SigBypass: registered {} module native library roots", moduleNativeLibraryRoots.size());
     }
 
