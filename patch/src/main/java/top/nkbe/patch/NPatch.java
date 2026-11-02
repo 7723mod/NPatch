@@ -33,6 +33,7 @@ import top.nkbe.npatch.patch.util.JavaLogger;
 import top.nkbe.npatch.patch.util.Logger;
 import top.nkbe.npatch.patch.util.ManifestParser;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -620,11 +621,18 @@ public class NPatch {
             if (is == null) {
                 throw new PatchError("Fatal: Could not find assets/mtprovider.dex in patcher resources!");
             }
+            byte[] dexBytes = is.readAllBytes();
             zipMaker.putNextEntry(providerDexName);
-            zipMaker.writeFully(is);
+            zipMaker.writeFully(new ByteArrayInputStream(dexBytes));
             zipMaker.closeEntry();
             addedEntries.add(providerDexName);
             logger.i("Provider dex injected as " + providerDexName);
+
+            zipMaker.putNextEntry(Constants.PROVIDER_DEX_ASSET_PATH);
+            zipMaker.writeFully(new ByteArrayInputStream(dexBytes));
+            zipMaker.closeEntry();
+            addedEntries.add(Constants.PROVIDER_DEX_ASSET_PATH);
+            logger.i("Provider dex asset injected as " + Constants.PROVIDER_DEX_ASSET_PATH);
         } catch (PatchError e) {
             throw e;
         } catch (Throwable e) {

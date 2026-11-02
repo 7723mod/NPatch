@@ -84,6 +84,7 @@ public class LSPApplication {
 
     private static PatchConfig config;
     private static boolean loadedApkUsesOriginCache;
+    private static Path pendingProviderPath;
 
     private static void logInfo(String msg) {
         XLog.i(TAG, msg);
@@ -496,6 +497,9 @@ public class LSPApplication {
                     Log.w(TAG, "Failed to sweep origin apk cache", e);
                 }
             }
+            if (config.injectProvider && loadedApkUsesOriginCache) {
+                pendingProviderPath = prepareProviderDex(appInfo, baseClassLoader, installedApkPath);
+            }
             // The patched manifest points appComponentFactory at the metaloader stub. appInfo has to
             // be handed back whatever the ORIGINAL apk declared, and appLoadedApk is built from it a
             // few lines below, so that decision has to be made here -- before the app's own class
@@ -547,7 +551,8 @@ public class LSPApplication {
         appendHostNativeLibraryPaths(loader, installedApkPath);
 
         if (config.injectProvider && loadedApkUsesOriginCache) {
-            appendHostDexPath(loader, installedApkPath);
+            String dexToAppend = pendingProviderPath != null ? pendingProviderPath.toString() : installedApkPath;
+            appendHostDexPath(loader, dexToAppend);
         }
 
         var activityClientRecordClass = XposedHelpers.findClass("android.app.ActivityThread$ActivityClientRecord", ActivityThread.class.getClassLoader());
@@ -718,8 +723,77 @@ public class LSPApplication {
         }
     }
 
-    private static void appendHostDexPath(ClassLoader loader, String installedApkPath) {
-        if (loader == null || installedApkPath == null || installedApkPath.isEmpty()) return;
+    private static Path prepareProviderDex(ApplicationInfo appInfo, ClassLoader baseClassLoader, String installedApkPath) {
+        if (appInfo == null) return null;
+        try {
+            Path cacheDir = Paths.get(appInfo.dataDir, "code_cache");
+            if (!Files.exists(cacheDir)) {
+                cacheDir = Paths.get(appInfo.dataDir, "cache", "code_cache");
+            }
+            if (!Files.exists(cacheDir)) {
+                Files.createDirectories(cacheDir);
+            }
+            Path targetDex = cacheDir.resolve("mtprovider.dex");
+
+            byte[] dexBytes = null;
+            if (baseClassLoader != null) {
+                try (InputStream is = baseClassLoader.getResourceAsStream(Constants.PROVIDER_DEX_ASSET_PATH)) {
+                    if (is != null) {
+                        dexBytes = is.readAllBytes();
+                    }
+                } catch (Throwable ignored) {
+                }
+            }
+            if (dexBytes == null && installedApkPath != null) {
+                try (java.util.zip.ZipFile zip = new java.util.zip.ZipFile(installedApkPath)) {
+                    java.util.zip.ZipEntry targetEntry = null;
+                    int maxDex = 1;
+                    var entries = zip.entries();
+                    while (entries.hasMoreElements()) {
+                        var entry = entries.nextElement();
+                        String name = entry.getName();
+                        if (name.startsWith("classes") && name.endsWith(".dex")) {
+                            int idx = 1;
+                            if (!name.equals("classes.dex")) {
+                                try {
+                                    idx = Integer.parseInt(name.substring(7, name.length() - 4));
+                                } catch (Exception ignored) {
+                                }
+                            }
+                            if (idx >= maxDex) {
+                                maxDex = idx;
+                                targetEntry = entry;
+                            }
+                        }
+                    }
+                    if (targetEntry != null) {
+                        try (InputStream is = zip.getInputStream(targetEntry)) {
+                            dexBytes = is.readAllBytes();
+                        }
+                    }
+                } catch (Throwable t) {
+                    Log.w(TAG, "Failed to read provider dex from installed apk", t);
+                }
+            }
+
+            if (dexBytes != null && dexBytes.length > 0) {
+                Files.deleteIfExists(targetDex);
+                Files.write(targetDex, dexBytes);
+                try {
+                    targetDex.toFile().setReadOnly();
+                } catch (Throwable ignored) {
+                }
+                Log.i(TAG, "Extracted provider dex to " + targetDex);
+                return targetDex;
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "Failed to prepare provider dex", t);
+        }
+        return null;
+    }
+
+    private static void appendHostDexPath(ClassLoader loader, String dexPath) {
+        if (loader == null || dexPath == null || dexPath.isEmpty()) return;
         try {
             Method method = null;
             try {
@@ -730,12 +804,12 @@ public class LSPApplication {
             }
             if (method != null) {
                 method.setAccessible(true);
-                method.invoke(loader, installedApkPath);
-                Log.i(TAG, "Appended installed apk to loader for provider: " + installedApkPath);
+                method.invoke(loader, dexPath);
+                Log.i(TAG, "Appended dex to loader for provider: " + dexPath);
                 return;
             }
         } catch (Throwable t) {
-            Log.w(TAG, "Failed to append installed apk for provider via addDexPath: " + t.getMessage(), t);
+            Log.w(TAG, "Failed to append dex for provider via addDexPath: " + t.getMessage(), t);
         }
 
         try {
@@ -752,17 +826,17 @@ public class LSPApplication {
                     addDexPathMethod.setAccessible(true);
                     Class<?>[] paramTypes = addDexPathMethod.getParameterTypes();
                     if (paramTypes.length == 2) {
-                        addDexPathMethod.invoke(dexPathList, installedApkPath, null);
+                        addDexPathMethod.invoke(dexPathList, dexPath, null);
                     } else if (paramTypes.length == 3) {
-                        addDexPathMethod.invoke(dexPathList, installedApkPath, null, false);
+                        addDexPathMethod.invoke(dexPathList, dexPath, null, false);
                     } else {
-                        addDexPathMethod.invoke(dexPathList, installedApkPath);
+                        addDexPathMethod.invoke(dexPathList, dexPath);
                     }
-                    Log.i(TAG, "Appended installed apk to DexPathList for provider: " + installedApkPath);
+                    Log.i(TAG, "Appended dex to DexPathList for provider: " + dexPath);
                 }
             }
         } catch (Throwable t) {
-            Log.e(TAG, "Failed to append installed apk to DexPathList for provider: " + t.getMessage(), t);
+            Log.e(TAG, "Failed to append dex to DexPathList for provider: " + t.getMessage(), t);
         }
     }
 
